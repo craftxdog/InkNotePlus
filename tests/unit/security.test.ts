@@ -3,6 +3,17 @@ import { describe, expect, it } from 'vitest';
 import { createContentSecurityPolicy } from '../../src/main/security';
 
 describe('createContentSecurityPolicy', () => {
+  it('keeps Vite styles usable when the main process also provides an editor nonce', () => {
+    const policy = createContentSecurityPolicy(
+      true,
+      'http://localhost:5173',
+      'testNonce012345678901234567890123',
+    );
+    expect(policy).toContain("style-src 'self' 'unsafe-inline'");
+    // CSP ignores unsafe-inline if a nonce is also present in the source list.
+    expect(policy).not.toContain('nonce-');
+    expect(policy).toContain("script-src 'self'");
+  });
   it('does not allow development servers in production', () => {
     const policy = createContentSecurityPolicy(false);
 

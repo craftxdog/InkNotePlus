@@ -16,6 +16,10 @@ import type {
 } from '../../domain/note';
 import type { NoteSyncOutbox } from '../../domain/sync';
 import { SqliteSyncOutbox } from './sqlite-sync-outbox';
+import {
+  noteMetadataSchema,
+  defaultNoteMetadata,
+} from '../../shared/note-metadata';
 
 interface NoteRow {
   id: string;
@@ -26,6 +30,7 @@ interface NoteRow {
   updatedAt: string;
   deletedAt: string | null;
   revision: number;
+  metadataJson: string;
 }
 
 const noteColumns = `
@@ -36,7 +41,8 @@ const noteColumns = `
   notes.created_at AS createdAt,
   notes.updated_at AS updatedAt,
   notes.deleted_at AS deletedAt,
-  notes.revision
+  notes.revision,
+  notes.metadata_json AS metadataJson
 `;
 
 type NoteSyncRecorder = Pick<NoteSyncOutbox, 'recordNote'>;
@@ -60,14 +66,16 @@ export class SqliteNoteRepository implements NoteRepository {
       updatedAt: now,
       deletedAt: null,
       revision: 1,
+      metadata: input.metadata ?? defaultNoteMetadata,
     };
 
     this.inTransaction(() => {
+      this.requireNotebook(note.metadata?.notebookId);
       this.database
         .prepare(`
           INSERT INTO notes (
-            id, title, body, is_pinned, created_at, updated_at, deleted_at, revision
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            id, title, body, is_pinned, created_at, updated_at, deleted_at, revision, metadata_json
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `)
         .run(
           note.id,
@@ -78,6 +86,7 @@ export class SqliteNoteRepository implements NoteRepository {
           note.updatedAt,
           note.deletedAt,
           note.revision,
+          JSON.stringify(note.metadata),
         );
       this.insertRevision(note);
       this.syncOutbox.recordNote(note);
@@ -104,13 +113,16 @@ export class SqliteNoteRepository implements NoteRepository {
       body: input.body,
       updatedAt: new Date().toISOString(),
       revision: current.revision + 1,
+      metadata: input.metadata ?? current.metadata,
+      isPinned: input.isPinned ?? current.isPinned,
     };
 
     this.inTransaction(() => {
+      this.requireNotebook(next.metadata?.notebookId);
       const result = this.database
         .prepare(`
           UPDATE notes
-          SET title = ?, body = ?, updated_at = ?, revision = ?
+          SET title = ?, body = ?, updated_at = ?, revision = ?, metadata_json = ?, is_pinned = ?
           WHERE id = ? AND revision = ? AND deleted_at IS NULL
         `)
         .run(
@@ -118,6 +130,8 @@ export class SqliteNoteRepository implements NoteRepository {
           next.body,
           next.updatedAt,
           next.revision,
+          JSON.stringify(next.metadata),
+          Number(next.isPinned),
           next.id,
           input.expectedRevision,
         );
@@ -135,21 +149,32 @@ export class SqliteNoteRepository implements NoteRepository {
 
   list(input: ListNotesInput = {}): Note[] {
     const limit = normalizeLimit(input.limit);
+    const filter = noteFilter(input);
     const rows = this.database
       .prepare(`
         SELECT ${noteColumns}
         FROM notes
-        WHERE deleted_at IS NULL
-        ORDER BY updated_at DESC, id DESC
+        WHERE ${filter.sql}
+        ORDER BY is_pinned DESC, updated_at DESC, id DESC
         LIMIT ?
       `)
-      .all(limit)
+      .all(...filter.params, limit)
       .map(parseNoteRow);
 
     return rows.map(toNote);
   }
 
+  private requireNotebook(id: string | null | undefined): void {
+    if (
+      id &&
+      !this.database.prepare('SELECT 1 FROM notebooks WHERE id = ?').get(id)
+    ) {
+      throw new Error('Notebook does not exist.');
+    }
+  }
+
   search(input: SearchNotesInput): Note[] {
+    const filter = noteFilter(input);
     const query = toFtsQuery(input.query);
     if (!query) {
       return [];
@@ -160,11 +185,11 @@ export class SqliteNoteRepository implements NoteRepository {
         SELECT ${noteColumns}
         FROM notes_fts
         INNER JOIN notes ON notes.rowid = notes_fts.rowid
-        WHERE notes_fts MATCH ? AND notes.deleted_at IS NULL
+        WHERE notes_fts MATCH ? AND ${filter.sql}
         ORDER BY bm25(notes_fts), notes.updated_at DESC, notes.id DESC
         LIMIT ?
       `)
-      .all(query, normalizeLimit(input.limit))
+      .all(query, ...filter.params, normalizeLimit(input.limit))
       .map(parseNoteRow);
 
     return rows.map(toNote);
@@ -223,8 +248,8 @@ export class SqliteNoteRepository implements NoteRepository {
     this.database
       .prepare(`
         INSERT INTO note_revisions (
-          note_id, revision, title, body, deleted_at, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?)
+          note_id, revision, title, body, deleted_at, created_at, metadata_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `)
       .run(
         note.id,
@@ -233,6 +258,7 @@ export class SqliteNoteRepository implements NoteRepository {
         note.body,
         note.deletedAt,
         note.updatedAt,
+        JSON.stringify(note.metadata ?? defaultNoteMetadata),
       );
   }
 
@@ -252,6 +278,34 @@ function normalizeLimit(value: number | undefined): number {
   return Math.min(Math.max(value ?? 50, 1), 100);
 }
 
+function noteFilter(input: ListNotesInput): {
+  sql: string;
+  params: (string | number)[];
+} {
+  const clauses = ['(notes.deleted_at IS NOT NULL) = ?'];
+  const params: (string | number)[] = [Number(input.trashed ?? false)];
+  if (input.notebookId === null)
+    clauses.push("json_extract(notes.metadata_json,'$.notebookId') IS NULL");
+  if (input.notebookId) {
+    clauses.push("json_extract(notes.metadata_json,'$.notebookId') = ?");
+    params.push(input.notebookId);
+  }
+  if (input.status) {
+    clauses.push("json_extract(notes.metadata_json,'$.status') = ?");
+    params.push(input.status);
+  }
+  if (input.templates) {
+    clauses.push("json_extract(notes.metadata_json,'$.isTemplate') = 1");
+  }
+  if (input.tag) {
+    clauses.push(
+      "EXISTS(SELECT 1 FROM json_each(notes.metadata_json,'$.tags') WHERE value = ?)",
+    );
+    params.push(input.tag);
+  }
+  return { sql: clauses.join(' AND '), params };
+}
+
 function toFtsQuery(value: string): string {
   const terms = value.match(/[\p{L}\p{N}_-]+/gu) ?? [];
   return terms
@@ -261,9 +315,11 @@ function toFtsQuery(value: string): string {
 }
 
 function toNote(row: NoteRow): Note {
+  const { metadataJson, ...fields } = row;
   return {
-    ...row,
+    ...fields,
     isPinned: Boolean(row.isPinned),
+    metadata: noteMetadataSchema.parse(JSON.parse(metadataJson)),
   };
 }
 
@@ -290,6 +346,7 @@ function parseNoteRow(row: Record<string, unknown>): NoteRow {
     updatedAt,
     deletedAt,
     revision,
+    metadataJson: readString(row, 'metadataJson'),
   };
 }
 

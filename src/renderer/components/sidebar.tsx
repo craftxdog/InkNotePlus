@@ -1,0 +1,244 @@
+import {
+  ChevronDown,
+  FileText,
+  Files,
+  Settings,
+  Search,
+  Plus,
+  Inbox,
+  BookOpen,
+  CirclePlay,
+  CirclePause,
+  CircleCheck,
+  CircleX,
+  Trash2,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { useWorkspace } from '../state/workspace-context';
+import type { Navigation } from '../state/workspace-types';
+import { IconButton } from './icon-button';
+import { tagColor } from './tag-badge';
+
+export const statusLabels = {
+  active: 'Activo',
+  onhold: 'En espera',
+  completed: 'Completado',
+  dropped: 'Descartado',
+} as const;
+export const statusIcons = {
+  active: CirclePlay,
+  onhold: CirclePause,
+  completed: CircleCheck,
+  dropped: CircleX,
+};
+
+export function Sidebar({
+  onNavigate,
+  onClose,
+  drawer = false,
+}: {
+  onNavigate: () => void;
+  onClose: () => void;
+  drawer?: boolean;
+}) {
+  const library = useWorkspace((state) => state.library);
+  const [tagSearch, setTagSearch] = useState<string | null>(null);
+  const navigation = useWorkspace((state) => state.navigation);
+  const navigate = useWorkspace((state) => state.navigate);
+  const openSettings = useWorkspace((state) => state.setSettingsOpen);
+  const openNotebook = useWorkspace((state) => state.setNotebookDialogOpen);
+  const select = (value: Navigation) => {
+    void navigate(value);
+    onNavigate();
+  };
+  const isActive = (value: Navigation) =>
+    JSON.stringify(value) === JSON.stringify(navigation);
+  const row = (
+    label: string,
+    icon: LucideIcon,
+    target: Navigation,
+    count?: number,
+    className?: string,
+  ) => (
+    <SidebarItem
+      key={label}
+      label={label}
+      icon={icon}
+      active={isActive(target)}
+      count={count}
+      className={className}
+      onClick={() => select(target)}
+    />
+  );
+  function notebookTree(parentId: string | null, depth = 0): ReactNode {
+    return library.notebooks
+      .filter((book) => book.parentId === parentId)
+      .map((book) => (
+        <div className={depth ? 'notebook-children' : undefined} key={book.id}>
+          {row(
+            book.name,
+            BookOpen,
+            { type: 'notebook', id: book.id },
+            book.count,
+          )}
+          {notebookTree(book.id, depth + 1)}
+        </div>
+      ));
+  }
+  return (
+    <nav className="pane pane--sidebar" aria-label="Biblioteca">
+      <header className="sidebar-header window-drag-region">
+        <span className="app-wordmark">InkNote</span>
+        {drawer && (
+          <IconButton icon={X} label="Cerrar biblioteca" onClick={onClose} />
+        )}
+        <IconButton
+          icon={Settings}
+          label="Preferencias"
+          onClick={() => openSettings(true)}
+        />
+      </header>
+      <div className="sidebar-scroll">
+        {row('Todas las notas', FileText, { type: 'all' }, library.total)}
+        {row(
+          'Plantillas de notas',
+          Files,
+          { type: 'templates' },
+          library.templates,
+        )}
+        <SidebarSection
+          title="Notebooks"
+          actions={
+            <IconButton
+              icon={Plus}
+              label="Nuevo notebook"
+              onClick={() => openNotebook(true)}
+            />
+          }
+        >
+          {row('Sin notebook', Inbox, { type: 'notebook', id: 'unfiled' })}
+          {notebookTree(null)}
+        </SidebarSection>
+        <SidebarSection title="Estado">
+          {(Object.keys(statusLabels) as (keyof typeof statusLabels)[]).map(
+            (status) =>
+              row(
+                statusLabels[status],
+                statusIcons[status],
+                { type: 'status', status },
+                library.statuses[status],
+                `status-${status}`,
+              ),
+          )}
+        </SidebarSection>
+        <SidebarSection
+          title="Etiquetas"
+          actions={
+            <IconButton
+              icon={Search}
+              label="Filtrar etiquetas"
+              active={tagSearch !== null}
+              onClick={() => setTagSearch(tagSearch === null ? '' : null)}
+            />
+          }
+        >
+          {tagSearch !== null && (
+            <input
+              className="sidebar-tag-search"
+              aria-label="Buscar etiquetas"
+              value={tagSearch}
+              onChange={(event) => setTagSearch(event.target.value)}
+              placeholder="Buscar etiquetas"
+            />
+          )}
+          {library.tags.length === 0 ? (
+            <p className="sidebar-empty-state">Sin etiquetas</p>
+          ) : (
+            library.tags
+              .filter((tag) =>
+                tag.name
+                  .toLocaleLowerCase()
+                  .includes((tagSearch ?? '').toLocaleLowerCase()),
+              )
+              .map((tag) => (
+                <button
+                  key={tag.name}
+                  type="button"
+                  className="navigation-item"
+                  data-active={isActive({ type: 'tag', name: tag.name })}
+                  onClick={() => select({ type: 'tag', name: tag.name })}
+                >
+                  <span className={`tag-dot tag-color-${tagColor(tag.name)}`} />
+                  <span className="navigation-label">{tag.name}</span>
+                  <span className="navigation-count">{tag.count}</span>
+                </button>
+              ))
+          )}
+        </SidebarSection>
+        {row('Papelera', Trash2, { type: 'trash' }, library.trash)}
+      </div>
+      <footer className="sidebar-footer">
+        <span className="local-status-dot" />
+        Almacenamiento local
+      </footer>
+    </nav>
+  );
+}
+
+function SidebarItem({
+  label,
+  icon: Icon,
+  active,
+  count,
+  onClick,
+  className = '',
+}: {
+  label: string;
+  icon: LucideIcon;
+  active: boolean;
+  count?: number;
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      className={`navigation-item ${className}`}
+      type="button"
+      data-active={active}
+      aria-current={active ? 'page' : undefined}
+      onClick={onClick}
+    >
+      <Icon size={18} strokeWidth={1.6} aria-hidden="true" />
+      <span className="navigation-label">{label}</span>
+      {count !== undefined && <span className="navigation-count">{count}</span>}
+    </button>
+  );
+}
+
+function SidebarSection({
+  title,
+  actions,
+  children,
+}: {
+  title: string;
+  actions?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <details className="sidebar-section" open>
+      <summary>
+        <span>{title}</span>
+        <span
+          className="section-actions"
+          onClick={(event) => event.preventDefault()}
+        >
+          {actions}
+        </span>
+        <ChevronDown className="section-chevron" size={16} aria-hidden="true" />
+      </summary>
+      <div>{children}</div>
+    </details>
+  );
+}

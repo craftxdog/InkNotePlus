@@ -1,24 +1,14 @@
-:root {
-  color-scheme: light dark;
-  background: Canvas;
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  inline-size: 100%;
-  block-size: 100%;
-  min-block-size: 100dvh;
-  margin: 0;
-}
-
-#root {
-  min-inline-size: 0;
-  min-block-size: 0;
-}
+@import '@inkdropapp/css/layers.css';
+@import '@inkdropapp/css/reset.css';
+@import '@inkdropapp/css/tokens.css';
+@import '@inkdropapp/css/utilities.css';
+@import '@inkdropapp/css/ui.css';
+@import '@inkdropapp/css/status.css';
+@import '@inkdropapp/css/task-progress.css';
+@import '@inkdropapp/css/tags.css';
+@import '@inkdropapp/css/syntax.css';
+@import '@inkdropapp/css/markdown.css';
+@import './styles/base.css';
+@import './styles/shell.css';
+@import './styles/editor.css';
+@import './styles/dialogs.css';

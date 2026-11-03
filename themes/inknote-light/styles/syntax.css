@@ -1,0 +1,13 @@
+@layer theme.syntax {
+  :root {
+    --editor-background-color: var(--editor-background);
+    --editor-foreground-color: var(--color-slate-800);
+    --editor-gutter-color: var(--color-slate-300);
+    --editor-caret-color: var(--color-violet-600);
+    --syntax-heading-color: var(--color-pink-600);
+    --syntax-processing-instruction-color: var(--color-blue-600);
+    --syntax-keyword-color: var(--color-violet-600);
+    --syntax-string-color: var(--color-green-700);
+    --syntax-comment-color: var(--color-slate-500);
+  }
+}

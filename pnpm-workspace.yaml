@@ -1,5 +1,9 @@
 nodeLinker: hoisted
 
+packages:
+  - 'themes/*'
+
 allowBuilds:
   electron: true
   electron-winstaller: true
+  puppeteer: true

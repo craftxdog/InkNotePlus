@@ -1,4 +1,5 @@
-import { z } from 'zod';
+import { z } from './validation';
+import { noteMetadataSchema, noteStatusSchema } from './note-metadata';
 
 const maxTitleLength = 512;
 const maxBodyLength = 1_000_000;
@@ -26,12 +27,18 @@ export const createNoteInputSchema = z
   .object({
     title: z.string().trim().max(maxTitleLength),
     body: z.string().max(maxBodyLength),
+    metadata: noteMetadataSchema.optional(),
   })
   .strict();
 
 export const listNotesInputSchema = z
   .object({
     limit: limitSchema.optional(),
+    trashed: z.boolean().optional(),
+    notebookId: z.uuid().nullable().optional(),
+    status: noteStatusSchema.optional(),
+    tag: z.string().trim().min(1).max(40).optional(),
+    templates: z.boolean().optional(),
   })
   .strict();
 
@@ -41,6 +48,8 @@ export const updateNoteInputSchema = z
     title: z.string().trim().max(maxTitleLength),
     body: z.string().max(maxBodyLength),
     expectedRevision: z.number().int().positive(),
+    metadata: noteMetadataSchema.optional(),
+    isPinned: z.boolean().optional(),
   })
   .strict();
 
@@ -48,6 +57,11 @@ export const searchNotesInputSchema = z
   .object({
     query: z.string().trim().min(1).max(maxSearchQueryLength),
     limit: limitSchema.optional(),
+    trashed: z.boolean().optional(),
+    notebookId: z.uuid().nullable().optional(),
+    status: noteStatusSchema.optional(),
+    tag: z.string().trim().min(1).max(40).optional(),
+    templates: z.boolean().optional(),
   })
   .strict();
 
@@ -67,6 +81,7 @@ export const noteSchema = z
     updatedAt: timestampSchema,
     deletedAt: timestampSchema.nullable(),
     revision: z.number().int().positive(),
+    metadata: noteMetadataSchema.optional(),
   })
   .strict();
 

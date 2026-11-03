@@ -28,7 +28,7 @@ function createConfiguration(): Configuration {
 }
 
 describe('main window options', () => {
-  it('creates a resizable, secure blank canvas with responsive dimensions', () => {
+  it('creates a resizable, secure shell with its configured dimensions', () => {
     const options = createMainWindowOptions({
       configuration: createConfiguration(),
       isDevelopment: false,

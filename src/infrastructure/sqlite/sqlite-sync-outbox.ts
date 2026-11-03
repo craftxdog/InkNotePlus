@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
+import { noteMetadataSchema } from '../../shared/note-metadata';
 
 import type { Note } from '../../domain/note';
 import {
@@ -257,6 +258,9 @@ function parseNotePayload(payloadJson: string): Note {
     updatedAt: readString(value, 'updatedAt'),
     deletedAt: readNullableString(value, 'deletedAt'),
     revision: readPositiveInteger(value, 'revision'),
+    ...(value.metadata === undefined
+      ? {}
+      : { metadata: noteMetadataSchema.parse(value.metadata) }),
   };
   assertIsoTimestamp(note.createdAt);
   assertIsoTimestamp(note.updatedAt);

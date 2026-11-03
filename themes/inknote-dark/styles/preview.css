@@ -1,0 +1,9 @@
+@layer theme.preview {
+  :root {
+    --mde-preview-heading-color: var(--color-neutral-100);
+    --mde-preview-strong-color: var(--color-neutral-100);
+    --mde-preview-link-color: var(--color-blue-400);
+    --mde-preview-codeblock-background-color: var(--color-neutral-900);
+    --mde-preview-inline-code-background-color: hsl(var(--hsl-slate-400) / 16%);
+  }
+}

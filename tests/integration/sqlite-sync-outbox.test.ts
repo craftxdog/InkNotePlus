@@ -19,6 +19,20 @@ describe('SqliteSyncOutbox', () => {
   afterEach(() => {
     database.close();
   });
+  it('reads legacy operations without metadata and rejects malformed new metadata', () => {
+    repository.create({ title: 'Legacy', body: 'unchanged' });
+    database.exec(
+      "UPDATE sync_outbox SET payload_json = json_remove(payload_json, '$.metadata')",
+    );
+    expect(outbox.listPending()[0]).toMatchObject({
+      kind: 'upsert',
+      payload: { title: 'Legacy', body: 'unchanged' },
+    });
+    database.exec(
+      "UPDATE sync_outbox SET payload_json = json_set(payload_json, '$.metadata', 'invalid')",
+    );
+    expect(() => outbox.listPending()).toThrow();
+  });
 
   it('records ordered note operations with one persistent device identity', () => {
     const created = repository.create({ title: 'Draft', body: 'v1' });

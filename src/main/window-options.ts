@@ -30,6 +30,12 @@ export function createMainWindowOptions({
     minHeight,
     resizable: true,
     show: false,
+    ...(process.platform === 'darwin'
+      ? {
+          titleBarStyle: 'hiddenInset' as const,
+          trafficLightPosition: { x: 16, y: 16 },
+        }
+      : {}),
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,

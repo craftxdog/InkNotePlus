@@ -1,0 +1,14 @@
+@layer theme.ui {
+  :root {
+    color-scheme: light;
+    --page-background: var(--color-stone-50);
+    --sidebar-background: var(--color-stone-200);
+    --note-list-bar-background: var(--color-gray-50);
+    --editor-background: var(--color-stone-50);
+    --text-color: var(--color-neutral-900);
+    --primary-color: var(--color-blue-500);
+    --sidebar-menu-item-active-background: hsl(var(--hsl-blue-500) / 14%);
+    --note-list-view-item-active-background: hsl(var(--hsl-blue-500) / 14%);
+    --default-squircle-radius: var(--4px);
+  }
+}

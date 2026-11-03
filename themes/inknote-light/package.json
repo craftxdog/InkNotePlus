@@ -1,0 +1,22 @@
+{
+  "name": "inknote-light",
+  "version": "0.0.0",
+  "theme": true,
+  "themeAppearance": "light",
+  "description": "InkNote base theme development package for Inkdrop-compatible tooling.",
+  "styleSheets": [
+    "ui.css",
+    "syntax.css",
+    "preview.css"
+  ],
+  "scripts": {
+    "prepublishOnly": "generate-palette"
+  },
+  "devDependencies": {
+    "@inkdropapp/theme-dev-helpers": "^0.7.1"
+  },
+  "engines": {
+    "inkdrop": "^6.0.0",
+    "node": ">=24"
+  }
+}

@@ -1,10 +1,16 @@
-import { z } from 'zod';
+import { z } from '../shared/validation';
 
-import { defineConfig } from './config';
+import { defineConfig, type ConfigDefinition } from './config';
+import { defaultPreferences, preferencesSchema } from '../shared/preferences';
 
 const dimensionSchema = z.number().int().min(320).max(10_000);
 
 export const coreConfig = {
+  appearance: defineConfig({
+    key: 'core.appearance',
+    schema: preferencesSchema,
+    defaultValue: defaultPreferences,
+  }),
   window: {
     initialHeight: defineConfig({
       key: 'core.window.initialHeight',
@@ -29,7 +35,8 @@ export const coreConfig = {
   },
 } as const;
 
-export const coreConfigDefinitions = [
+export const coreConfigDefinitions: readonly ConfigDefinition<unknown>[] = [
+  coreConfig.appearance,
   coreConfig.window.initialHeight,
   coreConfig.window.initialWidth,
   coreConfig.window.minimumHeight,

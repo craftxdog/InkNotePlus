@@ -34,6 +34,8 @@ jobs:
           cache: pnpm
 
       - name: Install locked dependencies
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Audit high and critical advisories

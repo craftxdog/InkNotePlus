@@ -1,6 +1,8 @@
-import { app, BrowserWindow, ipcMain, session } from 'electron';
+import { app, BrowserWindow, ipcMain, session, shell } from 'electron';
+import { registerExternalLinkHandler } from './main/ipc/external-link-handler';
 import type { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
+import { randomBytes } from 'node:crypto';
 import started from 'electron-squirrel-startup';
 
 import { Configuration } from './application/config';
@@ -14,6 +16,9 @@ import { JsonConfigStorage } from './infrastructure/config/json-config-storage';
 import { SqliteNoteRepository } from './infrastructure/sqlite/sqlite-note-repository';
 import { SqliteSyncOutbox } from './infrastructure/sqlite/sqlite-sync-outbox';
 import { registerNoteIpcHandlers } from './main/ipc/note-handlers';
+import { registerPreferencesHandlers } from './main/ipc/preferences-handlers';
+import { registerLibraryHandlers } from './main/ipc/library-handlers';
+import { SqliteLibraryRepository } from './infrastructure/sqlite/sqlite-library-repository';
 import { createContentSecurityPolicy } from './main/security';
 import { getConfigPath, getDatabasePath } from './main/storage';
 import { createMainWindowOptions } from './main/window-options';
@@ -26,10 +31,14 @@ if (started) {
 app.enableSandbox();
 
 const isDevelopment = Boolean(MAIN_WINDOW_VITE_DEV_SERVER_URL);
+const styleNonce = randomBytes(24).toString('base64');
 let database: DatabaseSync | null = null;
 let mainWindow: BrowserWindow | null = null;
 let noteCommands: Disposable | null = null;
 let noteIpcHandlers: Disposable | null = null;
+let appearanceHandlers: Disposable | null = null;
+let externalLinkHandler: Disposable | null = null;
+let libraryHandlers: Disposable | null = null;
 let coreModules: ModuleRegistry | null = null;
 let configuration: Configuration | null = null;
 
@@ -42,6 +51,7 @@ function installSessionSecurity() {
           createContentSecurityPolicy(
             isDevelopment,
             MAIN_WINDOW_VITE_DEV_SERVER_URL,
+            styleNonce,
           ),
         ],
       },
@@ -106,6 +116,37 @@ function initializeCoreModules(): Configuration {
     },
   });
   modules.register({
+    id: 'core.appearance',
+    activate() {
+      if (!configuration) throw new Error('Configuration is not active.');
+      appearanceHandlers = registerPreferencesHandlers({
+        ipc: ipcMain,
+        configuration,
+        getMainWebContents: () => mainWindow?.webContents ?? null,
+        styleNonce,
+        platform: process.platform,
+      });
+    },
+    deactivate() {
+      appearanceHandlers?.dispose();
+      appearanceHandlers = null;
+    },
+  });
+  modules.register({
+    id: 'core.links',
+    activate() {
+      externalLinkHandler = registerExternalLinkHandler({
+        ipc: ipcMain,
+        getMainWebContents: () => mainWindow?.webContents ?? null,
+        openExternal: (url) => shell.openExternal(url),
+      });
+    },
+    deactivate() {
+      externalLinkHandler?.dispose();
+      externalLinkHandler = null;
+    },
+  });
+  modules.register({
     id: 'core.notes',
     activate: () => {
       const localDatabase = openDatabase(
@@ -130,6 +171,11 @@ function initializeCoreModules(): Configuration {
           },
         });
 
+        libraryHandlers = registerLibraryHandlers({
+          ipc: ipcMain,
+          repository: new SqliteLibraryRepository(localDatabase),
+          getMainWebContents: () => mainWindow?.webContents ?? null,
+        });
         database = localDatabase;
         noteCommands = commandRegistration;
         noteIpcHandlers = ipcRegistration;
@@ -141,6 +187,8 @@ function initializeCoreModules(): Configuration {
       }
     },
     deactivate: () => {
+      libraryHandlers?.dispose();
+      libraryHandlers = null;
       noteIpcHandlers?.dispose();
       noteIpcHandlers = null;
       noteCommands?.dispose();

@@ -1,0 +1,58 @@
+@layer base {
+  html {
+    color-scheme: light dark;
+    font-family: var(--page-font);
+    font-size: var(--font-size);
+    line-height: var(--line-height);
+    color: var(--text-color);
+    background: var(--page-background);
+  }
+  html,
+  body,
+  #root {
+    inline-size: 100%;
+    block-size: 100%;
+    min-block-size: 0;
+    margin: 0;
+  }
+  body {
+    overflow: hidden;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled,
+  input:disabled,
+  select:disabled {
+    cursor: default;
+    opacity: var(--disabled-opacity);
+  }
+  :focus-visible {
+    outline: var(--focused-outline-width) solid var(--focused-outline-color);
+    outline-offset: -2px;
+  }
+  button,
+  input,
+  select {
+    -webkit-app-region: no-drag;
+  }
+  .window-drag-region {
+    -webkit-app-region: drag;
+    user-select: none;
+  }
+  .visually-hidden {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}

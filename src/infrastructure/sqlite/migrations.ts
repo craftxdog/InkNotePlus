@@ -100,4 +100,13 @@ export const migrations: readonly SqliteMigration[] = [
       ) STRICT;
     `,
   },
+  {
+    version: 3,
+    sql: `
+      CREATE TABLE notebooks (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, parent_id TEXT REFERENCES notebooks(id), created_at TEXT NOT NULL) STRICT;
+      ALTER TABLE notes ADD COLUMN metadata_json TEXT NOT NULL DEFAULT '{"notebookId":null,"status":"active","tags":[],"isTemplate":false}' CHECK (json_valid(metadata_json));
+      ALTER TABLE note_revisions ADD COLUMN metadata_json TEXT;
+      CREATE INDEX notes_notebook_idx ON notes(json_extract(metadata_json, '$.notebookId')) WHERE deleted_at IS NULL;
+    `,
+  },
 ];

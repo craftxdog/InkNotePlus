@@ -1,13 +1,23 @@
 export function createContentSecurityPolicy(
   isDevelopment: boolean,
   developmentServerUrl?: string,
+  styleNonce?: string,
 ): string {
   const connectSource = createConnectSource(
     isDevelopment,
     developmentServerUrl,
   );
   const scriptSource = "'self'";
-  const styleSource = isDevelopment ? "'self' 'unsafe-inline'" : "'self'";
+  const styleSource = [
+    "'self'",
+    // A nonce makes browsers ignore unsafe-inline. Vite's HMR styles do not
+    // carry our editor nonce, so these policies must remain mutually exclusive.
+    ...(isDevelopment
+      ? ["'unsafe-inline'"]
+      : styleNonce
+        ? [`'nonce-${styleNonce}'`]
+        : []),
+  ].join(' ');
 
   return [
     "default-src 'self'",

@@ -1,0 +1,85 @@
+@layer theme.ui.components {
+  .app-dialog {
+    inline-size: min(460px, calc(100vw - 32px));
+    max-block-size: calc(100vh - 48px);
+    overflow: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--10px);
+    padding: 0;
+    color: var(--text-color);
+    background: var(--page-background);
+    box-shadow: var(--floating-shadow);
+    pointer-events: auto;
+  }
+  .app-dialog::backdrop {
+    background: hsl(var(--hsl-black)/30%);
+  }
+  .dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-block-end: 1px solid var(--border-color);
+    padding: var(--12px) var(--16px);
+  }
+  .dialog-header h2 {
+    font-size: var(--large);
+    font-weight: var(--font-weights-semibold);
+    margin: 0;
+  }
+  .dialog-form,
+  .settings-content {
+    padding: var(--16px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--16px);
+  }
+  .dialog-form label,
+  .settings-content label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--6px);
+    font-size: var(--small);
+  }
+  .dialog-form input,
+  .dialog-form select,
+  .settings-content select {
+    inline-size: 100%;
+    border: var(--input-border);
+    border-radius: var(--4px);
+    padding: var(--8px);
+    background: var(--input-background);
+    color: var(--input-color);
+  }
+  .settings-content h3 {
+    margin: 0;
+    font-size: var(--medium);
+    font-weight: var(--font-weights-semibold);
+  }
+  .settings-description {
+    margin: 0;
+    color: var(--muted-text-color);
+    font-size: var(--small);
+  }
+  .settings-content input[type='range'] {
+    accent-color: var(--primary-color);
+  }
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--8px);
+    margin-block-start: var(--8px);
+  }
+  .button {
+    border: var(--button-border);
+    border-radius: var(--button-border-radius);
+    padding: var(--button-padding);
+    color: var(--button-text-color);
+    background: var(--button-background);
+    box-shadow: var(--button-box-shadow);
+    font-weight: var(--button-font-weight);
+  }
+  .button--primary {
+    background: var(--primary-button-background-color);
+    color: var(--primary-button-text-color);
+  }
+}

@@ -1,5 +1,29 @@
 import type { IpcRenderer } from 'electron';
 import type { ZodType } from 'zod';
+import {
+  EXTERNAL_LINK_CHANNEL,
+  externalLinkSchema,
+  externalLinkResultSchema,
+} from '../shared/external-link';
+import {
+  LIBRARY_CHANNELS,
+  createNotebookSchema,
+  libraryResultSchema,
+  notebookResultSchema,
+  type CreateNotebookInput,
+  type LibrarySnapshot,
+  type Notebook,
+} from '../shared/library';
+import {
+  bootstrapResultSchema,
+  preferencesResultSchema,
+  emptyPreferencesInputSchema,
+  preferencesPatchSchema,
+  PREFERENCES_CHANNELS,
+  type AppBootstrap,
+  type Preferences,
+  type PreferencesPatch,
+} from '../shared/preferences';
 
 import {
   IPC_CHANNELS,
@@ -25,6 +49,15 @@ import {
 type InputSchema<T> = Pick<ZodType<T>, 'safeParse'>;
 
 export interface InkNoteApi {
+  links: { openExternal(url: string): Promise<Result<boolean>> };
+  library: {
+    get(): Promise<Result<LibrarySnapshot>>;
+    createNotebook(input: CreateNotebookInput): Promise<Result<Notebook>>;
+  };
+  preferences: {
+    get(): Promise<Result<AppBootstrap>>;
+    update(input: PreferencesPatch): Promise<Result<Preferences>>;
+  };
   notes: {
     create(input: CreateNoteInput): Promise<Result<NoteProjection>>;
     update(input: UpdateNoteInput): Promise<Result<NoteProjection>>;
@@ -40,6 +73,52 @@ export function createInkNoteApi(
   ipcRenderer: Pick<IpcRenderer, 'invoke' | 'on' | 'removeListener'>,
 ): InkNoteApi {
   return {
+    links: {
+      openExternal: (url) =>
+        invoke(
+          ipcRenderer,
+          EXTERNAL_LINK_CHANNEL,
+          { url },
+          externalLinkSchema,
+          externalLinkResultSchema,
+        ),
+    },
+    library: {
+      get: () =>
+        invoke(
+          ipcRenderer,
+          LIBRARY_CHANNELS.get,
+          {},
+          emptyPreferencesInputSchema,
+          libraryResultSchema,
+        ),
+      createNotebook: (input) =>
+        invoke(
+          ipcRenderer,
+          LIBRARY_CHANNELS.createNotebook,
+          input,
+          createNotebookSchema,
+          notebookResultSchema,
+        ),
+    },
+    preferences: {
+      get: () =>
+        invoke(
+          ipcRenderer,
+          PREFERENCES_CHANNELS.get,
+          {},
+          emptyPreferencesInputSchema,
+          bootstrapResultSchema,
+        ),
+      update: (input) =>
+        invoke(
+          ipcRenderer,
+          PREFERENCES_CHANNELS.update,
+          input,
+          preferencesPatchSchema,
+          preferencesResultSchema,
+        ),
+    },
     notes: {
       create: (input) =>
         invoke(

@@ -54,6 +54,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install --yes fakeroot rpm
 
       - name: Install locked dependencies
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Audit high and critical advisories

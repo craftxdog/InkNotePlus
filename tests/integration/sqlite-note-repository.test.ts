@@ -31,7 +31,11 @@ describe('SqliteNoteRepository', () => {
       .prepare('SELECT version FROM inknote_schema_migrations ORDER BY version')
       .all() as Array<{ version: number }>;
 
-    expect(migrations).toEqual([{ version: 1 }, { version: 2 }]);
+    expect(migrations).toEqual([
+      { version: 1 },
+      { version: 2 },
+      { version: 3 },
+    ]);
   });
 
   it('creates a note and stores its first revision atomically', () => {

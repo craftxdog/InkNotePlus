@@ -1,0 +1,59 @@
+{
+  "name": "inknote",
+  "productName": "InkNote",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local-first Markdown notes for desktop.",
+  "keywords": [],
+  "license": "MIT",
+  "author": {
+    "name": "craftzdog",
+    "email": "aaronmars77@gmail.com"
+  },
+  "main": ".vite/build/main.cjs",
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "make:mac:arm64": "node scripts/make-macos-dmg.mjs arm64",
+    "make:mac:x64": "node scripts/make-macos-dmg.mjs x64",
+    "make:win:x64": "electron-forge make --platform=win32 --arch=x64",
+    "make:linux:x64": "electron-forge make --platform=linux --arch=x64",
+    "release": "electron-forge release",
+    "lint": "oxlint && oxfmt --check",
+    "lint:fix": "oxlint --fix && oxfmt --write",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:renderer": "vitest run tests/renderer",
+    "verify": "pnpm run lint && pnpm run typecheck && pnpm run test",
+    "build": "electron-forge package",
+    "check": "pnpm run verify && pnpm run build"
+  },
+  "devEngines": {
+    "packageManager": "pnpm@11.25.0"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^8.0.1",
+    "@electron-forge/maker-deb": "^8.0.1",
+    "@electron-forge/maker-rpm": "^8.0.1",
+    "@electron-forge/maker-squirrel": "^8.0.1",
+    "@electron-forge/plugin-fuses": "^8.0.1",
+    "@electron-forge/plugin-vite": "^8.0.1",
+    "@electron/fuses": "^2.1.3",
+    "@types/electron-squirrel-startup": "^1.0.2",
+    "electron": "45.1.0",
+    "oxfmt": "^0.75.0",
+    "oxlint": "^1.90.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.1",
+    "zod": "^4.6.7",
+    "zustand": "^5.0.16"
+  }
+}

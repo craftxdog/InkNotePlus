@@ -1,0 +1,24 @@
+:root {
+  color-scheme: light dark;
+  background: Canvas;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  inline-size: 100%;
+  block-size: 100%;
+  min-block-size: 100dvh;
+  margin: 0;
+}
+
+#root {
+  min-inline-size: 0;
+  min-block-size: 0;
+}

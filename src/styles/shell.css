@@ -1,4 +1,11 @@
 @layer theme.ui.components {
+  .search-scope-toggle {
+    display: flex;
+    border: 0;
+    background: none;
+    padding: 0;
+    color: var(--muted-text-color);
+  }
   .inknote-shell {
     display: flex;
     position: relative;

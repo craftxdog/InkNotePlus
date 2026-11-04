@@ -49,6 +49,7 @@ export const libraryInputSchema = z
     scopeId: z.uuid().nullable().optional(),
     filter: listNotesInputSchema.optional(),
     query: z.string().max(512).optional(),
+    globalSearch: z.boolean().optional(),
   })
   .strict();
 export type LibraryInput = z.output<typeof libraryInputSchema>;
@@ -68,7 +69,7 @@ export const notebookResultSchema = z.discriminatedUnion('ok', [
 export const emptyLibrary: LibrarySnapshot = {
   notebooks: [],
   tags: [],
-  statuses: { active: 0, onhold: 0, completed: 0, dropped: 0 },
+  statuses: { none: 0, active: 0, onhold: 0, completed: 0, dropped: 0 },
   total: 0,
   trash: 0,
   templates: 0,

@@ -1,6 +1,26 @@
 import type { IpcRenderer } from 'electron';
 import type { ZodType } from 'zod';
 import {
+  IMAGE_CHANNELS,
+  imageResultSchema,
+  imageWriteSchema,
+  type ManagedImage,
+} from '../shared/images';
+import {
+  THEME_CHANNELS,
+  themeListResultSchema,
+  registryResultSchema,
+  themeInstallResultSchema,
+  stylesResultSchema,
+  themeNameInputSchema,
+  registryInputSchema,
+  customStylesSchema,
+  type InstalledTheme,
+  type ThemeRegistryInput,
+  type RegistryTheme,
+  type ThemeResult,
+} from '../shared/themes';
+import {
   WINDOW_CHANNELS,
   closeRequestSchema,
   closeReadinessSchema,
@@ -62,6 +82,20 @@ import {
 } from '../shared/notebook-icons';
 
 export interface InkNoteApi {
+  images: {
+    importFile(): Promise<Result<ManagedImage | null>>;
+    write(base64: string): Promise<Result<ManagedImage | null>>;
+  };
+  themes: {
+    list(): Promise<ThemeResult<InstalledTheme[]>>;
+    browse(input?: ThemeRegistryInput): Promise<ThemeResult<RegistryTheme[]>>;
+    install(name: string): Promise<ThemeResult<InstalledTheme>>;
+    importFolder(): Promise<ThemeResult<InstalledTheme>>;
+    remove(name: string): Promise<ThemeResult<InstalledTheme[]>>;
+    getCustomStyles(): Promise<ThemeResult<string>>;
+    setCustomStyles(css: string): Promise<ThemeResult<string>>;
+    onCustomStylesChanged(listener: (css: string) => void): () => void;
+  };
   onBeforeClose(listener: () => Promise<boolean>): () => void;
   links: { openExternal(url: string): Promise<Result<boolean>> };
   library: {
@@ -88,6 +122,84 @@ export function createInkNoteApi(
   ipcRenderer: Pick<IpcRenderer, 'invoke' | 'on' | 'removeListener'>,
 ): InkNoteApi {
   return {
+    images: {
+      importFile: () =>
+        invoke(
+          ipcRenderer,
+          IMAGE_CHANNELS.import,
+          {},
+          emptyPreferencesInputSchema,
+          imageResultSchema,
+        ),
+      write: (base64) =>
+        invoke(
+          ipcRenderer,
+          IMAGE_CHANNELS.write,
+          { base64 },
+          imageWriteSchema,
+          imageResultSchema,
+        ),
+    },
+    themes: {
+      list: () =>
+        themeInvoke(
+          THEME_CHANNELS.list,
+          {},
+          emptyPreferencesInputSchema,
+          themeListResultSchema,
+        ),
+      browse: (input = {}) =>
+        themeInvoke(
+          THEME_CHANNELS.browse,
+          input,
+          registryInputSchema,
+          registryResultSchema,
+        ),
+      install: (name) =>
+        themeInvoke(
+          THEME_CHANNELS.install,
+          { name },
+          themeNameInputSchema,
+          themeInstallResultSchema,
+        ),
+      importFolder: () =>
+        themeInvoke(
+          THEME_CHANNELS.import,
+          {},
+          emptyPreferencesInputSchema,
+          themeInstallResultSchema,
+        ),
+      remove: (name) =>
+        themeInvoke(
+          THEME_CHANNELS.remove,
+          { name },
+          themeNameInputSchema,
+          themeListResultSchema,
+        ),
+      getCustomStyles: () =>
+        themeInvoke(
+          THEME_CHANNELS.stylesGet,
+          {},
+          emptyPreferencesInputSchema,
+          stylesResultSchema,
+        ),
+      setCustomStyles: (css) =>
+        themeInvoke(
+          THEME_CHANNELS.stylesSet,
+          css,
+          customStylesSchema,
+          stylesResultSchema,
+        ),
+      onCustomStylesChanged(listener) {
+        const handler = (_event: unknown, value: unknown) => {
+          const parsed = customStylesSchema.safeParse(value);
+          if (parsed.success) listener(parsed.data);
+        };
+        ipcRenderer.on(THEME_CHANNELS.stylesChanged, handler);
+        return () =>
+          ipcRenderer.removeListener(THEME_CHANNELS.stylesChanged, handler);
+      },
+    },
     onBeforeClose(listener) {
       const handler = (_event: unknown, input: unknown) => {
         const parsed = closeRequestSchema.safeParse(input);
@@ -245,6 +357,26 @@ export function createInkNoteApi(
       };
     },
   };
+  async function themeInvoke<I, O>(
+    channel: string,
+    input: I,
+    inputSchema: InputSchema<I>,
+    outputSchema: InputSchema<ThemeResult<O>>,
+  ): Promise<ThemeResult<O>> {
+    const parsed = inputSchema.safeParse(input);
+    if (!parsed.success)
+      return { ok: false, error: { code: 'invalid_package' } };
+    try {
+      const result = outputSchema.safeParse(
+        await ipcRenderer.invoke(channel, parsed.data),
+      );
+      return result.success
+        ? result.data
+        : { ok: false, error: { code: 'unavailable' } };
+    } catch {
+      return { ok: false, error: { code: 'unavailable' } };
+    }
+  }
 }
 
 async function invoke<TInput, TOutput>(

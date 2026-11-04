@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { noteFilter, toFtsQuery } from './note-query';
+import { noteFilter } from './note-query';
+import { compileNoteSearch } from './search-query';
 import type { DatabaseSync } from 'node:sqlite';
 
 import {
@@ -175,27 +176,17 @@ export class SqliteNoteRepository implements NoteRepository {
   }
 
   search(input: SearchNotesInput): Note[] {
-    const filter = noteFilter(input);
-    const query = toFtsQuery(input.query);
-    if (!query) {
-      return [];
-    }
+    const search = compileNoteSearch(input, input.query);
 
     const rows = this.database
       .prepare(`
         SELECT ${noteColumns}
-        FROM notes_fts
-        INNER JOIN notes ON notes.rowid = notes_fts.rowid
-        WHERE notes_fts MATCH ? AND ${filter.sql}
-        ORDER BY notes.is_pinned DESC, ${input.sort === 'title' ? 'notes.title COLLATE NOCASE,' : 'bm25(notes_fts),'} notes.updated_at DESC, notes.id DESC
+        FROM notes ${search.join}
+        WHERE ${search.sql}
+        ORDER BY notes.is_pinned DESC, ${input.sort === 'title' ? 'notes.title COLLATE NOCASE,' : search.fts ? 'bm25(notes_fts),' : ''} notes.updated_at DESC, notes.id DESC
         LIMIT ? OFFSET ?
       `)
-      .all(
-        query,
-        ...filter.params,
-        normalizeLimit(input.limit),
-        input.offset ?? 0,
-      )
+      .all(...search.params, normalizeLimit(input.limit), input.offset ?? 0)
       .map(parseNoteRow);
 
     return rows.map(toNote);

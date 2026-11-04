@@ -10,6 +10,12 @@ export const shortcutCommands = [
     key: 'Mod-,',
   },
   { id: 'core:new-note', label: 'Nueva nota', scope: 'app', key: 'Mod-n' },
+  {
+    id: 'core:choose-template',
+    label: 'Elegir plantilla para nota vacía',
+    scope: 'app',
+    key: 'Mod-t',
+  },
   { id: 'core:save-note', label: 'Guardar nota', scope: 'app', key: 'Mod-s' },
   {
     id: 'editor:find',
@@ -40,6 +46,65 @@ export const shortcutCommands = [
     label: 'Filtrar notas',
     scope: 'app',
     key: 'Mod-Shift-f',
+  },
+  {
+    id: 'core:find-global',
+    label: 'Buscar en toda la biblioteca',
+    scope: 'app',
+    key: 'Mod-Alt-Shift-f',
+  },
+  {
+    id: 'core:find-clear',
+    label: 'Limpiar filtro',
+    scope: 'search',
+    key: 'Escape',
+  },
+  {
+    id: 'core:pin-note',
+    label: 'Fijar o desfijar nota',
+    scope: 'note-list',
+    key: 'p',
+  },
+  {
+    id: 'editor:toggle-drawer',
+    label: 'Abrir acciones de la nota',
+    scope: 'app',
+    key: 'Mod-j',
+  },
+  {
+    id: 'editor:status-none',
+    label: 'Estado: Sin estado',
+    scope: 'app',
+    key: 'Shift-Alt-1',
+    macKey: 'Meta-Ctrl-1',
+  },
+  {
+    id: 'editor:status-active',
+    label: 'Estado: Activo',
+    scope: 'app',
+    key: 'Shift-Alt-2',
+    macKey: 'Meta-Ctrl-2',
+  },
+  {
+    id: 'editor:status-onhold',
+    label: 'Estado: En espera',
+    scope: 'app',
+    key: 'Shift-Alt-3',
+    macKey: 'Meta-Ctrl-3',
+  },
+  {
+    id: 'editor:status-completed',
+    label: 'Estado: Completado',
+    scope: 'app',
+    key: 'Shift-Alt-4',
+    macKey: 'Meta-Ctrl-4',
+  },
+  {
+    id: 'editor:status-dropped',
+    label: 'Estado: Descartado',
+    scope: 'app',
+    key: 'Shift-Alt-5',
+    macKey: 'Meta-Ctrl-5',
   },
   {
     id: 'view:toggle-sidebar',
@@ -116,10 +181,11 @@ export type KeybindingOverride = z.output<typeof keybindingsSchema>[number];
 export function shortcutFor(
   command: (typeof shortcutCommands)[number],
   overrides: readonly KeybindingOverride[],
+  mac = false,
 ) {
   return (
     overrides.find((binding) => binding.command === command.id)?.keystroke ??
-    command.key
+    (mac && 'macKey' in command ? command.macKey : command.key)
   );
 }
 
@@ -149,7 +215,14 @@ export function shortcutConflict(
   const selected = normalize(keystroke);
   return shortcutCommands.find((candidate) => {
     if (candidate.id === command) return false;
-    const shortcut = shortcutFor(candidate, overrides);
+    const scope = shortcutCommands.find((item) => item.id === command)?.scope;
+    if (
+      scope !== 'app' &&
+      candidate.scope !== 'app' &&
+      candidate.scope !== scope
+    )
+      return false;
+    const shortcut = shortcutFor(candidate, overrides, mac);
     if (!shortcut) return false;
     const other = normalize(shortcut);
     return (

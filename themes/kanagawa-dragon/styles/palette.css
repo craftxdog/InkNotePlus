@@ -1,0 +1,65 @@
+/*
+ * Kanagawa Dragon — color palette for Inkdrop v6.
+ *
+ * Imported from rebelot/kanagawa.nvim (lua/kanagawa/colors.lua, `dragon` theme)
+ * and converted from HEX to HSL. Values are raw HSL triplets — the convention
+ * Inkdrop uses for its --hsl-* tokens — so theme.css / index.css can wrap them in
+ * hsl() and add an alpha channel, e.g. hsl(var(--kanagawa-dragonBlue2) / 80%).
+ *
+ * Original HEX is kept in the trailing comment for cross-reference. The dragon
+ * theme also reuses a handful of shared palette colors (selection, dimmed
+ * foreground, diagnostics, diff and VCS) listed at the bottom.
+ */
+
+:root {
+  /* Dragon background shades */
+  --kanagawa-dragonBlack0: 0deg 4% 5%; /* #0D0C0C */
+  --kanagawa-dragonBlack1: 60deg 9% 6%; /* #12120F */
+  --kanagawa-dragonBlack2: 0deg 4% 9%; /* #181616 */
+  --kanagawa-dragonBlack3: 45deg 7% 11%; /* #1D1C19 (ui.bg) */
+  --kanagawa-dragonBlack4: 0deg 1% 15%; /* #282727 (ui.bg_gutter) */
+  --kanagawa-dragonBlack5: 40deg 3% 22%; /* #393836 (ui.bg_p2) */
+  --kanagawa-dragonBlack6: 30deg 4% 37%; /* #625E5A (ui.nontext) */
+
+  /* Dragon foreground & accents */
+  --kanagawa-dragonWhite: 120deg 4% 78%; /* #C5C9C5 (ui.fg) */
+  --kanagawa-dragonGreen: 120deg 17% 60%; /* #87A987 */
+  --kanagawa-dragonGreen2: 91deg 13% 54%; /* #8A9A7B (string) */
+  --kanagawa-dragonPink: 296deg 8% 61%; /* #A292A3 (number) */
+  --kanagawa-dragonOrange: 23deg 29% 60%; /* #B6927B (constant) */
+  --kanagawa-dragonOrange2: 17deg 31% 60%; /* #B98D7B */
+  --kanagawa-dragonGray: 60deg 5% 63%; /* #A6A69C (parameter) */
+  --kanagawa-dragonGray2: 44deg 5% 60%; /* #9E9B93 (punctuation) */
+  --kanagawa-dragonGray3: 173deg 4% 50%; /* #7A8382 (ui.special) */
+  --kanagawa-dragonBlue2: 199deg 19% 62%; /* #8BA4B0 (function) */
+  --kanagawa-dragonViolet: 222deg 15% 60%; /* #8992A7 (keyword) */
+  --kanagawa-dragonRed: 4deg 42% 60%; /* #C4746E (operator / preproc) */
+  --kanagawa-dragonAqua: 175deg 11% 60%; /* #8EA4A2 (type) */
+  --kanagawa-dragonAsh: 120deg 4% 47%; /* #737C73 (comment) */
+  --kanagawa-dragonTeal: 220deg 18% 65%; /* #949FB5 (special1) */
+  --kanagawa-dragonYellow: 41deg 33% 65%; /* #C4B28A (identifier) */
+
+  /* Shared — selection / floats */
+  --kanagawa-oldWhite: 51deg 33% 68%; /* #C8C093 (fg_dim) */
+  --kanagawa-waveBlue1: 215deg 36% 21%; /* #223249 (bg_visual) */
+  --kanagawa-waveBlue2: 205deg 39% 29%; /* #2D4F67 (bg_search) */
+  --kanagawa-katanaGray: 180deg 5% 46%; /* #717C7C (deprecated) */
+
+  /* Shared — diagnostics */
+  --kanagawa-samuraiRed: 0deg 81% 53%; /* #E82424 (error) */
+  --kanagawa-roninYellow: 30deg 100% 62%; /* #FF9E3B (warning) */
+  --kanagawa-dragonBlue: 199deg 19% 49%; /* #658594 (info) */
+  --kanagawa-waveAqua1: 163deg 17% 50%; /* #6A9589 (hint) */
+  --kanagawa-springGreen: 87deg 37% 58%; /* #98BB6C (ok) */
+
+  /* Shared — diff backgrounds */
+  --kanagawa-winterGreen: 104deg 12% 18%; /* #2B3328 */
+  --kanagawa-winterRed: 346deg 30% 20%; /* #43242B */
+  --kanagawa-winterBlue: 240deg 18% 18%; /* #252535 */
+  --kanagawa-winterYellow: 37deg 10% 26%; /* #49443C */
+
+  /* Shared — VCS */
+  --kanagawa-autumnGreen: 103deg 17% 50%; /* #76946A (added) */
+  --kanagawa-autumnRed: 359deg 52% 51%; /* #C34043 (removed) */
+  --kanagawa-autumnYellow: 33deg 64% 62%; /* #DCA561 (changed) */
+}

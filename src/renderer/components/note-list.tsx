@@ -6,7 +6,16 @@ import {
   Pin,
   ListFilter,
   ClipboardCheck,
+  Filter,
 } from 'lucide-react';
+import {
+  parseNoteSearch,
+  searchHighlightTerms,
+} from '../../shared/note-search';
+import { HighlightedText } from './highlighted-text';
+import { ContextMenu } from './context-menu';
+import { builtinTemplates } from '../templates/builtin-templates';
+import { UiSlot } from '../extensions/ui-slots';
 import type { AppErrorCode, NoteProjection } from '../../shared/ipc';
 import { useWorkspace } from '../state/workspace-context';
 import { IconButton } from './icon-button';
@@ -26,6 +35,13 @@ export function NoteList({
   const creating = useWorkspace((state) => state.noteList.isCreating);
   const activeId = useWorkspace((state) => state.activeNoteId);
   const select = useWorkspace((state) => state.selectNote);
+  const pin = useWorkspace((state) => state.togglePin);
+  const query = useWorkspace((state) => state.searchQuery);
+  const terms = searchHighlightTerms(query);
+  const customize = useWorkspace((state) => state.customizeTemplate);
+  const [menu, setMenu] = useState<{ x: number; y: number; id: string } | null>(
+    null,
+  );
   const create = useWorkspace((state) => state.createNote);
   const navigation = useWorkspace((state) => state.navigation);
   const books = useWorkspace((state) => state.library.notebooks);
@@ -96,6 +112,11 @@ export function NoteList({
           </div>
         </details>
       </div>
+      <UiSlot
+        name={
+          navigation.type === 'trash' ? 'note-list-bar:trash' : 'note-list-bar'
+        }
+      />
       {status === 'loading' && (
         <p className="list-status" role="status">
           Cargando notas…
@@ -105,6 +126,21 @@ export function NoteList({
         <p className="list-status list-error" role="alert">
           {errorMessage(error)}
         </p>
+      )}
+      {navigation.type === 'templates' && !query && (
+        <details className="builtin-template-library">
+          <summary>Plantillas incluidas</summary>
+          {builtinTemplates.map((template) => (
+            <button
+              className="button"
+              type="button"
+              key={template.id}
+              onClick={() => void customize(template)}
+            >
+              {template.title} · Personalizar
+            </button>
+          ))}
+        </details>
       )}
       <ul
         className="note-items"
@@ -116,6 +152,13 @@ export function NoteList({
             key={note.id}
             note={note}
             active={note.id === activeId}
+            terms={terms}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              event.currentTarget.focus();
+              select(note.id);
+              setMenu({ id: note.id, x: event.clientX, y: event.clientY });
+            }}
             onSelect={(id) => {
               select(id);
               onOpenNote();
@@ -142,6 +185,22 @@ export function NoteList({
         {total} {total === 1 ? 'nota' : 'notas'}
         {hasMore ? ` · ${notes.length} cargadas` : ''}
       </footer>
+      {menu && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          onClose={() => setMenu(null)}
+          actions={[
+            {
+              label: notes.find((note) => note.id === menu.id)?.isPinned
+                ? 'Desfijar nota'
+                : 'Fijar nota',
+              disabled: navigation.type === 'trash',
+              run: pin,
+            },
+          ]}
+        />
+      )}
     </section>
   );
 }
@@ -150,6 +209,8 @@ function NoteSearch() {
   const navigation = useWorkspace((state) => state.navigation);
   const query = useWorkspace((state) => state.searchQuery);
   const search = useWorkspace((state) => state.setSearchQuery);
+  const global = useWorkspace((state) => state.searchGlobal);
+  const setGlobal = useWorkspace((state) => state.setSearchGlobal);
   const [input, setInput] = useState(query);
   useEffect(() => setInput(query), [query, navigation]);
   useEffect(() => {
@@ -168,14 +229,32 @@ function NoteSearch() {
         void search(input);
       }}
     >
-      <Search size={16} aria-hidden="true" />
+      <button
+        type="button"
+        className="search-scope-toggle"
+        aria-label={
+          global ? 'Buscar en toda la biblioteca' : 'Filtrar esta vista'
+        }
+        title={
+          global
+            ? 'Cambiar a filtro de esta vista'
+            : 'Cambiar a búsqueda global'
+        }
+        aria-pressed={global}
+        onClick={() => void setGlobal(!global)}
+      >
+        {global ? <Search size={16} /> : <Filter size={16} />}
+      </button>
       <label className="visually-hidden" htmlFor="note-search">
         Buscar notas
       </label>
       <input
         id="note-search"
         type="search"
-        placeholder="Filtrar notas"
+        placeholder={global ? 'Buscar en toda la biblioteca' : 'Filtrar notas'}
+        maxLength={512}
+        title="book:, tag:, status:, title:, body:, frases entre comillas y exclusiones con -"
+        aria-invalid={!!query && !parseNoteSearch(query).valid}
         autoComplete="off"
         value={input}
         onChange={(event) => setInput(event.target.value)}
@@ -198,12 +277,17 @@ const NoteListItem = memo(function NoteListItem({
   note,
   active,
   onSelect,
+  terms,
+  onContextMenu,
 }: {
   note: NoteProjection;
   active: boolean;
   onSelect: (id: string) => void;
+  terms: string[];
+  onContextMenu: React.MouseEventHandler<HTMLButtonElement>;
 }) {
-  const StatusIcon = statusIcons[note.metadata?.status ?? 'active'];
+  const noteStatus = note.metadata?.status ?? 'none';
+  const StatusIcon = statusIcons[noteStatus];
   const excerpt = note.body.replaceAll(/\s+/g, ' ').trim();
   const tasks = [...note.body.matchAll(/^\s*[-*+] \[([ xX])\]/gm)];
   const completed = tasks.filter((task) => task[1] !== ' ').length;
@@ -215,17 +299,23 @@ const NoteListItem = memo(function NoteListItem({
         data-active={active}
         aria-current={active ? 'true' : undefined}
         onClick={() => onSelect(note.id)}
+        onContextMenu={onContextMenu}
       >
         <strong className="note-row-title">
           {note.isPinned && (
             <Pin size={14} className="pin-icon" aria-label="Fijada" />
           )}
-          <StatusIcon
-            size={14}
-            className={`status-${note.metadata?.status ?? 'active'}`}
-            aria-hidden="true"
+          {noteStatus !== 'none' && (
+            <StatusIcon
+              size={14}
+              className={`status-${noteStatus}`}
+              aria-hidden="true"
+            />
+          )}
+          <HighlightedText
+            text={note.title || 'Nota sin título'}
+            terms={terms}
           />
-          {note.title || 'Nota sin título'}
         </strong>
         <span className="note-row-metadata">
           <time
@@ -249,7 +339,9 @@ const NoteListItem = memo(function NoteListItem({
             <TagBadge key={tag} name={tag} />
           ))}
         </span>
-        <span className="note-list-item-excerpt">{excerpt.slice(0, 160)}</span>
+        <span className="note-list-item-excerpt">
+          <HighlightedText text={excerpt.slice(0, 160)} terms={terms} />
+        </span>
       </button>
     </li>
   );

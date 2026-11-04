@@ -1,5 +1,6 @@
 import { z } from './validation';
 export const noteStatusSchema = z.enum([
+  'none',
   'active',
   'onhold',
   'completed',
@@ -15,7 +16,7 @@ export const noteMetadataSchema = z
   .strict();
 export const defaultNoteMetadata: NoteMetadata = {
   notebookId: null,
-  status: 'active',
+  status: 'none',
   tags: [],
   isTemplate: false,
 };

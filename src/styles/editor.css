@@ -1,4 +1,22 @@
 @layer theme.ui.components {
+  .image-size-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--small);
+    flex: none;
+  }
+  .image-size-control select {
+    background: var(--input-background);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    max-inline-size: 130px;
+  }
+  .image-error {
+    padding: 6px 16px;
+    color: var(--negative-color);
+    font-size: var(--small);
+  }
   .editor-layout {
     container-type: inline-size;
     container-name: document;

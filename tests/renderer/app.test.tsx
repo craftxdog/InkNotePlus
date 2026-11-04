@@ -65,7 +65,7 @@ describe('React workspace', () => {
   it('switches all three theme areas together and keeps preferences across reconnects', async () => {
     const bridge = createApi({ list: async () => success([]) });
     const store = createWorkspaceStore(bridge.api);
-    const { container, unmount } = render(<App store={store} />);
+    const { unmount } = render(<App store={store} />);
     await screen.findByText('No hay notas en esta vista.');
     fireEvent.click(screen.getByRole('button', { name: 'Preferencias' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Temas' }));
@@ -76,7 +76,7 @@ describe('React workspace', () => {
       expect(store.getState().preferences.theme).toBe('inknote-dark'),
     );
     expect(
-      container.querySelectorAll('link[data-theme-package="inknote-dark"]'),
+      document.head.querySelectorAll('link[data-theme-package="inknote-dark"]'),
     ).toHaveLength(3);
     await waitFor(async () =>
       expect(await bridge.api.preferences.get()).toMatchObject({

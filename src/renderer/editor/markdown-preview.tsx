@@ -10,7 +10,13 @@ import {
   lazy,
   Suspense,
 } from 'react';
-import Markdown, { type Components, type ExtraProps } from 'react-markdown';
+import Markdown, {
+  defaultUrlTransform,
+  type Components,
+  type ExtraProps,
+} from 'react-markdown';
+import { managedImageUrlPattern } from '../../shared/images';
+import { parseImageDimensions } from './image-dimensions';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import { highlightTree } from '@lezer/highlight';
@@ -56,7 +62,16 @@ export const MarkdownPreview = memo(function MarkdownPreview({
       }}
     >
       <div className="mde-preview" aria-label="Vista previa Markdown">
-        <Markdown remarkPlugins={gfm} skipHtml components={components}>
+        <Markdown
+          remarkPlugins={gfm}
+          skipHtml
+          components={components}
+          urlTransform={(url, key) =>
+            key === 'src' && managedImageUrlPattern.test(url)
+              ? url
+              : defaultUrlTransform(url)
+          }
+        >
           {deferredBody}
         </Markdown>
       </div>
@@ -119,13 +134,35 @@ const components: Components = {
   li: PreviewListItem,
   input: PreviewCheckbox,
   a: PreviewLink,
-  img: ({ alt }) => (
-    <span className="blocked-image">
-      {alt ? `[Imagen: ${alt}]` : '[Imagen]'}
-    </span>
-  ),
+  img: PreviewImage,
   code: PreviewCode,
 };
+function PreviewImage({
+  node: _node,
+  src,
+  alt,
+  title,
+  ...props
+}: ComponentProps<'img'> & ExtraProps) {
+  const { width, height, caption } = parseImageDimensions(alt ?? '');
+  if (typeof src !== 'string' || !managedImageUrlPattern.test(src))
+    return (
+      <span className="blocked-image">
+        {caption ? `[Imagen: ${caption}]` : '[Imagen]'}
+      </span>
+    );
+  return (
+    <img
+      {...props}
+      src={src}
+      alt={caption}
+      title={title}
+      style={{ width, height }}
+      decoding="async"
+      loading="lazy"
+    />
+  );
+}
 
 function PreviewCode({ children, className }: ComponentProps<'code'>) {
   const math = useWorkspace((state) => state.preferences.mathEnabled);

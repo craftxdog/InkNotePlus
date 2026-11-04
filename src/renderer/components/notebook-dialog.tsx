@@ -4,7 +4,7 @@ import { Modal } from './modal';
 
 export function NotebookDialog() {
   const [name, setName] = useState('');
-  const scope = useWorkspace((state) => state.preferences.notebookScopeId);
+  const scope = useWorkspace((state) => state.notebookDialogParentId);
   const [parentId, setParentId] = useState(scope ?? '');
   const [busy, setBusy] = useState(false);
   const [attempted, setAttempted] = useState(false);

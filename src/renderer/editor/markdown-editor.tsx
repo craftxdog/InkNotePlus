@@ -36,6 +36,7 @@ export function MarkdownEditor({
   onView,
   onUpdate,
   preferences,
+  onImageFiles,
 }: {
   value: string;
   nonce: string;
@@ -43,11 +44,12 @@ export function MarkdownEditor({
   onView: (view: EditorView | null) => void;
   onUpdate?: (selectionChanged: boolean) => void;
   preferences: Preferences;
+  onImageFiles?: (files: File[]) => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const callbacks = useRef({ onChange, onView, onUpdate });
-  callbacks.current = { onChange, onView, onUpdate };
+  const callbacks = useRef({ onChange, onView, onUpdate, onImageFiles });
+  callbacks.current = { onChange, onView, onUpdate, onImageFiles };
   const initialValue = useRef(value);
   const settings = useRef(new Compartment()).current;
   const initialSettings = useRef(preferences);
@@ -102,6 +104,34 @@ export function MarkdownEditor({
             '.cm-foldGutter': { width: '12px' },
           }),
           history(),
+          EditorView.domEventHandlers({
+            paste(event) {
+              const files = [...(event.clipboardData?.files ?? [])].filter(
+                (file) => /^image\/(png|jpeg|gif|webp)$/.test(file.type),
+              );
+              if (!files.length || !callbacks.current.onImageFiles)
+                return false;
+              event.preventDefault();
+              callbacks.current.onImageFiles(files);
+              return true;
+            },
+            drop(event, editor) {
+              const files = [...(event.dataTransfer?.files ?? [])].filter(
+                (file) => /^image\/(png|jpeg|gif|webp)$/.test(file.type),
+              );
+              if (!files.length || !callbacks.current.onImageFiles)
+                return false;
+              event.preventDefault();
+              const position = editor.posAtCoords({
+                x: event.clientX,
+                y: event.clientY,
+              });
+              if (position !== null)
+                editor.dispatch({ selection: { anchor: position } });
+              callbacks.current.onImageFiles(files);
+              return true;
+            },
+          }),
           search({ top: true }),
           drawSelection(),
           bracketMatching(),

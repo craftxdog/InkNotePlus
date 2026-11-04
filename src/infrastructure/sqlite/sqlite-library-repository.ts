@@ -9,7 +9,8 @@ import {
   type LibrarySnapshot,
   type Notebook,
 } from '../../shared/library';
-import { noteFilter, toFtsQuery } from './note-query';
+import { noteFilter } from './note-query';
+import { compileNoteSearch } from './search-query';
 import type { SetNotebookIconInput } from '../../shared/notebook-icons';
 
 export class SqliteLibraryRepository {
@@ -72,7 +73,9 @@ export class SqliteLibraryRepository {
       if (typeof row.status === 'string' && row.status in statuses)
         statuses[row.status as keyof typeof statuses] = Number(row.count);
     }
-    const matchingFilter = { ...input.filter, ...scope };
+    const matchingFilter = input.globalSearch
+      ? { ...input.filter }
+      : { ...input.filter, ...scope };
     return librarySchema.parse({
       notebooks,
       tags,
@@ -89,16 +92,16 @@ export class SqliteLibraryRepository {
     input: Parameters<typeof noteFilter>[0],
     query?: string,
   ): number {
-    const filter = noteFilter(input);
-    const fts = query ? toFtsQuery(query) : '';
-    if (query && !fts) return 0;
+    const filter = query
+      ? compileNoteSearch(input, query)
+      : { ...noteFilter(input), join: '' };
     const row = this.database
       .prepare(`
       SELECT COUNT(*) AS count FROM notes
-      ${fts ? 'JOIN notes_fts ON notes.rowid=notes_fts.rowid' : ''}
-      WHERE ${filter.sql} ${fts ? 'AND notes_fts MATCH ?' : ''}
+      ${filter.join}
+      WHERE ${filter.sql}
     `)
-      .get(...filter.params, ...(fts ? [fts] : []));
+      .get(...filter.params);
     return Number(row?.count ?? 0);
   }
 

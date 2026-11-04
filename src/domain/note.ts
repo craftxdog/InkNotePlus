@@ -36,6 +36,7 @@ export interface ListNotesInput {
   status?: NoteMetadata['status'];
   tag?: string;
   templates?: boolean;
+  excludeFinished?: boolean;
 }
 
 export interface SearchNotesInput extends ListNotesInput {

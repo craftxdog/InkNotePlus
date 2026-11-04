@@ -10,6 +10,7 @@ import {
   CirclePause,
   CircleCheck,
   CircleX,
+  CircleDashed,
   Trash2,
   X,
   type LucideIcon,
@@ -20,14 +21,17 @@ import type { Navigation } from '../state/workspace-types';
 import { IconButton } from './icon-button';
 import { tagColor } from './tag-badge';
 import { NotebookTree, NotebookBreadcrumbs } from './notebook-tree';
+import { UiSlot } from '../extensions/ui-slots';
 
 export const statusLabels = {
+  none: 'Sin estado',
   active: 'Activo',
   onhold: 'En espera',
   completed: 'Completado',
   dropped: 'Descartado',
 } as const;
 export const statusIcons = {
+  none: CircleDashed,
   active: CirclePlay,
   onhold: CirclePause,
   completed: CircleCheck,
@@ -89,6 +93,7 @@ export function Sidebar({
       </header>
       <NotebookBreadcrumbs />
       <div className="sidebar-scroll">
+        <UiSlot name={scope ? 'sidebar-workspace-menu' : 'sidebar-menu'} />
         {row('Todas las notas', FileText, { type: 'all' }, library.total)}
         {row(
           'Plantillas de notas',
@@ -116,7 +121,7 @@ export function Sidebar({
           <NotebookTree parentId={scope} onNavigate={onNavigate} />
         </SidebarSection>
         <SidebarSection title="Estado">
-          {(Object.keys(statusLabels) as (keyof typeof statusLabels)[]).map(
+          {(['active', 'onhold', 'completed', 'dropped'] as const).map(
             (status) =>
               row(
                 statusLabels[status],
@@ -179,6 +184,7 @@ export function Sidebar({
         <span className="local-status-dot" />
         Almacenamiento local
       </footer>
+      <UiSlot name="sidebar" />
     </nav>
   );
 }

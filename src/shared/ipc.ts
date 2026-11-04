@@ -43,6 +43,7 @@ export const listNotesInputSchema = z
     status: noteStatusSchema.optional(),
     tag: z.string().trim().min(1).max(40).optional(),
     templates: z.boolean().optional(),
+    excludeFinished: z.boolean().optional(),
   })
   .strict();
 

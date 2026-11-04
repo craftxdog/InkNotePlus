@@ -32,7 +32,7 @@ export function Keybindings({ query }: { query: string }) {
     <div className="keybinding-list">
       {shortcutCommands
         .filter((command) =>
-          `${command.label} ${command.id} ${shortcutFor(command, preferences.keybindings)}`
+          `${command.label} ${command.id} ${shortcutFor(command, preferences.keybindings, platform === 'darwin')}`
             .toLocaleLowerCase()
             .includes(normalized),
         )
@@ -42,7 +42,11 @@ export function Keybindings({ query }: { query: string }) {
             command={command.id}
             label={command.label}
             scope={command.scope}
-            value={shortcutFor(command, preferences.keybindings)}
+            value={shortcutFor(
+              command,
+              preferences.keybindings,
+              platform === 'darwin',
+            )}
           />
         ))}
       <h4>Edición nativa · CodeMirror</h4>

@@ -46,7 +46,9 @@ export function createMainWindowOptions({
       webSecurity: true,
       allowRunningInsecureContent: false,
       webviewTag: false,
-      devTools: isDevelopment,
+      devTools:
+        isDevelopment ||
+        configuration.get(coreConfig.appearance).developmentMode,
     },
   };
 }

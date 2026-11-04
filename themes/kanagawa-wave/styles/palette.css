@@ -1,0 +1,64 @@
+/*
+ * Kanagawa Wave — color palette for Inkdrop v6.
+ *
+ * Imported from rebelot/kanagawa.nvim (lua/kanagawa/colors.lua) and converted
+ * from HEX to HSL. Values are stored as raw HSL triplets — the same convention
+ * Inkdrop uses for its --hsl-* tokens — so theme.css can wrap them in hsl() and
+ * add an alpha channel, e.g. hsl(var(--kanagawa-crystalBlue) / 80%).
+ *
+ * Original HEX is kept in the trailing comment for cross-reference.
+ */
+
+:root {
+  /* Bg Shades */
+  --kanagawa-sumiInk0: 240deg 14% 10%; /* #16161D */
+  --kanagawa-sumiInk1: 240deg 14% 11%; /* #181820 */
+  --kanagawa-sumiInk2: 240deg 13% 12%; /* #1A1A22 */
+  --kanagawa-sumiInk3: 240deg 13% 14%; /* #1F1F28 */
+  --kanagawa-sumiInk4: 240deg 13% 19%; /* #2A2A37 */
+  --kanagawa-sumiInk5: 240deg 13% 24%; /* #363646 */
+  --kanagawa-sumiInk6: 240deg 13% 38%; /* #54546D */
+
+  /* Popup and Floats */
+  --kanagawa-waveBlue1: 215deg 36% 21%; /* #223249 */
+  --kanagawa-waveBlue2: 205deg 39% 29%; /* #2D4F67 */
+
+  /* Diff and Git */
+  --kanagawa-winterGreen: 104deg 12% 18%; /* #2B3328 */
+  --kanagawa-winterYellow: 37deg 10% 26%; /* #49443C */
+  --kanagawa-winterRed: 346deg 30% 20%; /* #43242B */
+  --kanagawa-winterBlue: 240deg 18% 18%; /* #252535 */
+  --kanagawa-autumnGreen: 103deg 17% 50%; /* #76946A */
+  --kanagawa-autumnRed: 359deg 52% 51%; /* #C34043 */
+  --kanagawa-autumnYellow: 33deg 64% 62%; /* #DCA561 */
+
+  /* Diagnostics */
+  --kanagawa-samuraiRed: 0deg 81% 53%; /* #E82424 */
+  --kanagawa-roninYellow: 30deg 100% 62%; /* #FF9E3B */
+  --kanagawa-waveAqua1: 163deg 17% 50%; /* #6A9589 */
+  --kanagawa-dragonBlue: 199deg 19% 49%; /* #658594 */
+
+  /* Fg and Comments */
+  --kanagawa-oldWhite: 51deg 33% 68%; /* #C8C093 */
+  --kanagawa-fujiWhite: 51deg 33% 80%; /* #DCD7BA */
+  --kanagawa-fujiGray: 53deg 4% 43%; /* #727169 */
+
+  /* Accents */
+  --kanagawa-oniViolet: 263deg 29% 61%; /* #957FB8 */
+  --kanagawa-oniViolet2: 249deg 23% 76%; /* #B8B4D0 */
+  --kanagawa-crystalBlue: 220deg 54% 67%; /* #7E9CD8 */
+  --kanagawa-springViolet1: 257deg 15% 60%; /* #938AA9 */
+  --kanagawa-springViolet2: 220deg 30% 70%; /* #9CABCA */
+  --kanagawa-springBlue: 198deg 41% 65%; /* #7FB4CA */
+  --kanagawa-lightBlue: 181deg 37% 74%; /* #A3D4D5 */
+  --kanagawa-waveAqua2: 168deg 21% 57%; /* #7AA89F */
+  --kanagawa-springGreen: 87deg 37% 58%; /* #98BB6C */
+  --kanagawa-boatYellow1: 41deg 26% 46%; /* #938056 */
+  --kanagawa-boatYellow2: 39deg 39% 59%; /* #C0A36E */
+  --kanagawa-carpYellow: 39deg 66% 71%; /* #E6C384 */
+  --kanagawa-sakuraPink: 341deg 48% 66%; /* #D27E99 */
+  --kanagawa-waveRed: 353deg 70% 65%; /* #E46876 */
+  --kanagawa-peachRed: 358deg 100% 68%; /* #FF5D62 */
+  --kanagawa-surimiOrange: 23deg 100% 70%; /* #FFA066 */
+  --kanagawa-katanaGray: 180deg 5% 46%; /* #717C7C */
+}

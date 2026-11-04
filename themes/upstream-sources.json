@@ -1,0 +1,56 @@
+[
+  {
+    "repository": "https://github.com/inkdropapp/solarized-light",
+    "sha": "0f6bbb952cd93ef7cabfe71e6ad2236f6e6cfd23",
+    "license": "MIT",
+    "author": "Takuya Matsuyama",
+    "files": {
+      "themes/solarized-light/package.json": "d6bdbc55fd7cb6352e75690f47e8d1fc3658eb2c",
+      "themes/solarized-light/palette.json": "bf297b391c5a78053c6d4a1428df141653e9fe5f",
+      "themes/solarized-light/styles/preview.css": "9610a531b1864394ec6bb7478f8ca44d387347b3",
+      "themes/solarized-light/styles/syntax.css": "1301bcb18afd945517d599dc431ec42380196034",
+      "themes/solarized-light/styles/tokens.css": "24ce03171d004cd52aabbaffebcc362a9f1ed07f",
+      "themes/solarized-light/styles/ui.css": "e67cc297d2399bdb644f102686a54f14c5d5dfd1"
+    }
+  },
+  {
+    "repository": "https://github.com/inkdropapp/solarized-dark",
+    "sha": "4337f6e5ea9871b6193b5a3bf8db6206de2c3678",
+    "license": "MIT",
+    "author": "Takuya Matsuyama",
+    "files": {
+      "themes/solarized-dark/package.json": "6431af8e0b8b3a375a84f48cd894f61e18636d5e",
+      "themes/solarized-dark/palette.json": "b3909734b40008af0a058595e72d8ce252bb6aa2",
+      "themes/solarized-dark/styles/preview.css": "52242c5de09d47f78585b5f6e16783f5b17a0af5",
+      "themes/solarized-dark/styles/syntax.css": "9bcf1abc2a96484704bb328075dc927a13cc933c",
+      "themes/solarized-dark/styles/tokens.css": "24ce03171d004cd52aabbaffebcc362a9f1ed07f",
+      "themes/solarized-dark/styles/ui.css": "eddf5ff5976f47573ed7be726f0e723a55201312"
+    }
+  },
+  {
+    "repository": "https://github.com/inkdropapp/kanagawa",
+    "sha": "73bac77cd4095c59d8e81a47a7fa0845c1ef6344",
+    "license": "MIT",
+    "author": "Takuya Matsuyama",
+    "files": {
+      "themes/kanagawa-dragon/package.json": "9cc29cd4051150a60e69482a8270c07ca015c6a5",
+      "themes/kanagawa-dragon/palette.json": "f6314104e57a0bcb1b44b1c366f6af38a98ef3af",
+      "themes/kanagawa-dragon/styles/palette.css": "a69d0b6018b51d28a14c7863c9253f89a60d3071",
+      "themes/kanagawa-dragon/styles/preview.css": "3fa66f096ecf47ab6c920ba6bcfb533ecbd6e16c",
+      "themes/kanagawa-dragon/styles/syntax.css": "93476c7951b2a84964882c2442729587eecd6775",
+      "themes/kanagawa-dragon/styles/ui.css": "7ca2c72a74cf9e480fb47de659bd5e665f4dc776",
+      "themes/kanagawa-lotus/package.json": "0e2cf73199e8374801cbfb6f55dce2f810c69564",
+      "themes/kanagawa-lotus/palette.json": "bb8ee74dcc1794b8e8301b697c30fd38806be5d5",
+      "themes/kanagawa-lotus/styles/palette.css": "18ea5d08d55bb2726a54e3a3e3225c17c8e7d422",
+      "themes/kanagawa-lotus/styles/preview.css": "28a1ac23860fff79b6819b2dce00c7c1c0e35c05",
+      "themes/kanagawa-lotus/styles/syntax.css": "c335bb0920b1727a3ddf37aeccf3ca484b7365bd",
+      "themes/kanagawa-lotus/styles/ui.css": "f31c171e1f1af441a1becf2a598f9dff4a7be3f3",
+      "themes/kanagawa-wave/package.json": "3bf4d1bebae4fc1986245ef5bcc87842fdd82f19",
+      "themes/kanagawa-wave/palette.json": "afe585260c2761cec4a42af2c7a6beec67e8e694",
+      "themes/kanagawa-wave/styles/palette.css": "a17c9a336d216541cbf972071491e8e5187cc40a",
+      "themes/kanagawa-wave/styles/preview.css": "d3843137aebcd80e9f3f4ff96bd49652f01cfa20",
+      "themes/kanagawa-wave/styles/syntax.css": "68e2652fbfbb6dada7a296c164ddd4196ae03ba5",
+      "themes/kanagawa-wave/styles/ui.css": "0abfa4c31ecb0232aec2879dada7012dfe5f4e48"
+    }
+  }
+]

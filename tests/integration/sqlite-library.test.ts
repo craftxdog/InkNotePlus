@@ -42,7 +42,7 @@ describe('persistent shell library', () => {
         title: 'Existing title',
         body: 'Existing body',
         revision: 7,
-        metadata: defaultNoteMetadata,
+        metadata: { ...defaultNoteMetadata, status: 'active' },
       });
     } finally {
       legacy.close();
@@ -148,6 +148,7 @@ describe('persistent shell library', () => {
       metadata: {
         ...defaultNoteMetadata,
         notebookId: book.id,
+        status: 'active',
         tags: ['bug'],
         isTemplate: true,
       },

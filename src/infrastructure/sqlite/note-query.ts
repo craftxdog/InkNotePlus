@@ -32,6 +32,10 @@ export function noteFilter(input: ListNotesInput): {
     clauses.push("json_extract(notes.metadata_json,'$.status') = ?");
     params.push(input.status);
   }
+  if (input.excludeFinished && !input.status)
+    clauses.push(
+      "json_extract(notes.metadata_json,'$.status') NOT IN ('completed','dropped')",
+    );
   if (input.templates)
     clauses.push("json_extract(notes.metadata_json,'$.isTemplate') = 1");
   if (input.tag) {
@@ -41,11 +45,4 @@ export function noteFilter(input: ListNotesInput): {
     params.push(input.tag);
   }
   return { sql: clauses.join(' AND '), params };
-}
-
-export function toFtsQuery(value: string): string {
-  return (value.match(/[\p{L}\p{N}_-]+/gu) ?? [])
-    .slice(0, 10)
-    .map((term) => `"${term}"`)
-    .join(' AND ');
 }

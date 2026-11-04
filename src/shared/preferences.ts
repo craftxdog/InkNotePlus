@@ -2,13 +2,17 @@ import { z } from './validation';
 import { appErrorSchema } from './ipc';
 import { keybindingsSchema } from './keybindings';
 
-export const themeIdSchema = z.enum(['inknote-light', 'inknote-dark']);
+export const themeIdSchema = z
+  .string()
+  .max(100)
+  .regex(/^[a-z][a-z0-9-]*$/);
 export const editorModeSchema = z.enum(['edit', 'split', 'preview']);
 const fontFamilySchema = z
   .string()
   .max(240)
   .regex(/^[\p{L}\p{N}\s_,'"\u002e-]*$/u);
 const fields = {
+  developmentMode: z.boolean(),
   theme: themeIdSchema,
   sidebarWidth: z.number().int().min(160).max(400),
   noteListWidth: z.number().int().min(220).max(480),
@@ -40,6 +44,7 @@ const fields = {
 const recordSchema = z.object(fields).strict();
 export type Preferences = z.output<typeof recordSchema>;
 export const defaultPreferences: Preferences = {
+  developmentMode: false,
   theme: 'inknote-light',
   sidebarWidth: 220,
   noteListWidth: 300,

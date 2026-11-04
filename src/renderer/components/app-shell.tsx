@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  lazy,
+  Suspense,
+  type CSSProperties,
+} from 'react';
 import { useWorkspace } from '../state/workspace-context';
 import { resolveShellLayout } from '../layout/shell-layout';
 import { Sidebar } from './sidebar';
@@ -7,6 +14,8 @@ import { DocumentWorkspace } from './document-workspace';
 import { PanelDivider } from './panel-divider';
 import { SettingsDialog } from './settings-dialog';
 import { NotebookDialog } from './notebook-dialog';
+import { UiSlot } from '../extensions/ui-slots';
+const TemplatePicker = lazy(() => import('./template-picker'));
 
 export function AppShell() {
   const layout = useWorkspace((state) => state.mainLayout);
@@ -15,6 +24,7 @@ export function AppShell() {
   const setSidebarVisible = useWorkspace((state) => state.setSidebarVisible);
   const settingsOpen = useWorkspace((state) => state.settingsOpen);
   const notebookDialogOpen = useWorkspace((state) => state.notebookDialogOpen);
+  const templatePickerOpen = useWorkspace((state) => state.templatePickerOpen);
   const platform = useWorkspace((state) => state.platform);
   const root = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(1280);
@@ -88,6 +98,15 @@ export function AppShell() {
           onClick={() => setDrawer(false)}
         />
       )}
+      <UiSlot
+        name={
+          layout.distractionFreeEnabled
+            ? 'main:distraction-free'
+            : resolved.sidebar
+              ? 'main:full'
+              : 'main:slim'
+        }
+      />
       <Sidebar
         drawer={drawer && !resolved.sidebar}
         onClose={() => setDrawer(false)}
@@ -134,6 +153,12 @@ export function AppShell() {
       <div className="modal-layout">
         {settingsOpen && <SettingsDialog />}
         {notebookDialogOpen && <NotebookDialog />}
+        <UiSlot name="modal" />
+        {templatePickerOpen && (
+          <Suspense fallback={null}>
+            <TemplatePicker />
+          </Suspense>
+        )}
       </div>
     </div>
   );

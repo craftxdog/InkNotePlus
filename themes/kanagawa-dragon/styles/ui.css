@@ -1,0 +1,569 @@
+@layer theme.ui {
+  /*
+   * Kanagawa Dragon — semantic UI overrides for Inkdrop v6.
+   *
+   * Maps the variables declared in ui.css to the Kanagawa Dragon palette defined in
+   * palette.css. This is a dark-only theme, so values are assigned directly
+   * (no light-dark()). Surfaces follow the kanagawa.nvim depth model: the editor
+   * sits on the lightest ground (dragonBlack3) while the surrounding chrome and
+   * floats recede into the darker dragon inks.
+   */
+
+  :root {
+    /*-------------------
+      Brand Colors
+    --------------------*/
+    --primary-color: hsl(var(--kanagawa-dragonBlue2));
+    --secondary-color: hsl(var(--kanagawa-dragonViolet));
+    --light-primary-color: hsl(var(--kanagawa-dragonTeal));
+    --light-secondary-color: hsl(var(--kanagawa-dragonGray3));
+
+    /*-------------------
+      Form Input
+    --------------------*/
+    --input-background: hsl(var(--kanagawa-dragonBlack0));
+    --input-color: hsl(var(--kanagawa-dragonWhite) / 90%);
+    --input-placeholder-color: hsl(var(--kanagawa-dragonGray3) / 60%);
+    --input-placeholder-focus-color: hsl(var(--kanagawa-oldWhite) / 60%);
+
+    /*-------------------
+      Focused Input
+    --------------------*/
+    --focused-form-border-color: hsl(var(--kanagawa-dragonBlue2) / 70%);
+    --focused-form-muted-border-color: hsl(var(--kanagawa-dragonBlue2) / 50%);
+    --focused-outline-color: hsl(var(--kanagawa-dragonBlue2) / 30%);
+
+    /*-------------------
+      Page
+    --------------------*/
+    --page-background: hsl(var(--kanagawa-dragonBlack0));
+    --text-color: hsl(var(--kanagawa-dragonWhite) / 90%);
+
+    /*-------------------
+      Links
+    --------------------*/
+    --link-color: hsl(var(--kanagawa-dragonBlue2));
+    --link-hover-color: hsl(var(--kanagawa-dragonTeal));
+
+    /*-------------------
+      Highlighted Text
+    --------------------*/
+    --highlight-background: hsl(var(--kanagawa-waveBlue2));
+    --highlight-color: hsl(var(--kanagawa-dragonWhite));
+    --input-highlight-background: hsl(var(--kanagawa-waveBlue1));
+    --input-highlight-color: hsl(var(--kanagawa-dragonWhite));
+
+    /*-------------------
+      Loader
+    --------------------*/
+    --loader-line-color: hsl(var(--kanagawa-dragonGray3));
+
+    /*-------------------
+      Site Colors (tags / colored labels)
+    --------------------*/
+    --red: hsl(var(--kanagawa-dragonRed));
+    --orange: hsl(var(--kanagawa-dragonOrange));
+    --yellow: hsl(var(--kanagawa-dragonYellow));
+    --olive: hsl(var(--kanagawa-dragonGreen2));
+    --green: hsl(var(--kanagawa-dragonGreen2));
+    --teal: hsl(var(--kanagawa-dragonAqua));
+    --blue: hsl(var(--kanagawa-dragonBlue2));
+    --violet: hsl(var(--kanagawa-dragonViolet));
+    --purple: hsl(var(--kanagawa-dragonViolet));
+    --pink: hsl(var(--kanagawa-dragonPink));
+    --brown: hsl(var(--kanagawa-dragonOrange2));
+    --grey: hsl(var(--kanagawa-dragonGray3));
+
+    /*-------------------
+      Emotive Colors
+    --------------------*/
+    --positive-color: hsl(var(--kanagawa-dragonGreen2));
+    --negative-color: hsl(var(--kanagawa-dragonRed));
+    --info-color: hsl(var(--kanagawa-dragonBlue));
+    --warning-color: hsl(var(--kanagawa-roninYellow));
+
+    /*-------------------
+      Neutral Text
+    --------------------*/
+    --dark-text-color: hsl(var(--kanagawa-dragonWhite) / 90%);
+    --muted-text-color: hsl(var(--kanagawa-oldWhite) / 70%);
+    --light-text-color: hsl(var(--kanagawa-dragonGray3) / 90%);
+    --unselected-text-color: hsl(var(--kanagawa-dragonViolet) / 80%);
+    --hovered-text-color: hsl(var(--kanagawa-dragonWhite) / 95%);
+    --selected-text-color: hsl(var(--kanagawa-dragonWhite));
+
+    /*-------------------
+      Borders
+    --------------------*/
+    --border-color: hsl(var(--kanagawa-dragonBlack6) / 40%);
+    --strong-border-color: hsl(var(--kanagawa-dragonBlack6) / 60%);
+    --internal-border-color: hsl(var(--kanagawa-dragonBlack6) / 30%);
+    --selected-border-color: hsl(var(--kanagawa-dragonBlack6) / 80%);
+    --solid-border-color: hsl(var(--kanagawa-dragonBlack5));
+    --solid-internal-border-color: hsl(var(--kanagawa-dragonBlack4));
+    --solid-selected-border-color: hsl(var(--kanagawa-dragonBlack6));
+
+    /*-------------------
+      Button
+    --------------------*/
+    --button-background: hsl(var(--kanagawa-dragonBlack4)) none;
+    --button-text-color: hsl(var(--kanagawa-dragonWhite) / 75%);
+    --button-hover-background-color: hsl(var(--kanagawa-dragonBlack5));
+    --button-down-background-color: hsl(var(--kanagawa-dragonBlack5));
+    --button-active-background-color: hsl(var(--kanagawa-dragonBlack5));
+    --basic-button-hover-background: hsl(var(--kanagawa-dragonBlack4) / 60%);
+
+    /*-------------------
+      Elements
+    --------------------*/
+    --kbd-background: hsl(var(--kanagawa-dragonBlack4));
+    --mark-background-color: hsl(var(--kanagawa-dragonYellow) / 22%);
+    --mark-border-color: hsl(var(--kanagawa-dragonYellow) / 40%);
+    --mark-color: hsl(var(--kanagawa-dragonWhite));
+
+    /*-------------------
+      Header
+    --------------------*/
+    --header-text-color: hsl(var(--kanagawa-dragonYellow));
+
+    /*-------------------
+      Input
+    --------------------*/
+    --input-focus-border-color: hsl(var(--kanagawa-dragonBlue2));
+
+    /*-------------------
+      Segment
+    --------------------*/
+    --segment-background: hsl(var(--kanagawa-dragonBlack2));
+    --secondary-segment-background: hsl(var(--kanagawa-dragonBlack4) / 60%);
+    --grouped-segment-hover-background: hsl(var(--kanagawa-dragonBlack4) / 80%);
+    --piled-segments-background: hsl(var(--kanagawa-dragonBlack2));
+
+    /*-------------------
+      Form
+    --------------------*/
+    --form-select-background: hsl(var(--kanagawa-dragonBlack0));
+    --form-prompt-background: hsl(var(--kanagawa-dragonBlack4));
+
+    /*-------------------
+      Menu
+    --------------------*/
+    --menu-background: hsl(var(--kanagawa-dragonBlack0));
+    --vertical-menu-background: hsl(var(--kanagawa-dragonBlack0) / 70%);
+    --tabular-menu-active-background: none hsl(var(--kanagawa-dragonBlack4));
+
+    /*-------------------
+      Message
+    --------------------*/
+    --message-background: hsl(var(--kanagawa-dragonBlack4) / 50%);
+
+    /*-------------------
+      Popup
+    --------------------*/
+    --popup-background: hsl(var(--kanagawa-dragonBlack2));
+
+    /*-------------------
+      Table
+    --------------------*/
+    --table-header-background: hsl(var(--kanagawa-dragonBlack4) / 40%);
+
+    /*-------------------
+      Checkbox
+    --------------------*/
+    --checkbox-background: hsl(var(--kanagawa-dragonBlack4));
+    --checkbox-pressed-background: hsl(var(--kanagawa-dragonBlack2));
+    --checkbox-focus-background: hsl(var(--kanagawa-dragonBlack5));
+
+    /*-------------------
+      Dropdown
+    --------------------*/
+    --dropdown-menu-background: hsl(var(--kanagawa-dragonBlack0));
+    --inline-dropdown-menu-background: hsl(var(--kanagawa-dragonBlack0) / 70%);
+
+    /*-------------------
+      Modal
+    --------------------*/
+    --modal-box-header-background: hsl(var(--kanagawa-dragonBlack4));
+    --modal-box-content-background: hsl(var(--kanagawa-dragonBlack3));
+    --modal-box-actions-background: hsl(var(--kanagawa-dragonBlack3));
+
+    /*-------------------
+      Side Bar
+    --------------------*/
+    --sidebar-background: hsl(var(--kanagawa-dragonBlack1));
+    --sidebar-border-right: 1px solid hsl(var(--kanagawa-dragonBlack4));
+    --sidebar-menu-item-inactive-background: hsl(
+      var(--kanagawa-dragonBlue2) / 20%
+    );
+    --sidebar-menu-item-active-background: hsl(var(--kanagawa-waveBlue2) / 60%);
+    --sidebar-menu-section-color: hsl(var(--kanagawa-dragonViolet) / 80%);
+    --sidebar-menu-item-color: hsl(var(--kanagawa-oldWhite) / 80%);
+    --sidebar-menu-active-item-color: hsl(var(--kanagawa-dragonWhite));
+    --sidebar-sync-status-view-background: hsl(
+      var(--kanagawa-dragonBlack4) / 40%
+    );
+    --sidebar-sync-status-view-text-color: hsl(var(--kanagawa-oldWhite) / 70%);
+    --sidebar-sync-status-view-border-top: 1px solid
+      hsl(var(--kanagawa-dragonBlack4));
+
+    /*-------------------
+      Note List Bar
+    --------------------*/
+    --note-list-bar-background: hsl(var(--kanagawa-dragonBlack2));
+    --note-list-bar-border-right: 1px solid
+      hsl(var(--kanagawa-dragonBlack4) / 75%);
+    --note-list-bar-section-header-background: hsl(var(--kanagawa-dragonBlack4));
+    --note-list-view-item-header-color: hsl(var(--kanagawa-dragonWhite));
+    --note-list-view-item-color: hsl(var(--kanagawa-oldWhite) / 70%);
+    --note-list-view-item-separator-border: 1px solid
+      hsl(var(--kanagawa-dragonBlack4) / 60%);
+    --note-list-view-item-date-color: hsl(var(--kanagawa-dragonViolet));
+    --note-list-view-item-selected-background: hsl(
+      var(--kanagawa-waveBlue1) / 70%
+    );
+    --note-list-view-item-active-background: hsl(var(--kanagawa-waveBlue2) / 80%);
+    --note-search-bar-input-background: hsl(var(--kanagawa-dragonBlack0));
+
+    /*-------------------
+      Editor
+    --------------------*/
+    --editor-background: hsl(var(--kanagawa-dragonBlack3));
+    --editor-floating-actions-background: hsl(var(--kanagawa-dragonBlack3) / 70%);
+    --editor-drawer-background: hsl(var(--kanagawa-dragonBlack1) / 70%);
+
+    /*-------------------
+      Header Note Menu
+    --------------------*/
+    --header-note-menu-color: hsl(var(--kanagawa-dragonGray3) / 90%);
+
+    /*-------------------
+      Notifications
+    --------------------*/
+    --notification-item-background: hsl(var(--kanagawa-dragonBlack0) / 80%);
+
+    /*-------------------
+      Preferences
+    --------------------*/
+    --preferences-sidebar-background: hsl(var(--kanagawa-dragonBlack0));
+    --preferences-view-background: hsl(var(--kanagawa-dragonBlack3));
+
+    /*-------------------
+      Note Status
+    --------------------*/
+    --note-status-active: hsl(var(--kanagawa-oldWhite));
+    --note-status-onhold: hsl(var(--kanagawa-roninYellow));
+    --note-status-completed: hsl(var(--kanagawa-dragonGreen2));
+    --note-status-dropped: hsl(var(--kanagawa-dragonRed));
+
+    /*-------------------
+      Task Progress View
+    --------------------*/
+    --task-progress-view-border-color: hsl(var(--kanagawa-dragonBlack0) / 30%);
+    --task-progress-view-background-color: hsl(
+      var(--kanagawa-dragonBlack0) / 30%
+    );
+    --task-progress-view-foreground-color: hsl(var(--kanagawa-dragonWhite) / 60%);
+    --task-progress-view-completed-color: hsl(var(--kanagawa-dragonGreen2));
+
+    /*===================================================================
+      Derived tone aliases — dragon-ink remap.
+
+      ui.css builds a grayscale tone scale (--black/--white/--grey … and
+      their hover/focus/down/active states) plus a few inverted-text and
+      component tokens straight from the default neutral/gray/zinc ramps.
+      Since this theme keeps those ramps untouched, the tokens below would
+      otherwise fall back to Inkdrop's slate neutrals — they are remapped
+      here, shade-for-shade, onto the Kanagawa dragon inks and dragon white.
+    ===================================================================*/
+
+    /*---  Dark tones  ---*/
+    --black: hsl(var(--kanagawa-dragonBlack2));
+    --black-hover: hsl(var(--kanagawa-dragonBlack3));
+    --black-focus: hsl(var(--kanagawa-dragonBlack4));
+    --black-down: hsl(var(--kanagawa-dragonBlack5));
+    --black-active: hsl(var(--kanagawa-dragonBlack5));
+    --full-black-hover: hsl(var(--kanagawa-dragonBlack1));
+    --full-black-focus: hsl(var(--kanagawa-dragonBlack2));
+    --full-black-down: hsl(var(--kanagawa-dragonBlack3));
+    --full-black-active: hsl(var(--kanagawa-dragonBlack3));
+    --light-black: hsl(var(--kanagawa-dragonBlack4));
+    --light-black-hover: hsl(var(--kanagawa-dragonBlack3));
+    --light-black-focus: hsl(var(--kanagawa-dragonBlack3));
+    --light-black-down: hsl(var(--kanagawa-dragonBlack2));
+    --light-black-active: hsl(var(--kanagawa-dragonBlack2));
+
+    /*---  Grey tones  ---*/
+    --grey-hover: hsl(var(--kanagawa-dragonGray3));
+    --grey-focus: hsl(var(--kanagawa-oldWhite) / 75%);
+    --grey-down: hsl(var(--kanagawa-oldWhite));
+    --grey-active: hsl(var(--kanagawa-oldWhite));
+    --light-grey: hsl(var(--kanagawa-oldWhite) / 75%);
+    --light-grey-hover: hsl(var(--kanagawa-dragonGray3));
+    --light-grey-focus: hsl(var(--kanagawa-dragonGray3));
+    --light-grey-down: hsl(var(--kanagawa-dragonBlack6));
+    --light-grey-active: hsl(var(--kanagawa-dragonBlack6));
+
+    /*---  Light tones  ---*/
+    --off-white: hsl(var(--kanagawa-dragonWhite));
+    --dark-white: hsl(var(--kanagawa-oldWhite));
+    --mid-white: hsl(var(--kanagawa-oldWhite) / 85%);
+    --white-hover: hsl(var(--kanagawa-dragonWhite));
+    --white-focus: hsl(var(--kanagawa-oldWhite));
+    --white-down: hsl(var(--kanagawa-oldWhite) / 85%);
+    --white-active: hsl(var(--kanagawa-oldWhite) / 85%);
+    --off-white-hover: hsl(var(--kanagawa-oldWhite));
+    --off-white-focus: hsl(var(--kanagawa-oldWhite) / 85%);
+    --off-white-down: hsl(var(--kanagawa-dragonGray3));
+    --off-white-active: hsl(var(--kanagawa-dragonGray3));
+    --dark-white-hover: hsl(var(--kanagawa-oldWhite) / 85%);
+    --dark-white-focus: hsl(var(--kanagawa-dragonGray3));
+    --dark-white-down: hsl(var(--kanagawa-dragonGray3) / 85%);
+    --dark-white-active: hsl(var(--kanagawa-dragonGray3) / 85%);
+
+    /*---  Secondary tones  ---*/
+    --secondary-color-hover: hsl(var(--kanagawa-dragonBlack4));
+    --secondary-color-focus: hsl(var(--kanagawa-dragonBlack4));
+    --secondary-color-down: hsl(var(--kanagawa-dragonBlack5));
+    --secondary-color-active: hsl(var(--kanagawa-dragonBlack5));
+
+    /*---  Inverted text (dark text on light/colored surfaces)  ---*/
+    --inverted-text-color: hsl(var(--kanagawa-dragonBlack1) / 90%);
+    --inverted-muted-text-color: hsl(var(--kanagawa-dragonBlack1) / 80%);
+    --inverted-light-text-color: hsl(var(--kanagawa-dragonBlack1) / 70%);
+    --inverted-unselected-text-color: hsl(var(--kanagawa-dragonBlack1) / 50%);
+    --inverted-hovered-text-color: hsl(var(--kanagawa-dragonBlack1));
+    --inverted-pressed-text-color: hsl(var(--kanagawa-dragonBlack1));
+    --inverted-selected-text-color: hsl(var(--kanagawa-dragonBlack1));
+    --inverted-disabled-text-color: hsl(var(--kanagawa-dragonBlack1) / 20%);
+
+    /*---  Text & border states  ---*/
+    --pressed-text-color: hsl(var(--kanagawa-dragonWhite) / 90%);
+    --disabled-text-color: hsl(var(--kanagawa-dragonWhite) / 30%);
+    --strong-selected-border-color: hsl(var(--kanagawa-dragonWhite) / 50%);
+    --disabled-border-color: hsl(var(--kanagawa-dragonWhite) / 50%);
+    --solid-white-border-color: hsl(var(--kanagawa-dragonGray3));
+    --selected-solid-white-border-color: hsl(var(--kanagawa-oldWhite) / 75%);
+
+    /*---  Component bits  ---*/
+    --basic-button-down-background: hsl(var(--kanagawa-dragonBlack4) / 50%);
+    --input-down-background: hsl(var(--kanagawa-dragonBlack0));
+    --label-basic-background: hsl(var(--kanagawa-dragonWhite) / 5%);
+    --table-background: hsl(var(--kanagawa-dragonBlack3) / 20%);
+    --toggle-handle-background: hsl(var(--kanagawa-dragonWhite))
+      var(--subtle-gradient);
+    --note-list-bar-pinned-section-header-background: hsl(
+      var(--kanagawa-dragonBlack4)
+    );
+    --grouped-segment-group-segment-box-shadow:
+      0 0 0 1px hsl(var(--kanagawa-dragonWhite) / 10%),
+      0 1px 1px hsl(var(--kanagawa-dragonBlack0) / 0.1),
+      0 1.5px 3px -2px hsl(var(--kanagawa-dragonBlack0) / 0.3),
+      0 4px 6px hsl(var(--kanagawa-dragonBlack0) / 0.04),
+      0 8px 12px -1px hsl(var(--kanagawa-dragonBlack0) / 0.03);
+
+    /*===================================================================
+      Accent decompositions — Kanagawa remap.
+
+      ui.css derives colored tags, callout boxes and every accent button's
+      hover/focus/down/active states from the default blue/green/red/…
+      ramps. The Kanagawa palette has one tone per hue rather than a ramp,
+      so these are mapped onto the nearest palette colors: the winter* inks
+      back colored labels, the dragon/autumn variants stand in for
+      lighter/darker shades, and alpha conveys the pressed feedback.
+    ===================================================================*/
+
+    /*---  Light accent variants  ---*/
+    --light-red: hsl(var(--kanagawa-dragonRed));
+    --light-orange: hsl(var(--kanagawa-dragonOrange));
+    --light-yellow: hsl(var(--kanagawa-dragonYellow));
+    --light-olive: hsl(var(--kanagawa-dragonGreen2));
+    --light-green: hsl(var(--kanagawa-dragonGreen2));
+    --light-teal: hsl(var(--kanagawa-dragonAqua));
+    --light-blue: hsl(var(--kanagawa-dragonTeal));
+    --light-violet: hsl(var(--kanagawa-dragonGray));
+    --light-purple: hsl(var(--kanagawa-dragonGray));
+    --light-pink: hsl(var(--kanagawa-dragonPink));
+    --light-brown: hsl(var(--kanagawa-dragonYellow));
+    /*---  Colored backgrounds (tags / labels)  ---*/
+    --red-background: hsl(var(--kanagawa-winterRed));
+    --orange-background: hsl(var(--kanagawa-winterYellow));
+    --yellow-background: hsl(var(--kanagawa-winterYellow));
+    --olive-background: hsl(var(--kanagawa-winterGreen));
+    --green-background: hsl(var(--kanagawa-winterGreen));
+    --teal-background: hsl(var(--kanagawa-winterGreen));
+    --blue-background: hsl(var(--kanagawa-waveBlue1));
+    --violet-background: hsl(var(--kanagawa-winterBlue));
+    --purple-background: hsl(var(--kanagawa-winterBlue));
+    --pink-background: hsl(var(--kanagawa-winterRed));
+    --brown-background: hsl(var(--kanagawa-winterYellow));
+    /*---  Colored header & text  ---*/
+    --red-header-color: hsl(var(--kanagawa-dragonRed));
+    --orange-header-color: hsl(var(--kanagawa-dragonOrange));
+    --yellow-header-color: hsl(var(--kanagawa-dragonYellow));
+    --olive-header-color: hsl(var(--kanagawa-dragonGreen2));
+    --green-header-color: hsl(var(--kanagawa-dragonGreen2));
+    --teal-header-color: hsl(var(--kanagawa-dragonAqua));
+    --blue-header-color: hsl(var(--kanagawa-dragonBlue2));
+    --violet-header-color: hsl(var(--kanagawa-dragonViolet));
+    --purple-header-color: hsl(var(--kanagawa-dragonViolet));
+    --pink-header-color: hsl(var(--kanagawa-dragonPink));
+    --brown-header-color: hsl(var(--kanagawa-dragonYellow));
+    --red-text-color: hsl(var(--kanagawa-dragonRed));
+    --orange-text-color: hsl(var(--kanagawa-dragonOrange));
+    --yellow-text-color: hsl(var(--kanagawa-dragonYellow));
+    --olive-text-color: hsl(var(--kanagawa-dragonGreen2));
+    --green-text-color: hsl(var(--kanagawa-dragonGreen2));
+    --teal-text-color: hsl(var(--kanagawa-dragonAqua));
+    --blue-text-color: hsl(var(--kanagawa-dragonBlue2));
+    --violet-text-color: hsl(var(--kanagawa-dragonViolet));
+    --purple-text-color: hsl(var(--kanagawa-dragonViolet));
+    --pink-text-color: hsl(var(--kanagawa-dragonPink));
+    --brown-text-color: hsl(var(--kanagawa-dragonYellow));
+    /*---  Emotive callouts (message / alert boxes)  ---*/
+    --positive-background-color: hsl(var(--kanagawa-dragonGreen2) / 15%);
+    --positive-border-color: hsl(var(--kanagawa-dragonGreen2) / 50%);
+    --positive-header-color: hsl(var(--kanagawa-dragonGreen2) / 90%);
+    --positive-text-color: hsl(var(--kanagawa-dragonGreen2) / 90%);
+    --negative-background-color: hsl(var(--kanagawa-dragonRed) / 15%);
+    --negative-border-color: hsl(var(--kanagawa-dragonRed) / 50%);
+    --negative-header-color: hsl(var(--kanagawa-dragonRed) / 90%);
+    --negative-text-color: hsl(var(--kanagawa-dragonRed) / 90%);
+    --info-background-color: hsl(var(--kanagawa-dragonTeal) / 15%);
+    --info-border-color: hsl(var(--kanagawa-dragonTeal) / 50%);
+    --info-header-color: hsl(var(--kanagawa-dragonTeal) / 90%);
+    --info-text-color: hsl(var(--kanagawa-dragonTeal) / 90%);
+    --warning-background-color: hsl(var(--kanagawa-roninYellow) / 15%);
+    --warning-border-color: hsl(var(--kanagawa-dragonYellow) / 60%);
+    --warning-header-color: hsl(var(--kanagawa-dragonYellow) / 90%);
+    --warning-text-color: hsl(var(--kanagawa-dragonYellow) / 90%);
+    /*---  Hover states  ---*/
+    --primary-color-hover: hsl(var(--kanagawa-dragonTeal));
+    --red-hover: hsl(var(--kanagawa-dragonRed));
+    --orange-hover: hsl(var(--kanagawa-dragonOrange));
+    --yellow-hover: hsl(var(--kanagawa-dragonYellow));
+    --olive-hover: hsl(var(--kanagawa-dragonGreen2));
+    --green-hover: hsl(var(--kanagawa-dragonGreen2));
+    --teal-hover: hsl(var(--kanagawa-dragonAqua));
+    --blue-hover: hsl(var(--kanagawa-dragonBlue2));
+    --violet-hover: hsl(var(--kanagawa-dragonViolet));
+    --purple-hover: hsl(var(--kanagawa-dragonViolet));
+    --pink-hover: hsl(var(--kanagawa-dragonPink));
+    --brown-hover: hsl(var(--kanagawa-dragonYellow));
+    --light-red-hover: hsl(var(--kanagawa-dragonRed));
+    --light-orange-hover: hsl(var(--kanagawa-dragonOrange));
+    --light-yellow-hover: hsl(var(--kanagawa-dragonYellow));
+    --light-olive-hover: hsl(var(--kanagawa-dragonGreen2));
+    --light-green-hover: hsl(var(--kanagawa-dragonGreen2));
+    --light-teal-hover: hsl(var(--kanagawa-dragonAqua));
+    --light-blue-hover: hsl(var(--kanagawa-dragonTeal));
+    --light-violet-hover: hsl(var(--kanagawa-dragonGray));
+    --light-purple-hover: hsl(var(--kanagawa-dragonGray));
+    --light-pink-hover: hsl(var(--kanagawa-dragonPink));
+    --light-brown-hover: hsl(var(--kanagawa-dragonYellow));
+    --positive-color-hover: hsl(var(--kanagawa-dragonGreen2));
+    --negative-color-hover: hsl(var(--kanagawa-dragonRed));
+    /*---  Focus states  ---*/
+    --primary-color-focus: hsl(var(--kanagawa-dragonTeal));
+    --red-focus: hsl(var(--kanagawa-dragonRed));
+    --orange-focus: hsl(var(--kanagawa-dragonOrange));
+    --yellow-focus: hsl(var(--kanagawa-dragonYellow));
+    --olive-focus: hsl(var(--kanagawa-dragonGreen2));
+    --green-focus: hsl(var(--kanagawa-dragonGreen2));
+    --teal-focus: hsl(var(--kanagawa-dragonAqua));
+    --blue-focus: hsl(var(--kanagawa-dragonBlue2));
+    --violet-focus: hsl(var(--kanagawa-dragonViolet));
+    --purple-focus: hsl(var(--kanagawa-dragonViolet));
+    --pink-focus: hsl(var(--kanagawa-dragonPink));
+    --brown-focus: hsl(var(--kanagawa-dragonYellow));
+    --light-red-focus: hsl(var(--kanagawa-dragonRed));
+    --light-orange-focus: hsl(var(--kanagawa-dragonOrange));
+    --light-yellow-focus: hsl(var(--kanagawa-dragonYellow));
+    --light-olive-focus: hsl(var(--kanagawa-dragonGreen2));
+    --light-green-focus: hsl(var(--kanagawa-dragonGreen2));
+    --light-teal-focus: hsl(var(--kanagawa-dragonAqua));
+    --light-blue-focus: hsl(var(--kanagawa-dragonTeal));
+    --light-violet-focus: hsl(var(--kanagawa-dragonGray));
+    --light-purple-focus: hsl(var(--kanagawa-dragonGray));
+    --light-pink-focus: hsl(var(--kanagawa-dragonPink));
+    --light-brown-focus: hsl(var(--kanagawa-dragonYellow));
+    --positive-color-focus: hsl(var(--kanagawa-dragonGreen2));
+    --negative-color-focus: hsl(var(--kanagawa-dragonRed));
+    /*---  Down (pressed) states  ---*/
+    --primary-color-down: hsl(var(--kanagawa-dragonBlue2));
+    --red-down: hsl(var(--kanagawa-dragonRed) / 85%);
+    --orange-down: hsl(var(--kanagawa-dragonOrange) / 85%);
+    --yellow-down: hsl(var(--kanagawa-dragonYellow) / 85%);
+    --olive-down: hsl(var(--kanagawa-dragonGreen2) / 85%);
+    --green-down: hsl(var(--kanagawa-dragonGreen2) / 85%);
+    --teal-down: hsl(var(--kanagawa-dragonAqua) / 85%);
+    --blue-down: hsl(var(--kanagawa-dragonBlue2) / 85%);
+    --violet-down: hsl(var(--kanagawa-dragonViolet) / 85%);
+    --purple-down: hsl(var(--kanagawa-dragonViolet) / 85%);
+    --pink-down: hsl(var(--kanagawa-dragonPink) / 85%);
+    --brown-down: hsl(var(--kanagawa-dragonYellow) / 85%);
+    --light-red-down: hsl(var(--kanagawa-dragonRed) / 85%);
+    --light-orange-down: hsl(var(--kanagawa-dragonOrange) / 85%);
+    --light-yellow-down: hsl(var(--kanagawa-dragonYellow) / 85%);
+    --light-olive-down: hsl(var(--kanagawa-dragonGreen2) / 85%);
+    --light-green-down: hsl(var(--kanagawa-dragonGreen2) / 85%);
+    --light-teal-down: hsl(var(--kanagawa-dragonAqua) / 85%);
+    --light-blue-down: hsl(var(--kanagawa-dragonTeal) / 85%);
+    --light-violet-down: hsl(var(--kanagawa-dragonGray) / 85%);
+    --light-purple-down: hsl(var(--kanagawa-dragonGray) / 85%);
+    --light-pink-down: hsl(var(--kanagawa-dragonPink) / 85%);
+    --light-brown-down: hsl(var(--kanagawa-dragonYellow) / 85%);
+    --positive-color-down: hsl(var(--kanagawa-autumnGreen));
+    --negative-color-down: hsl(var(--kanagawa-dragonRed) / 85%);
+    /*---  Active states  ---*/
+    --primary-color-active: hsl(var(--kanagawa-dragonBlue2));
+    --red-active: hsl(var(--kanagawa-dragonRed) / 85%);
+    --orange-active: hsl(var(--kanagawa-dragonOrange) / 85%);
+    --yellow-active: hsl(var(--kanagawa-dragonYellow) / 85%);
+    --olive-active: hsl(var(--kanagawa-dragonGreen2) / 85%);
+    --green-active: hsl(var(--kanagawa-dragonGreen2) / 85%);
+    --teal-active: hsl(var(--kanagawa-dragonAqua) / 85%);
+    --blue-active: hsl(var(--kanagawa-dragonBlue2) / 85%);
+    --violet-active: hsl(var(--kanagawa-dragonViolet) / 85%);
+    --purple-active: hsl(var(--kanagawa-dragonViolet) / 85%);
+    --pink-active: hsl(var(--kanagawa-dragonPink) / 85%);
+    --brown-active: hsl(var(--kanagawa-dragonYellow) / 85%);
+    --light-red-active: hsl(var(--kanagawa-dragonRed) / 85%);
+    --light-orange-active: hsl(var(--kanagawa-dragonOrange) / 85%);
+    --light-yellow-active: hsl(var(--kanagawa-dragonYellow) / 85%);
+    --light-olive-active: hsl(var(--kanagawa-dragonGreen2) / 85%);
+    --light-green-active: hsl(var(--kanagawa-dragonGreen2) / 85%);
+    --light-teal-active: hsl(var(--kanagawa-dragonAqua) / 85%);
+    --light-blue-active: hsl(var(--kanagawa-dragonTeal) / 85%);
+    --light-violet-active: hsl(var(--kanagawa-dragonGray) / 85%);
+    --light-purple-active: hsl(var(--kanagawa-dragonGray) / 85%);
+    --light-pink-active: hsl(var(--kanagawa-dragonPink) / 85%);
+    --light-brown-active: hsl(var(--kanagawa-dragonYellow) / 85%);
+    --positive-color-active: hsl(var(--kanagawa-autumnGreen));
+    --negative-color-active: hsl(var(--kanagawa-dragonRed) / 85%);
+    /*---  Error placeholders & misc  ---*/
+    --input-error-placeholder-focus-color: hsl(var(--kanagawa-dragonRed) / 90%);
+    --input-placeholder-error-color: hsl(var(--kanagawa-dragonRed) / 80%);
+    --input-placeholder-error-focus-color: hsl(var(--kanagawa-dragonRed));
+    --sidebar-notification-view-color: hsl(var(--kanagawa-dragonBlack1) / 90%);
+    --preferences-sidebar-item-active-background: hsl(
+      var(--kanagawa-dragonBlue2) / 20%
+    );
+  }
+
+  /*-------------------
+    Acrylic background window
+  --------------------*/
+
+  :root:has(body.acrylic-window) {
+    --page-background: transparent;
+    --sidebar-background: hsl(var(--kanagawa-dragonBlack1) / 50%);
+    --note-list-bar-background: hsl(var(--kanagawa-dragonBlack2) / 70%);
+    --editor-background: hsl(var(--kanagawa-dragonBlack3) / 90%);
+    --inline-dropdown-menu-background: hsl(var(--kanagawa-dragonBlack1));
+    --vertical-menu-background: hsl(var(--kanagawa-dragonBlack1));
+  }
+
+  :root:has(body.acrylic-window.platform-win32) {
+    --page-background: hsl(var(--kanagawa-dragonBlack0) / 40%);
+  }
+}

@@ -11,12 +11,8 @@ import {
   Workflow,
 } from 'lucide-react';
 import { useWorkspace } from '../state/workspace-context';
-import { themeCatalog } from '../themes/catalog';
-import {
-  type Preferences,
-  type EditorMode,
-  type ThemeId,
-} from '../../shared/preferences';
+import { ThemeSettings } from './theme-settings';
+import { type Preferences, type EditorMode } from '../../shared/preferences';
 import { Modal } from './modal';
 import { CommitRange } from './commit-range';
 import { SettingGroup, FontField, LineHeight } from './settings-controls';
@@ -200,6 +196,11 @@ export function SettingsDialog() {
                   )}
                 </SettingGroup>
                 <SettingGroup title="Paneles">
+                  {toggle(
+                    'developmentMode',
+                    'Modo de desarrollo',
+                    'Permite inspeccionar elementos desde el menú contextual. Requiere reiniciar la aplicación.',
+                  )}
                   {range('sidebarWidth', 'Anchura de biblioteca', 160, 400)}
                   {range('noteListWidth', 'Anchura de lista', 220, 480)}
                   <label>
@@ -296,55 +297,7 @@ export function SettingsDialog() {
                 </SettingGroup>
               </>
             )}
-            {section === 'themes' && (
-              <SettingGroup title="Tema de la aplicación">
-                <label>
-                  Tema
-                  <select
-                    aria-label="Tema"
-                    value={preferences.theme}
-                    onChange={(event) =>
-                      void update({ theme: event.target.value as ThemeId })
-                    }
-                  >
-                    {Object.entries(themeCatalog).map(([id, theme]) => (
-                      <option value={id} key={id}>
-                        {theme.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <p className="settings-description">
-                  Un solo paquete controla interfaz, editor y vista previa
-                  mediante variables CSS.
-                </p>
-                <div className="theme-options">
-                  {Object.entries(themeCatalog).map(([id, theme]) => (
-                    <button
-                      key={id}
-                      type="button"
-                      className="theme-option"
-                      data-theme-preview={id}
-                      aria-pressed={preferences.theme === id}
-                      onClick={() => void update({ theme: id as ThemeId })}
-                    >
-                      <span className="theme-swatch">
-                        <i />
-                        <i />
-                        <i />
-                      </span>
-                      <span>{theme.label}</span>
-                      {preferences.theme === id && <Check size={16} />}
-                    </button>
-                  ))}
-                </div>
-                <p className="settings-description">
-                  La interfaz usa la fuente nativa del sistema. Puedes elegir
-                  otras fuentes para el editor y la vista previa en sus
-                  secciones.
-                </p>
-              </SettingGroup>
-            )}
+            {section === 'themes' && <ThemeSettings />}
             {section === 'keybindings' && (
               <>
                 <label className="settings-search">

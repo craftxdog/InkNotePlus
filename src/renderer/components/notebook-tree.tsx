@@ -4,6 +4,7 @@ import { IconButton } from './icon-button';
 import type { Notebook } from '../../shared/library';
 import { useState } from 'react';
 import { NotebookIcon, NotebookIconPicker } from './notebook-icon';
+import { ContextMenu } from './context-menu';
 
 export function NotebookBreadcrumbs() {
   const books = useWorkspace((state) => state.library.notebooks);
@@ -68,6 +69,10 @@ export function NotebookTree({
   const toggle = useWorkspace((state) => state.toggleNotebook);
   const focus = useWorkspace((state) => state.focusNotebook);
   const [iconNotebookId, setIconNotebookId] = useState<string | null>(null);
+  const create = useWorkspace((state) => state.setNotebookDialogOpen);
+  const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(
+    null,
+  );
   return books
     .filter(
       (book) => book.parentId === parentId && !ancestors.includes(book.id),
@@ -79,6 +84,10 @@ export function NotebookTree({
         <div className={depth ? 'notebook-children' : undefined} key={book.id}>
           <div
             className="notebook-row"
+            onContextMenu={(event) => {
+              event.preventDefault();
+              setMenu({ id: book.id, x: event.clientX, y: event.clientY });
+            }}
             data-active={
               navigation.type === 'notebook' && navigation.id === book.id
             }
@@ -149,6 +158,30 @@ export function NotebookTree({
             <NotebookIconPicker
               id={book.id}
               onClose={() => setIconNotebookId(null)}
+            />
+          )}
+          {menu?.id === book.id && (
+            <ContextMenu
+              x={menu.x}
+              y={menu.y}
+              onClose={() => setMenu(null)}
+              actions={[
+                {
+                  label: 'Nuevo subnotebook',
+                  run: () => create(true, book.id),
+                },
+                {
+                  label: 'Detail',
+                  run: () => {
+                    void focus(book.id);
+                    onNavigate();
+                  },
+                },
+                {
+                  label: 'Cambiar icono',
+                  run: () => setIconNotebookId(book.id),
+                },
+              ]}
             />
           )}
           {children && open && (

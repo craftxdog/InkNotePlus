@@ -1,31 +1,44 @@
-import lightManifest from '../../../themes/inknote-light/package.json';
-import darkManifest from '../../../themes/inknote-dark/package.json';
-import lightUi from '../../../themes/inknote-light/styles/ui.css?url&no-inline';
-import lightSyntax from '../../../themes/inknote-light/styles/syntax.css?url&no-inline';
-import lightPreview from '../../../themes/inknote-light/styles/preview.css?url&no-inline';
-import darkUi from '../../../themes/inknote-dark/styles/ui.css?url&no-inline';
-import darkSyntax from '../../../themes/inknote-dark/styles/syntax.css?url&no-inline';
-import darkPreview from '../../../themes/inknote-dark/styles/preview.css?url&no-inline';
-import { themeManifestSchema } from '../../shared/theme-manifest';
-import type { ThemeId } from '../../shared/preferences';
+import {
+  themeManifestSchema,
+  type ThemeManifest,
+} from '../../shared/theme-manifest';
 
-export const themeCatalog = {
-  'inknote-light': {
-    manifest: themeManifestSchema.parse(lightManifest),
-    label: 'InkNote Light',
-    assets: {
-      'ui.css': lightUi,
-      'syntax.css': lightSyntax,
-      'preview.css': lightPreview,
-    },
-  },
-  'inknote-dark': {
-    manifest: themeManifestSchema.parse(darkManifest),
-    label: 'InkNote Dark',
-    assets: {
-      'ui.css': darkUi,
-      'syntax.css': darkSyntax,
-      'preview.css': darkPreview,
-    },
-  },
-} satisfies Record<ThemeId, unknown>;
+export interface ThemePackage {
+  manifest: ThemeManifest;
+  label: string;
+  styles: string[];
+  source: 'builtin' | 'installed';
+}
+const manifests = import.meta.glob('../../../themes/*/package.json', {
+  eager: true,
+  import: 'default',
+});
+const styles = import.meta.glob('../../../themes/*/styles/*.css', {
+  eager: true,
+  query: '?url&no-inline',
+  import: 'default',
+});
+export const themeCatalog: Record<string, ThemePackage> = Object.fromEntries(
+  Object.entries(manifests).map(([file, raw]) => {
+    const manifest = themeManifestSchema.parse(raw);
+    const directory = file.slice(0, file.lastIndexOf('/'));
+    return [
+      manifest.name,
+      {
+        manifest,
+        label: manifest.name
+          .split('-')
+          .map((word) =>
+            word === 'inknote'
+              ? 'InkNote'
+              : word[0].toUpperCase() + word.slice(1),
+          )
+          .join(' '),
+        styles: manifest.styleSheets.map(
+          (sheet) => styles[`${directory}/styles/${sheet}`] as string,
+        ),
+        source: 'builtin',
+      },
+    ];
+  }),
+);

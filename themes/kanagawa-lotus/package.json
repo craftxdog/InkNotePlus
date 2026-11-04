@@ -1,0 +1,37 @@
+{
+  "name": "kanagawa-lotus",
+  "version": "1.2.1",
+  "theme": true,
+  "themeAppearance": "light",
+  "type": "module",
+  "description": "Kanagawa Lotus Theme for Inkdrop",
+  "styleSheets": [
+    "palette.css",
+    "ui.css",
+    "syntax.css",
+    "preview.css"
+  ],
+  "scripts": {
+    "prepublishOnly": "generate-palette"
+  },
+  "keywords": [
+    "inkdrop",
+    "markdown",
+    "theme",
+    "kanagawa",
+    "light"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/inkdropapp/kanagawa.git",
+    "directory": "packages/lotus"
+  },
+  "author": "Takuya Matsuyama<t@inkdrop.app>",
+  "license": "MIT",
+  "devDependencies": {
+    "@inkdropapp/theme-dev-helpers": "^0.7.1"
+  },
+  "engines": {
+    "inkdrop": "^6.0.0"
+  }
+}

@@ -44,7 +44,7 @@ function DiagramButton({ tooltip, bare: _bare, ...props }: MermaidButtonProps) {
 }
 
 export default function Diagram({ code }: { code: string }) {
-  const theme = useWorkspace((state) => state.preferences.theme);
+  const theme = useWorkspace((state) => state.themeRevision);
   const fontFamily = useWorkspace(
     (state) => state.preferences.previewFontFamily,
   );

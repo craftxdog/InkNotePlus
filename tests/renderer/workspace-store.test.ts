@@ -10,6 +10,20 @@ import {
 } from '../support/renderer-api';
 
 describe('workspace Zustand store', () => {
+  it('leaves Trash when starting a global search so live results stay editable', async () => {
+    const bridge = createApi({
+      list: async () => success([firstNote]),
+      search: async () => success([firstNote]),
+    });
+    const store = createWorkspaceStore(bridge.api);
+    await store.getState().navigate({ type: 'trash' });
+    await store.getState().setSearchGlobal(true);
+    await store.getState().setSearchQuery('First');
+    expect(store.getState().navigation).toEqual({ type: 'all' });
+    expect(store.getState().document.noteId).toBe(firstNote.id);
+    store.getState().setNoteStatus('active');
+    expect(store.getState().document.metadata.status).toBe('active');
+  });
   it('refreshes a filtered section when saving metadata moves a note out of it', async () => {
     let note = {
       ...firstNote,

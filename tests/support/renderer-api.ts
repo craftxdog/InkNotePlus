@@ -39,6 +39,20 @@ export function createApi(overrides: Partial<InkNoteApi['notes']> = {}) {
   const listeners = new Set<(event: NoteChangedEvent) => void>();
   let preferences = { ...defaultPreferences };
   const api: InkNoteApi = {
+    images: {
+      importFile: async () => success(null),
+      write: async () => success(null),
+    },
+    themes: {
+      list: async () => ({ ok: true, data: [] }),
+      browse: async () => ({ ok: true, data: [] }),
+      install: async () => ({ ok: false, error: { code: 'unavailable' } }),
+      importFolder: async () => ({ ok: false, error: { code: 'cancelled' } }),
+      remove: async () => ({ ok: true, data: [] }),
+      getCustomStyles: async () => ({ ok: true, data: '' }),
+      setCustomStyles: async (css) => ({ ok: true, data: css }),
+      onCustomStylesChanged: () => () => {},
+    },
     onBeforeClose: () => () => {},
     links: { openExternal: async () => success(true) },
     library: {

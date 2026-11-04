@@ -18,14 +18,15 @@ export function keystrokeMatches(
   event: Pick<
     KeyboardEvent,
     'key' | 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey'
-  >,
+  > & { code?: string },
   mac: boolean,
 ) {
   const parts = stroke.match(/^(?:(?:Mod|Ctrl|Alt|Shift|Meta)-)*/)?.[0] ?? '';
   const key = stroke.slice(parts.length);
   const modifiers = new Set(parts.split('-').filter(Boolean));
   return (
-    event.key.toLowerCase() === key?.toLowerCase() &&
+    (event.key.toLowerCase() === key?.toLowerCase() ||
+      (/^[1-5]$/.test(key) && event.code === `Digit${key}`)) &&
     event.metaKey ===
       (modifiers.has('Meta') || (mac && modifiers.has('Mod'))) &&
     event.ctrlKey ===
@@ -50,11 +51,48 @@ export function executeShortcut(
     case 'core:new-note':
       void state.createNote();
       return true;
+    case 'core:choose-template':
+      state.setTemplatePickerOpen(true);
+      return true;
     case 'core:save-note':
       void state.flushDrafts();
       return true;
     case 'core:focus-search':
+      void state.setSearchGlobal(false);
       document.querySelector<HTMLInputElement>('#note-search')?.focus();
+      return true;
+    case 'core:find-global':
+      void state.setSearchGlobal(true);
+      document.querySelector<HTMLInputElement>('#note-search')?.focus();
+      return true;
+    case 'core:find-clear':
+      void state.setSearchQuery('');
+      return true;
+    case 'core:pin-note':
+      state.togglePin();
+      return true;
+    case 'editor:toggle-drawer': {
+      const drawer = document.querySelector<HTMLDetailsElement>('.editor-more');
+      if (!drawer) return false;
+      drawer.open = !drawer.open;
+      if (drawer.open)
+        drawer.querySelector<HTMLButtonElement>('.popover button')?.focus();
+      return true;
+    }
+    case 'editor:status-none':
+      state.setNoteStatus('none');
+      return true;
+    case 'editor:status-active':
+      state.setNoteStatus('active');
+      return true;
+    case 'editor:status-onhold':
+      state.setNoteStatus('onhold');
+      return true;
+    case 'editor:status-completed':
+      state.setNoteStatus('completed');
+      return true;
+    case 'editor:status-dropped':
+      state.setNoteStatus('dropped');
       return true;
     case 'view:toggle-sidebar':
       state.setSidebarVisible(!state.mainLayout.sidebarVisible);
@@ -118,12 +156,17 @@ export function installShortcuts(
     const element = event.target instanceof Element ? event.target : null;
     if (element?.closest('[data-shortcut-input]')) return;
     const editor = !!element?.closest('.cm-editor');
+    const list = !!element?.closest('.note-list-item');
+    const search = !!element?.closest('#note-search');
     const commands = shortcutCommands
       .filter(
         (command) =>
-          (!state.settingsOpen ||
+          ((!state.settingsOpen && !state.templatePickerOpen) ||
             command.id === 'application:open-preferences') &&
-          (command.scope === 'app' || editor),
+          (command.scope === 'app' ||
+            (command.scope === 'editor' && editor) ||
+            (command.scope === 'note-list' && list) ||
+            (command.scope === 'search' && search)),
       )
       .toSorted(
         (a, b) => Number(b.scope === 'editor') - Number(a.scope === 'editor'),
@@ -131,7 +174,11 @@ export function installShortcuts(
     const matches = commands
       .map((command) => ({
         command,
-        keys: shortcutFor(command, state.preferences.keybindings).split(' '),
+        keys: shortcutFor(
+          command,
+          state.preferences.keybindings,
+          state.platform === 'darwin',
+        ).split(' '),
       }))
       .filter(
         ({ keys }) =>

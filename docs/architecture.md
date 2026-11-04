@@ -254,6 +254,13 @@ notebooks, contadores visibles, Detail y breadcrumbs. La opción
 `--notes-database=/ruta/a/base.sqlite` revisa notas existentes mediante copias
 en el perfil temporal; abre la base original exclusivamente en modo lectura.
 `pnpm run test:desktop:package` comprueba el paquete nativo previamente construido.
+La prueba incluye los siete temas, protocolo de recursos instalados, CSS personal
+con recarga, imágenes importadas y pegadas, tamaños Marp, plantillas, búsquedas
+calificadas y fijado. `pnpm run test:desktop --catalog` añade una prueba con red:
+consulta el catálogo público e instala y activa un tema desde Preferencias.
+Las descargas usan `fetch` de Node en main, con redirecciones HTTPS validadas;
+el modo manual de `net.fetch` cancela la redirección del tarball en esta versión
+de Electron. Los temas y notas de prueba sólo se escriben en perfiles temporales.
 El cliente `puppeteer-core` es sólo de desarrollo y usa Electron existente;
 no descarga ni distribuye otro navegador. Estas pruebas necesitan un escritorio
 gráfico disponible y cierran únicamente sus procesos temporales.
@@ -301,10 +308,32 @@ de tema unificado de Inkdrop 6: `theme: true`, `themeAppearance`, las tres
 hojas `ui.css`, `syntax.css` y `preview.css`, y
 `prepublishOnly: generate-palette`. Cada tema define sus overrides en
 `theme.ui`, `theme.syntax` y `theme.preview`, sobre las subcapas base oficiales.
-El catálogo valida los manifests y carga las tres hojas como recursos CSS
-externos de la aplicación. Preferencias cambia el paquete completo; no hay
-cargador de temas de terceros ni ejecución de JavaScript de temas. Cada uno tiene su
-`palette.json` generado por `@inkdropapp/theme-dev-helpers` 0.7.1.
+El catálogo valida los manifests y respeta el orden de `styleSheets`, incluido
+un archivo de tokens o paleta compartida antes de las tres áreas. Incluye los
+temas oficiales Solarized Light/Dark y Kanagawa Wave/Dragon/Lotus, con origen,
+revisión y hashes en `themes/upstream-sources.json`. Sus fuentes se conservan;
+sólo se añade un LF final a los JSON de paletas. Por eso el formateador excluye
+esos cinco paquetes, y una prueba comprueba sus hashes contra las fuentes.
+
+ThemeManager precarga todas las hojas sin aplicarlas y cambia el paquete de
+forma atómica. `onDidChangeActiveThemes` se emite después de cargar las hojas;
+Mermaid vuelve a renderizar con los colores efectivos. Una carga fallida
+mantiene el tema anterior y cancela selecciones pendientes obsoletas.
+
+Preferencias consulta el catálogo público de Inkdrop mediante las rutas v2 y
+la cabecera de versión que usa su IPM. Permite instalar temas unificados de
+Inkdrop 6 e importar carpetas descargadas. Los paquetes se guardan bajo
+`<userData>/themes`, sin ejecutar scripts ni instalar sus dependencias. La
+importación rechaza enlaces de archivos, rutas que escapan del paquete,
+archivos excesivos, CSS remoto y paquetes v5. El protocolo restringido
+`inknote-asset:` sirve únicamente CSS, fuentes e imágenes permitidas.
+El catálogo depende de un servicio externo: si no responde, la interfaz
+muestra el error y ofrece reintentar o importar una carpeta local.
+
+`<userData>/styles.css` sobreescribe el tema después de sus hojas. El editor
+de Preferencias guarda automáticamente CSS válido; conserva el borrador si
+hay errores y lo incluye en el protocolo de cierre. Un watcher recarga cambios
+externos. No se ejecuta JavaScript de temas o de estilos.
 
 CodeMirror mapea tags Lezer a las clases públicas `.tok-*`. El preview usa
 `.mde-preview-container` y `.mde-preview`, con variables `--mde-preview-*`.
@@ -346,6 +375,8 @@ Módulos actuales:
 
 - core.config: carga definiciones tipadas y config.json.
 - core.appearance: expone preferencias y nonce de estilos por IPC validado.
+- core.themes: catálogo, importación, eliminación y estilos personales.
+- core.images: importación validada de imágenes y archivos locales gestionados.
 - core.links: abre enlaces web permitidos mediante el navegador del sistema.
 - core.notes: abre SQLite, crea comandos, outbox e IPC de notas y biblioteca.
 
@@ -354,6 +385,51 @@ API, IDs con namespace, capacidades y contribuciones. No existe cargador,
 marketplace ni ejecución de código de terceros. Eso es intencional: un plugin
 futuro necesitará activate/deactivate, Disposable, capacidades mínimas y un
 entorno limitado; no acceso directo a la DB ni a Electron.
+
+El renderer tiene un registro de componentes React de confianza y contribuciones
+a los layouts publicados por Inkdrop. Las altas devuelven Disposable y sólo el
+propietario puede eliminar una contribución. El botón de elegir plantilla usa
+este registro. Las extensiones se aíslan con un error boundary; no se evalúan
+archivos JavaScript descargados del catálogo de temas.
+
+## Organización, búsqueda, plantillas e imágenes
+
+Las notas nuevas empiezan en `none` (Sin estado); los estados ya guardados se
+conservan. Dentro de un notebook se ocultan `completed` y `dropped`, salvo que
+una consulta incluya explícitamente un estado. Los estados siguen accesibles
+en la biblioteca. El menú contextual permite crear subnotebooks, abrir Detail
+y cambiar iconos. Las notas se fijan desde el menú contextual o con P cuando
+la fila tiene foco; Mod-J abre las acciones del editor.
+
+La búsqueda distingue filtro de vista y búsqueda global. Acepta `book:`,
+`tag:`, `status:`, `title:` y `body:`, frases entre comillas y exclusiones `-`.
+Los términos se combinan con AND y los valores se enlazan como parámetros SQL;
+las búsquedas de texto usan FTS5 y no realizan coincidencias por subcadena.
+No se admiten consultas formadas sólo por exclusiones. Listado y contador
+comparten el compilador de búsqueda. Mod-Shift-F filtra la vista;
+Mod-Alt-Shift-F busca globalmente y Escape limpia el filtro.
+
+Una nota vacía ofrece un selector de plantillas con búsqueda, navegación por
+teclado y preview. Mod-T lo abre. Las plantillas personales se almacenan como
+notas con `isTemplate`; el selector pagina los resultados. El parser YAML
+procesa `_template` sin aliases y conserva otro frontmatter. Aplica título,
+notebook local, etiquetas y estado; no borra etiquetas o estados ya elegidos.
+La fecha usa los marcadores documentados (`%Y`, `%m`, `%d`, `%H`, `%M`, `%A`,
+etc.) y `{% uuid %}` genera identificadores. No es un intérprete Liquid general.
+Los blockquotes de instrucciones con encabezado `!` se omiten al generar la nota.
+Se incluye el ejemplo Daily Report publicado en la guía, adaptado sin notebook
+fijo; el resto de la biblioteca privada de plantillas de Inkdrop no se inventa.
+Personalizar el ejemplo crea una plantilla propia y conserva el original.
+
+El editor importa, pega o recibe por arrastre PNG, JPEG, GIF y WebP. Se limitan
+a 5 MB y 16 megapíxeles antes de decodificar; se validan en main y se almacenan
+por hash bajo `<userData>/images`. Markdown sólo renderiza estas URLs gestionadas;
+las imágenes remotas siguen sin solicitarse. Los archivos se guardan junto al
+perfil y todavía no tienen transporte de sincronización remota.
+La sintaxis Marp de alt admite `width:`, `height:`, `w:` y `h:`, números en px
+y las unidades documentadas. Con el cursor dentro de una imagen, la toolbar
+ofrece Automático, 30 %, 50 % y 100 %. El cambio conserva deshacer, actualiza
+el Markdown y el preview y se guarda automáticamente.
 
 ## Seguridad
 
@@ -434,13 +510,18 @@ release público y no se fuerzan con overrides incompatibles.
 
 ## Límites de la siguiente entrega
 
-El shell implementa notebooks anidados, etiquetas, estados, plantillas como
-filtro de notas marcadas, papelera recuperable, toolbar y los tres modos de
-edición. No hay gestor de adjuntos, aplicación automática de plantillas,
-marketplace ni edición de la distribución por plugins. Un proveedor remoto
-requiere contrato y pruebas de recuperación antes de activarse.
+El shell implementa notebooks anidados, etiquetas, estados, plantillas
+aplicables, imágenes locales, papelera, toolbar y los tres modos de edición.
+El catálogo instala temas CSS; no instala plugins ejecutables de Inkdrop.
+No se replica su biblioteca privada de plantillas ni su servicio de cuenta.
+Un proveedor remoto requiere contrato y pruebas de recuperación antes de activarse.
 
 ## Fuentes
+
+- Inkdrop, [gestor de temas](https://developers.inkdrop.app/modules/theme-manager), [extender la UI](https://developers.inkdrop.app/guides/extend-the-ui) y [ajustes CSS](https://developers.inkdrop.app/guides/style-tweaks).
+- Inkdrop, [imágenes Marp](https://docs.inkdrop.app/reference/resize-images), [plantillas](https://docs.inkdrop.app/reference/note-templates), [búsqueda](https://docs.inkdrop.app/reference/search-and-filter-notes), [estados](https://docs.inkdrop.app/reference/note-statuses) y [fijado](https://docs.inkdrop.app/reference/pin-notes-to-top).
+- Inkdrop, [catálogo público](https://my.inkdrop.app/plugins/theme) y [cliente IPM v2](https://github.com/inkdropapp/ipm/blob/main/src/registry.ts).
+- [node-tar](https://isaacs.github.io/node-tar/) y [YAML](https://eemeli.org/yaml/).
 
 - Inkdrop, [base local y flujo de sync](https://developers.inkdrop.app/guides/access-the-local-database), [Flux](https://developers.inkdrop.app/guides/flux-architecture), [configuración](https://developers.inkdrop.app/modules/config), [comandos](https://developers.inkdrop.app/modules/command-registry), [Environment](https://developers.inkdrop.app/modules/environment) y [lifecycle de paquetes](https://developers.inkdrop.app/modules/package-manager).
 - Inkdrop, [layouts](https://developers.inkdrop.app/states/layouts), [estado mainLayout](https://developers.inkdrop.app/states/main-layout) y [creación de temas](https://developers.inkdrop.app/guides/create-a-theme).

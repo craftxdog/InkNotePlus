@@ -1,0 +1,76 @@
+/*
+ * Kanagawa Lotus — color palette for Inkdrop v6 (light theme).
+ *
+ * Imported from rebelot/kanagawa.nvim (lua/kanagawa/colors.lua, `lotus` theme)
+ * and converted from HEX to HSL. Values are raw HSL triplets — the convention
+ * Inkdrop uses for its --hsl-* tokens — so theme.css / index.css can wrap them in
+ * hsl() and add an alpha channel, e.g. hsl(var(--kanagawa-lotusBlue4) / 30%).
+ *
+ * NOTE on the lotusWhite ladder: kanagawa names White3 `bg` (the editor) and
+ * White0–2 the dimmer `bg_m1..m3`, which rise monotonically in lightness
+ * (White0 #D5CEA3 → White3 #F2ECBC). White4/White5 (`bg_p1`/`bg_p2`) are
+ * deliberately *darker* than bg — in a light theme the CursorLine / gutter /
+ * ColorColumn highlights have to be darker than the near-white bg to show. So
+ * surfaces are chosen by luminance/role, not by index: editor = White3
+ * (lightest), chrome = White1/White0, highlights = White4/White0 (darker).
+ */
+
+:root {
+  /* Lotus ink — foreground / dark text */
+  --kanagawa-lotusInk1: 240deg 9% 36%; /* #545464 (ui.fg) */
+  --kanagawa-lotusInk2: 240deg 23% 34%; /* #43436C (fg_dim, float.fg) */
+
+  /* Lotus grays */
+  --kanagawa-lotusGray: 51deg 33% 80%; /* #DCD7BA (fg_reverse) */
+  --kanagawa-lotusGray2: 49deg 8% 41%; /* #716E61 (float.fg_border) */
+  --kanagawa-lotusGray3: 54deg 4% 52%; /* #8A8980 (comment) */
+
+  /* Lotus white background shades (see NOTE above) */
+  --kanagawa-lotusWhite0: 52deg 37% 74%; /* #D5CEA3 (bg_m3 / float.bg) */
+  --kanagawa-lotusWhite1: 51deg 41% 77%; /* #DCD5AC (bg_m2 / bg_dim) */
+  --kanagawa-lotusWhite2: 51deg 50% 79%; /* #E5DDB0 (bg_m1) */
+  --kanagawa-lotusWhite3: 53deg 67% 84%; /* #F2ECBC (bg — editor, lightest) */
+  --kanagawa-lotusWhite4: 50deg 60% 77%; /* #E7DBA0 (bg_p1 / gutter — darker) */
+  --kanagawa-lotusWhite5: 50deg 60% 74%; /* #E4D794 (bg_p2 / cursorline — darker) */
+
+  /* Lotus violet */
+  --kanagawa-lotusViolet1: 255deg 9% 64%; /* #A09CAC (nontext / whitespace) */
+  --kanagawa-lotusViolet2: 258deg 15% 49%; /* #766B90 (special) */
+  --kanagawa-lotusViolet3: 225deg 8% 80%; /* #C9CBD1 (bg_visual) */
+  --kanagawa-lotusViolet4: 264deg 27% 41%; /* #624C83 (keyword) */
+
+  /* Lotus blue */
+  --kanagawa-lotusBlue1: 202deg 29% 83%; /* #C7D7E0 (pmenu.bg) */
+  --kanagawa-lotusBlue2: 194deg 24% 77%; /* #B5CBD2 (bg_search) */
+  --kanagawa-lotusBlue3: 209deg 28% 71%; /* #9FB5C9 (pmenu.bg_sel) */
+  --kanagawa-lotusBlue4: 218deg 34% 45%; /* #4D699B (function) */
+  --kanagawa-lotusBlue5: 245deg 30% 49%; /* #5D57A3 (parameter) */
+
+  /* Lotus green */
+  --kanagawa-lotusGreen: 86deg 27% 42%; /* #6F894E (string) */
+  --kanagawa-lotusGreen2: 102deg 21% 47%; /* #6E915F (vcs added) */
+  --kanagawa-lotusGreen3: 104deg 27% 75%; /* #B7D0AE (diff add) */
+
+  /* Lotus warm accents */
+  --kanagawa-lotusPink: 340deg 37% 53%; /* #B35B79 (number) */
+  --kanagawa-lotusOrange: 32deg 100% 40%; /* #CC6D00 (constant) */
+  --kanagawa-lotusOrange2: 36deg 100% 46%; /* #E98A00 (warning) */
+  --kanagawa-lotusYellow: 54deg 31% 36%; /* #77713F (identifier) */
+  --kanagawa-lotusYellow2: 39deg 28% 40%; /* #836F4A (operator / regex) */
+  --kanagawa-lotusYellow3: 41deg 100% 44%; /* #DE9800 (vcs changed / heading) */
+  --kanagawa-lotusYellow4: 40deg 90% 77%; /* #F9D791 (diff text) */
+
+  /* Lotus red */
+  --kanagawa-lotusRed: 352deg 55% 52%; /* #C84053 (preproc / special) */
+  --kanagawa-lotusRed2: 358deg 64% 56%; /* #D7474B (vcs removed) */
+  --kanagawa-lotusRed3: 0deg 81% 53%; /* #E82424 (error) */
+  --kanagawa-lotusRed4: 15deg 48% 72%; /* #D9A594 (diff delete) */
+
+  /* Lotus teal / aqua */
+  --kanagawa-lotusAqua: 169deg 16% 42%; /* #597B75 (type) */
+  --kanagawa-lotusAqua2: 163deg 17% 45%; /* #5E857A (hint) */
+  --kanagawa-lotusTeal1: 196deg 35% 47%; /* #4E8CA2 (punctuation) */
+  --kanagawa-lotusTeal2: 210deg 41% 57%; /* #6693BF (special1) */
+  --kanagawa-lotusTeal3: 200deg 19% 44%; /* #5A7785 (info) */
+  --kanagawa-lotusCyan: 125deg 18% 87%; /* #D7E3D8 (diff change) */
+}

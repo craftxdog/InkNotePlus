@@ -1,0 +1,175 @@
+@layer theme.preview {
+  /*
+   * Kanagawa Lotus — Markdown preview theme for Inkdrop v6 (LIGHT).
+   *
+   * Mirrors the rendered look of kanagawa-lotus-syntax so the preview pane matches
+   * the editor: headings lotusYellow3, strong lotusRed, emphasis lotusGreen, links
+   * lotusBlue4, ==marks== underlined lotusYellow3. Colors come from palette.css
+   * (--kanagawa-* HSL triplets); surfaces use the lotus whites.
+   */
+
+  :root {
+    /* Raised surfaces for code blocks, tables and images */
+    --kanagawa-preview-surface: hsl(var(--kanagawa-lotusWhite1));
+    --kanagawa-preview-surface-subtle: hsl(var(--kanagawa-lotusWhite1) / 50%);
+
+    /* Links */
+    --mde-preview-link-color: hsl(var(--kanagawa-lotusBlue4));
+
+    /* Lists */
+    --mde-preview-list-marker-color: hsl(var(--kanagawa-lotusTeal2));
+    --mde-preview-list-marker-2-color: hsl(var(--kanagawa-lotusYellow3));
+    --mde-preview-list-marker-3-color: hsl(var(--kanagawa-lotusGreen2));
+
+    /* Code blocks */
+    --mde-preview-codeblock-border-color: hsl(var(--kanagawa-lotusWhite0));
+    --mde-preview-codeblock-background-color: var(
+      --kanagawa-preview-surface-subtle
+    );
+    --mde-preview-codeblock-meta-background-color: var(
+      --kanagawa-preview-surface
+    );
+    --mde-preview-inline-code-text-color: hsl(var(--kanagawa-lotusInk1));
+    --mde-preview-inline-code-border-width: 1px;
+    --mde-preview-inline-code-border-color: hsl(
+      var(--kanagawa-lotusGray3) / 40%
+    );
+    --mde-preview-inline-code-background-color: hsl(
+      var(--kanagawa-lotusWhite1) / 60%
+    );
+
+    /* Tables */
+    --mde-preview-table-head-text-color: hsl(var(--kanagawa-lotusYellow3));
+    --mde-preview-table-head-background-color: var(--kanagawa-preview-surface);
+    --mde-preview-table-row-background-color: var(--kanagawa-preview-surface);
+    --mde-preview-table-row-stripe-background-color: var(
+      --kanagawa-preview-surface-subtle
+    );
+
+    /* Images */
+    --mde-preview-image-background-color: var(--kanagawa-preview-surface);
+
+    /* Mark (==highlight==) */
+    --mde-preview-inline-mark-text-color: hsl(var(--kanagawa-lotusInk2));
+    --mde-preview-inline-mark-background-color: hsl(
+      var(--kanagawa-lotusYellow4) / 45%
+    );
+    --mde-preview-inline-mark-underline-color: hsl(
+      var(--kanagawa-lotusYellow3)
+    );
+
+    /* Prose */
+    --mde-preview-heading-color: hsl(var(--kanagawa-lotusYellow3));
+    --mde-preview-strong-color: hsl(var(--kanagawa-lotusRed));
+    --mde-preview-em-color: hsl(var(--kanagawa-lotusGreen));
+
+    /*
+     * Mermaid diagrams. Kanagawa Lotus is a light theme, so surfaces are light
+     * Kanagawa tints on the cream canvas and text stays dark ink (via the
+     * inherited --text-color). Overriding these base tokens cascades to most
+     * node, actor, state, packet, tag and requirement surfaces through
+     * mermaid.css's own var() chain — the entries below only cover the token
+     * families mermaid.css colors independently rather than cascading.
+     */
+    --mermaid-line-color: hsl(var(--kanagawa-lotusViolet2));
+    --mermaid-node-background-color: hsl(var(--kanagawa-lotusBlue2));
+    --mermaid-node-border-color: hsl(var(--kanagawa-lotusBlue4));
+    --mermaid-cluster-background-color: var(--kanagawa-preview-surface-subtle);
+    --mermaid-cluster-border-color: hsl(var(--kanagawa-lotusInk1) / 20%);
+    --mermaid-edge-label-background-color: hsl(var(--kanagawa-lotusWhite1));
+
+    /* Notes (sequence / state) — warm sticky-note gold */
+    --mermaid-note-background-color: hsl(var(--kanagawa-lotusYellow4));
+    --mermaid-note-border-color: hsl(var(--kanagawa-lotusYellow3));
+    --mermaid-note-text-color: hsl(var(--kanagawa-lotusInk1));
+
+    /* Sequence label box */
+    --mermaid-label-box-background-color: hsl(var(--kanagawa-lotusRed4));
+    --mermaid-label-box-border-color: hsl(var(--kanagawa-lotusPink));
+    --mermaid-label-text-color: hsl(var(--kanagawa-lotusInk2));
+
+    /* Gantt */
+    --mermaid-section-background-color: hsl(var(--kanagawa-lotusInk1) / 8%);
+    --mermaid-alt-section-background-color: hsl(var(--kanagawa-lotusInk1) / 4%);
+    --mermaid-task-background-color: hsl(var(--kanagawa-lotusBlue3));
+    --mermaid-task-border-color: hsl(var(--kanagawa-lotusBlue4));
+    --mermaid-active-task-background-color: hsl(
+      var(--kanagawa-lotusViolet4) / 45%
+    );
+    --mermaid-active-task-border-color: hsl(var(--kanagawa-lotusViolet4));
+    --mermaid-done-task-background-color: hsl(var(--kanagawa-lotusGray));
+    --mermaid-done-task-border-color: hsl(var(--kanagawa-lotusGray2));
+    --mermaid-crit-task-background-color: hsl(var(--kanagawa-lotusRed) / 50%);
+    --mermaid-crit-task-border-color: hsl(var(--kanagawa-lotusRed2));
+    --mermaid-grid-color: hsl(var(--kanagawa-lotusInk1) / 15%);
+    --mermaid-today-line-color: hsl(var(--kanagawa-lotusRed));
+
+    /*
+     * Seed palette — Mermaid derives its categorical scales (pie / git /
+     * quadrant slices, kanban columns) from these three, then in light mode
+     * darkens every derived colour by 25 and paints dark (#333) labels on top.
+     * So the seeds must be VERY light (Mermaid's own light defaults are ~95%
+     * lightness); the Kanagawa palette has no colours that pale, so we mix each
+     * accent hue toward white to lift it there while keeping the theme's hue.
+     * Fully opaque so the resulting pastels stay distinct against the cream.
+     */
+    --mermaid-primary-color: color-mix(
+      in srgb,
+      hsl(var(--kanagawa-lotusBlue4)) 18%,
+      white
+    );
+    --mermaid-secondary-color: color-mix(
+      in srgb,
+      hsl(var(--kanagawa-lotusRed)) 18%,
+      white
+    );
+    --mermaid-tertiary-color: color-mix(
+      in srgb,
+      hsl(var(--kanagawa-lotusGreen2)) 18%,
+      white
+    );
+
+    /* Error */
+    --mermaid-error-background-color: hsl(var(--kanagawa-lotusRed) / 18%);
+    --mermaid-error-text-color: hsl(var(--kanagawa-lotusRed3));
+
+    /* Event modeling — one hue per element kind */
+    --mermaid-em-processor-background-color: hsl(
+      var(--kanagawa-lotusViolet4) / 35%
+    );
+    --mermaid-em-processor-border-color: hsl(var(--kanagawa-lotusViolet4));
+    --mermaid-em-read-model-background-color: hsl(
+      var(--kanagawa-lotusGreen2) / 35%
+    );
+    --mermaid-em-read-model-border-color: hsl(var(--kanagawa-lotusGreen2));
+    --mermaid-em-command-background-color: hsl(
+      var(--kanagawa-lotusBlue4) / 35%
+    );
+    --mermaid-em-command-border-color: hsl(var(--kanagawa-lotusBlue4));
+    --mermaid-em-event-background-color: hsl(
+      var(--kanagawa-lotusYellow3) / 35%
+    );
+    --mermaid-em-event-border-color: hsl(var(--kanagawa-lotusYellow3));
+
+    /* Wardley map */
+    --mermaid-wardley-evolution-color: hsl(var(--kanagawa-lotusRed));
+
+    /* Cynefin — one hue per domain */
+    --mermaid-cynefin-cliff-color: hsl(var(--kanagawa-lotusRed));
+    --mermaid-cynefin-complex-background-color: hsl(
+      var(--kanagawa-lotusGreen2) / 35%
+    );
+    --mermaid-cynefin-complicated-background-color: hsl(
+      var(--kanagawa-lotusBlue4) / 35%
+    );
+    --mermaid-cynefin-chaotic-background-color: hsl(
+      var(--kanagawa-lotusRed) / 35%
+    );
+    --mermaid-cynefin-clear-background-color: hsl(
+      var(--kanagawa-lotusYellow3) / 35%
+    );
+    --mermaid-cynefin-confusion-background-color: hsl(
+      var(--kanagawa-lotusViolet4) / 35%
+    );
+  }
+}

@@ -1,0 +1,563 @@
+@layer theme.ui {
+  /*
+   * Kanagawa Wave — semantic UI overrides for Inkdrop v6.
+   *
+   * Maps the variables declared in ui.css to the Kanagawa Wave palette defined in
+   * palette.css. This is a dark-only theme, so values are assigned directly
+   * (no light-dark()). Surfaces follow the kanagawa.nvim depth model: the editor
+   * sits on the lightest ground (sumiInk3) while the surrounding chrome and floats
+   * recede into the darker sumi inks.
+   */
+
+  :root {
+    /*-------------------
+      Brand Colors
+    --------------------*/
+    --primary-color: hsl(var(--kanagawa-crystalBlue));
+    --secondary-color: hsl(var(--kanagawa-springViolet1));
+    --light-primary-color: hsl(var(--kanagawa-springBlue));
+    --light-secondary-color: hsl(var(--kanagawa-fujiGray));
+
+    /*-------------------
+      Form Input
+    --------------------*/
+    --input-background: hsl(var(--kanagawa-sumiInk0));
+    --input-color: hsl(var(--kanagawa-fujiWhite) / 90%);
+    --input-placeholder-color: hsl(var(--kanagawa-fujiGray) / 60%);
+    --input-placeholder-focus-color: hsl(var(--kanagawa-oldWhite) / 60%);
+
+    /*-------------------
+      Focused Input
+    --------------------*/
+    --focused-form-border-color: hsl(var(--kanagawa-crystalBlue) / 70%);
+    --focused-form-muted-border-color: hsl(var(--kanagawa-crystalBlue) / 50%);
+    --focused-outline-color: hsl(var(--kanagawa-crystalBlue) / 30%);
+
+    /*-------------------
+      Page
+    --------------------*/
+    --page-background: hsl(var(--kanagawa-sumiInk0));
+    --text-color: hsl(var(--kanagawa-fujiWhite) / 90%);
+
+    /*-------------------
+      Links
+    --------------------*/
+    --link-color: hsl(var(--kanagawa-crystalBlue));
+    --link-hover-color: hsl(var(--kanagawa-springBlue));
+
+    /*-------------------
+      Highlighted Text
+    --------------------*/
+    --highlight-background: hsl(var(--kanagawa-waveBlue2));
+    --highlight-color: hsl(var(--kanagawa-fujiWhite));
+    --input-highlight-background: hsl(var(--kanagawa-waveBlue1));
+    --input-highlight-color: hsl(var(--kanagawa-fujiWhite));
+
+    /*-------------------
+      Loader
+    --------------------*/
+    --loader-line-color: hsl(var(--kanagawa-fujiGray));
+
+    /*-------------------
+      Site Colors (tags / colored labels)
+    --------------------*/
+    --red: hsl(var(--kanagawa-autumnRed));
+    --orange: hsl(var(--kanagawa-surimiOrange));
+    --yellow: hsl(var(--kanagawa-carpYellow));
+    --olive: hsl(var(--kanagawa-springGreen));
+    --green: hsl(var(--kanagawa-springGreen));
+    --teal: hsl(var(--kanagawa-waveAqua2));
+    --blue: hsl(var(--kanagawa-crystalBlue));
+    --violet: hsl(var(--kanagawa-oniViolet));
+    --purple: hsl(var(--kanagawa-oniViolet));
+    --pink: hsl(var(--kanagawa-sakuraPink));
+    --brown: hsl(var(--kanagawa-boatYellow1));
+    --grey: hsl(var(--kanagawa-fujiGray));
+
+    /*-------------------
+      Emotive Colors
+    --------------------*/
+    --positive-color: hsl(var(--kanagawa-springGreen));
+    --negative-color: hsl(var(--kanagawa-autumnRed));
+    --info-color: hsl(var(--kanagawa-springBlue));
+    --warning-color: hsl(var(--kanagawa-roninYellow));
+
+    /*-------------------
+      Neutral Text
+    --------------------*/
+    --dark-text-color: hsl(var(--kanagawa-fujiWhite) / 90%);
+    --muted-text-color: hsl(var(--kanagawa-oldWhite) / 70%);
+    --light-text-color: hsl(var(--kanagawa-fujiGray) / 90%);
+    --unselected-text-color: hsl(var(--kanagawa-springViolet1) / 80%);
+    --hovered-text-color: hsl(var(--kanagawa-fujiWhite) / 95%);
+    --selected-text-color: hsl(var(--kanagawa-fujiWhite));
+
+    /*-------------------
+      Borders
+    --------------------*/
+    --border-color: hsl(var(--kanagawa-sumiInk6) / 40%);
+    --strong-border-color: hsl(var(--kanagawa-sumiInk6) / 60%);
+    --internal-border-color: hsl(var(--kanagawa-sumiInk6) / 30%);
+    --selected-border-color: hsl(var(--kanagawa-sumiInk6) / 80%);
+    --solid-border-color: hsl(var(--kanagawa-sumiInk5));
+    --solid-internal-border-color: hsl(var(--kanagawa-sumiInk4));
+    --solid-selected-border-color: hsl(var(--kanagawa-sumiInk6));
+
+    /*-------------------
+      Button
+    --------------------*/
+    --button-background: hsl(var(--kanagawa-sumiInk4)) none;
+    --button-text-color: hsl(var(--kanagawa-fujiWhite) / 75%);
+    --button-hover-background-color: hsl(var(--kanagawa-sumiInk5));
+    --button-down-background-color: hsl(var(--kanagawa-sumiInk5));
+    --button-active-background-color: hsl(var(--kanagawa-sumiInk5));
+    --basic-button-hover-background: hsl(var(--kanagawa-sumiInk4) / 60%);
+
+    /*-------------------
+      Elements
+    --------------------*/
+    --kbd-background: hsl(var(--kanagawa-sumiInk4));
+    --mark-background-color: hsl(var(--kanagawa-carpYellow) / 22%);
+    --mark-border-color: hsl(var(--kanagawa-carpYellow) / 40%);
+    --mark-color: hsl(var(--kanagawa-fujiWhite));
+
+    /*-------------------
+      Header
+    --------------------*/
+    --header-text-color: hsl(var(--kanagawa-carpYellow));
+
+    /*-------------------
+      Input
+    --------------------*/
+    --input-focus-border-color: hsl(var(--kanagawa-crystalBlue));
+
+    /*-------------------
+      Segment
+    --------------------*/
+    --segment-background: hsl(var(--kanagawa-sumiInk2));
+    --secondary-segment-background: hsl(var(--kanagawa-sumiInk4) / 60%);
+    --grouped-segment-hover-background: hsl(var(--kanagawa-sumiInk4) / 80%);
+    --piled-segments-background: hsl(var(--kanagawa-sumiInk2));
+
+    /*-------------------
+      Form
+    --------------------*/
+    --form-select-background: hsl(var(--kanagawa-sumiInk0));
+    --form-prompt-background: hsl(var(--kanagawa-sumiInk4));
+
+    /*-------------------
+      Menu
+    --------------------*/
+    --menu-background: hsl(var(--kanagawa-sumiInk0));
+    --vertical-menu-background: hsl(var(--kanagawa-sumiInk0) / 70%);
+    --tabular-menu-active-background: none hsl(var(--kanagawa-sumiInk4));
+
+    /*-------------------
+      Message
+    --------------------*/
+    --message-background: hsl(var(--kanagawa-sumiInk4) / 50%);
+
+    /*-------------------
+      Popup
+    --------------------*/
+    --popup-background: hsl(var(--kanagawa-sumiInk0));
+
+    /*-------------------
+      Table
+    --------------------*/
+    --table-header-background: hsl(var(--kanagawa-sumiInk4) / 40%);
+
+    /*-------------------
+      Checkbox
+    --------------------*/
+    --checkbox-background: hsl(var(--kanagawa-sumiInk4));
+    --checkbox-pressed-background: hsl(var(--kanagawa-sumiInk2));
+    --checkbox-focus-background: hsl(var(--kanagawa-sumiInk5));
+
+    /*-------------------
+      Dropdown
+    --------------------*/
+    --dropdown-menu-background: hsl(var(--kanagawa-sumiInk0));
+    --inline-dropdown-menu-background: hsl(var(--kanagawa-sumiInk0) / 70%);
+
+    /*-------------------
+      Modal
+    --------------------*/
+    --modal-box-header-background: hsl(var(--kanagawa-sumiInk4));
+    --modal-box-content-background: hsl(var(--kanagawa-sumiInk3));
+    --modal-box-actions-background: hsl(var(--kanagawa-sumiInk3));
+
+    /*-------------------
+      Side Bar
+    --------------------*/
+    --sidebar-background: hsl(var(--kanagawa-sumiInk1));
+    --sidebar-border-right: 1px solid hsl(var(--kanagawa-sumiInk4));
+    --sidebar-menu-item-inactive-background: hsl(
+      var(--kanagawa-crystalBlue) / 20%
+    );
+    --sidebar-menu-item-active-background: hsl(var(--kanagawa-waveBlue2) / 60%);
+    --sidebar-menu-section-color: hsl(var(--kanagawa-springViolet1) / 80%);
+    --sidebar-menu-item-color: hsl(var(--kanagawa-oldWhite) / 80%);
+    --sidebar-menu-active-item-color: hsl(var(--kanagawa-fujiWhite));
+    --sidebar-sync-status-view-background: hsl(var(--kanagawa-sumiInk4) / 40%);
+    --sidebar-sync-status-view-text-color: hsl(var(--kanagawa-oldWhite) / 70%);
+    --sidebar-sync-status-view-border-top: 1px solid hsl(var(--kanagawa-sumiInk4));
+
+    /*-------------------
+      Note List Bar
+    --------------------*/
+    --note-list-bar-background: hsl(var(--kanagawa-sumiInk2));
+    --note-list-bar-border-right: 1px solid hsl(var(--kanagawa-sumiInk4) / 75%);
+    --note-list-bar-section-header-background: hsl(var(--kanagawa-sumiInk4));
+    --note-list-view-item-header-color: hsl(var(--kanagawa-fujiWhite));
+    --note-list-view-item-color: hsl(var(--kanagawa-oldWhite) / 70%);
+    --note-list-view-item-separator-border: 1px solid
+      hsl(var(--kanagawa-sumiInk4) / 60%);
+    --note-list-view-item-date-color: hsl(var(--kanagawa-springViolet1));
+    --note-list-view-item-selected-background: hsl(
+      var(--kanagawa-waveBlue1) / 70%
+    );
+    --note-list-view-item-active-background: hsl(var(--kanagawa-waveBlue2) / 80%);
+    --note-search-bar-input-background: hsl(var(--kanagawa-sumiInk0));
+
+    /*-------------------
+      Editor
+    --------------------*/
+    --editor-background: hsl(var(--kanagawa-sumiInk3));
+    --editor-floating-actions-background: hsl(var(--kanagawa-sumiInk3) / 70%);
+    --editor-drawer-background: hsl(var(--kanagawa-sumiInk1) / 70%);
+
+    /*-------------------
+      Header Note Menu
+    --------------------*/
+    --header-note-menu-color: hsl(var(--kanagawa-fujiGray) / 90%);
+
+    /*-------------------
+      Notifications
+    --------------------*/
+    --notification-item-background: hsl(var(--kanagawa-sumiInk0) / 80%);
+
+    /*-------------------
+      Preferences
+    --------------------*/
+    --preferences-sidebar-background: hsl(var(--kanagawa-sumiInk0));
+    --preferences-view-background: hsl(var(--kanagawa-sumiInk3));
+
+    /*-------------------
+      Note Status
+    --------------------*/
+    --note-status-active: hsl(var(--kanagawa-oldWhite));
+    --note-status-onhold: hsl(var(--kanagawa-roninYellow));
+    --note-status-completed: hsl(var(--kanagawa-springGreen));
+    --note-status-dropped: hsl(var(--kanagawa-autumnRed));
+
+    /*-------------------
+      Task Progress View
+    --------------------*/
+    --task-progress-view-border-color: hsl(var(--kanagawa-sumiInk0) / 30%);
+    --task-progress-view-background-color: hsl(var(--kanagawa-sumiInk0) / 30%);
+    --task-progress-view-foreground-color: hsl(var(--kanagawa-fujiWhite) / 60%);
+    --task-progress-view-completed-color: hsl(var(--kanagawa-springGreen));
+
+    /*===================================================================
+      Derived tone aliases — sumi-ink remap.
+
+      ui.css builds a grayscale tone scale (--black/--white/--grey … and
+      their hover/focus/down/active states) plus a few inverted-text and
+      component tokens straight from the default neutral/gray/zinc ramps.
+      Since this theme keeps those ramps untouched, the tokens below would
+      otherwise fall back to Inkdrop's slate neutrals — they are remapped
+      here, shade-for-shade, onto the Kanagawa sumi inks and fuji whites.
+    ===================================================================*/
+
+    /*---  Dark tones  ---*/
+    --black: hsl(var(--kanagawa-sumiInk2));
+    --black-hover: hsl(var(--kanagawa-sumiInk3));
+    --black-focus: hsl(var(--kanagawa-sumiInk4));
+    --black-down: hsl(var(--kanagawa-sumiInk5));
+    --black-active: hsl(var(--kanagawa-sumiInk5));
+    --full-black-hover: hsl(var(--kanagawa-sumiInk1));
+    --full-black-focus: hsl(var(--kanagawa-sumiInk2));
+    --full-black-down: hsl(var(--kanagawa-sumiInk3));
+    --full-black-active: hsl(var(--kanagawa-sumiInk3));
+    --light-black: hsl(var(--kanagawa-sumiInk4));
+    --light-black-hover: hsl(var(--kanagawa-sumiInk3));
+    --light-black-focus: hsl(var(--kanagawa-sumiInk3));
+    --light-black-down: hsl(var(--kanagawa-sumiInk2));
+    --light-black-active: hsl(var(--kanagawa-sumiInk2));
+
+    /*---  Grey tones  ---*/
+    --grey-hover: hsl(var(--kanagawa-fujiGray));
+    --grey-focus: hsl(var(--kanagawa-oldWhite) / 75%);
+    --grey-down: hsl(var(--kanagawa-oldWhite));
+    --grey-active: hsl(var(--kanagawa-oldWhite));
+    --light-grey: hsl(var(--kanagawa-oldWhite) / 75%);
+    --light-grey-hover: hsl(var(--kanagawa-fujiGray));
+    --light-grey-focus: hsl(var(--kanagawa-fujiGray));
+    --light-grey-down: hsl(var(--kanagawa-sumiInk6));
+    --light-grey-active: hsl(var(--kanagawa-sumiInk6));
+
+    /*---  Light tones  ---*/
+    --off-white: hsl(var(--kanagawa-fujiWhite));
+    --dark-white: hsl(var(--kanagawa-oldWhite));
+    --mid-white: hsl(var(--kanagawa-oldWhite) / 85%);
+    --white-hover: hsl(var(--kanagawa-fujiWhite));
+    --white-focus: hsl(var(--kanagawa-oldWhite));
+    --white-down: hsl(var(--kanagawa-oldWhite) / 85%);
+    --white-active: hsl(var(--kanagawa-oldWhite) / 85%);
+    --off-white-hover: hsl(var(--kanagawa-oldWhite));
+    --off-white-focus: hsl(var(--kanagawa-oldWhite) / 85%);
+    --off-white-down: hsl(var(--kanagawa-fujiGray));
+    --off-white-active: hsl(var(--kanagawa-fujiGray));
+    --dark-white-hover: hsl(var(--kanagawa-oldWhite) / 85%);
+    --dark-white-focus: hsl(var(--kanagawa-fujiGray));
+    --dark-white-down: hsl(var(--kanagawa-fujiGray) / 85%);
+    --dark-white-active: hsl(var(--kanagawa-fujiGray) / 85%);
+
+    /*---  Secondary tones  ---*/
+    --secondary-color-hover: hsl(var(--kanagawa-sumiInk4));
+    --secondary-color-focus: hsl(var(--kanagawa-sumiInk4));
+    --secondary-color-down: hsl(var(--kanagawa-sumiInk5));
+    --secondary-color-active: hsl(var(--kanagawa-sumiInk5));
+
+    /*---  Inverted text (dark text on light/colored surfaces)  ---*/
+    --inverted-text-color: hsl(var(--kanagawa-sumiInk1) / 90%);
+    --inverted-muted-text-color: hsl(var(--kanagawa-sumiInk1) / 80%);
+    --inverted-light-text-color: hsl(var(--kanagawa-sumiInk1) / 70%);
+    --inverted-unselected-text-color: hsl(var(--kanagawa-sumiInk1) / 50%);
+    --inverted-hovered-text-color: hsl(var(--kanagawa-sumiInk1));
+    --inverted-pressed-text-color: hsl(var(--kanagawa-sumiInk1));
+    --inverted-selected-text-color: hsl(var(--kanagawa-sumiInk1));
+    --inverted-disabled-text-color: hsl(var(--kanagawa-sumiInk1) / 20%);
+
+    /*---  Text & border states  ---*/
+    --pressed-text-color: hsl(var(--kanagawa-fujiWhite) / 90%);
+    --disabled-text-color: hsl(var(--kanagawa-fujiWhite) / 30%);
+    --strong-selected-border-color: hsl(var(--kanagawa-fujiWhite) / 50%);
+    --disabled-border-color: hsl(var(--kanagawa-fujiWhite) / 50%);
+    --solid-white-border-color: hsl(var(--kanagawa-fujiGray));
+    --selected-solid-white-border-color: hsl(var(--kanagawa-oldWhite) / 75%);
+
+    /*---  Component bits  ---*/
+    --basic-button-down-background: hsl(var(--kanagawa-sumiInk4) / 50%);
+    --input-down-background: hsl(var(--kanagawa-sumiInk0));
+    --label-basic-background: hsl(var(--kanagawa-fujiWhite) / 5%);
+    --table-background: hsl(var(--kanagawa-sumiInk3) / 20%);
+    --toggle-handle-background: hsl(var(--kanagawa-fujiWhite))
+      var(--subtle-gradient);
+    --note-list-bar-pinned-section-header-background: hsl(
+      var(--kanagawa-sumiInk4)
+    );
+    --grouped-segment-group-segment-box-shadow:
+      0 0 0 1px hsl(var(--kanagawa-fujiWhite) / 10%),
+      0 1px 1px hsl(var(--kanagawa-sumiInk0) / 0.1),
+      0 1.5px 3px -2px hsl(var(--kanagawa-sumiInk0) / 0.3),
+      0 4px 6px hsl(var(--kanagawa-sumiInk0) / 0.04),
+      0 8px 12px -1px hsl(var(--kanagawa-sumiInk0) / 0.03);
+
+    /*===================================================================
+      Accent decompositions — Kanagawa remap.
+
+      ui.css derives colored tags, callout boxes and every accent button's
+      hover/focus/down/active states from the default blue/green/red/…
+      ramps. The Kanagawa palette has one tone per hue rather than a ramp,
+      so these are mapped onto the nearest palette colors: the winter* inks
+      back colored labels, the wave/spring/autumn variants stand in for
+      lighter/darker shades, and alpha conveys the pressed feedback.
+    ===================================================================*/
+
+    /*---  Light accent variants  ---*/
+    --light-red: hsl(var(--kanagawa-waveRed));
+    --light-orange: hsl(var(--kanagawa-surimiOrange));
+    --light-yellow: hsl(var(--kanagawa-carpYellow));
+    --light-olive: hsl(var(--kanagawa-springGreen));
+    --light-green: hsl(var(--kanagawa-springGreen));
+    --light-teal: hsl(var(--kanagawa-waveAqua2));
+    --light-blue: hsl(var(--kanagawa-springBlue));
+    --light-violet: hsl(var(--kanagawa-oniViolet2));
+    --light-purple: hsl(var(--kanagawa-oniViolet2));
+    --light-pink: hsl(var(--kanagawa-sakuraPink));
+    --light-brown: hsl(var(--kanagawa-boatYellow2));
+    /*---  Colored backgrounds (tags / labels)  ---*/
+    --red-background: hsl(var(--kanagawa-winterRed));
+    --orange-background: hsl(var(--kanagawa-winterYellow));
+    --yellow-background: hsl(var(--kanagawa-winterYellow));
+    --olive-background: hsl(var(--kanagawa-winterGreen));
+    --green-background: hsl(var(--kanagawa-winterGreen));
+    --teal-background: hsl(var(--kanagawa-winterGreen));
+    --blue-background: hsl(var(--kanagawa-waveBlue1));
+    --violet-background: hsl(var(--kanagawa-winterBlue));
+    --purple-background: hsl(var(--kanagawa-winterBlue));
+    --pink-background: hsl(var(--kanagawa-winterRed));
+    --brown-background: hsl(var(--kanagawa-winterYellow));
+    /*---  Colored header & text  ---*/
+    --red-header-color: hsl(var(--kanagawa-waveRed));
+    --orange-header-color: hsl(var(--kanagawa-surimiOrange));
+    --yellow-header-color: hsl(var(--kanagawa-carpYellow));
+    --olive-header-color: hsl(var(--kanagawa-springGreen));
+    --green-header-color: hsl(var(--kanagawa-springGreen));
+    --teal-header-color: hsl(var(--kanagawa-waveAqua2));
+    --blue-header-color: hsl(var(--kanagawa-crystalBlue));
+    --violet-header-color: hsl(var(--kanagawa-oniViolet));
+    --purple-header-color: hsl(var(--kanagawa-oniViolet));
+    --pink-header-color: hsl(var(--kanagawa-sakuraPink));
+    --brown-header-color: hsl(var(--kanagawa-boatYellow2));
+    --red-text-color: hsl(var(--kanagawa-waveRed));
+    --orange-text-color: hsl(var(--kanagawa-surimiOrange));
+    --yellow-text-color: hsl(var(--kanagawa-carpYellow));
+    --olive-text-color: hsl(var(--kanagawa-springGreen));
+    --green-text-color: hsl(var(--kanagawa-springGreen));
+    --teal-text-color: hsl(var(--kanagawa-waveAqua2));
+    --blue-text-color: hsl(var(--kanagawa-crystalBlue));
+    --violet-text-color: hsl(var(--kanagawa-oniViolet));
+    --purple-text-color: hsl(var(--kanagawa-oniViolet));
+    --pink-text-color: hsl(var(--kanagawa-sakuraPink));
+    --brown-text-color: hsl(var(--kanagawa-boatYellow2));
+    /*---  Emotive callouts (message / alert boxes)  ---*/
+    --positive-background-color: hsl(var(--kanagawa-springGreen) / 15%);
+    --positive-border-color: hsl(var(--kanagawa-springGreen) / 50%);
+    --positive-header-color: hsl(var(--kanagawa-springGreen) / 90%);
+    --positive-text-color: hsl(var(--kanagawa-springGreen) / 90%);
+    --negative-background-color: hsl(var(--kanagawa-autumnRed) / 15%);
+    --negative-border-color: hsl(var(--kanagawa-autumnRed) / 50%);
+    --negative-header-color: hsl(var(--kanagawa-waveRed) / 90%);
+    --negative-text-color: hsl(var(--kanagawa-waveRed) / 90%);
+    --info-background-color: hsl(var(--kanagawa-springBlue) / 15%);
+    --info-border-color: hsl(var(--kanagawa-springBlue) / 50%);
+    --info-header-color: hsl(var(--kanagawa-springBlue) / 90%);
+    --info-text-color: hsl(var(--kanagawa-springBlue) / 90%);
+    --warning-background-color: hsl(var(--kanagawa-roninYellow) / 15%);
+    --warning-border-color: hsl(var(--kanagawa-boatYellow2) / 60%);
+    --warning-header-color: hsl(var(--kanagawa-carpYellow) / 90%);
+    --warning-text-color: hsl(var(--kanagawa-carpYellow) / 90%);
+    /*---  Hover states  ---*/
+    --primary-color-hover: hsl(var(--kanagawa-springBlue));
+    --red-hover: hsl(var(--kanagawa-waveRed));
+    --orange-hover: hsl(var(--kanagawa-surimiOrange));
+    --yellow-hover: hsl(var(--kanagawa-carpYellow));
+    --olive-hover: hsl(var(--kanagawa-springGreen));
+    --green-hover: hsl(var(--kanagawa-springGreen));
+    --teal-hover: hsl(var(--kanagawa-waveAqua2));
+    --blue-hover: hsl(var(--kanagawa-crystalBlue));
+    --violet-hover: hsl(var(--kanagawa-oniViolet));
+    --purple-hover: hsl(var(--kanagawa-oniViolet));
+    --pink-hover: hsl(var(--kanagawa-sakuraPink));
+    --brown-hover: hsl(var(--kanagawa-boatYellow2));
+    --light-red-hover: hsl(var(--kanagawa-waveRed));
+    --light-orange-hover: hsl(var(--kanagawa-surimiOrange));
+    --light-yellow-hover: hsl(var(--kanagawa-carpYellow));
+    --light-olive-hover: hsl(var(--kanagawa-springGreen));
+    --light-green-hover: hsl(var(--kanagawa-springGreen));
+    --light-teal-hover: hsl(var(--kanagawa-waveAqua2));
+    --light-blue-hover: hsl(var(--kanagawa-springBlue));
+    --light-violet-hover: hsl(var(--kanagawa-oniViolet2));
+    --light-purple-hover: hsl(var(--kanagawa-oniViolet2));
+    --light-pink-hover: hsl(var(--kanagawa-sakuraPink));
+    --light-brown-hover: hsl(var(--kanagawa-boatYellow2));
+    --positive-color-hover: hsl(var(--kanagawa-springGreen));
+    --negative-color-hover: hsl(var(--kanagawa-autumnRed));
+    /*---  Focus states  ---*/
+    --primary-color-focus: hsl(var(--kanagawa-springBlue));
+    --red-focus: hsl(var(--kanagawa-waveRed));
+    --orange-focus: hsl(var(--kanagawa-surimiOrange));
+    --yellow-focus: hsl(var(--kanagawa-carpYellow));
+    --olive-focus: hsl(var(--kanagawa-springGreen));
+    --green-focus: hsl(var(--kanagawa-springGreen));
+    --teal-focus: hsl(var(--kanagawa-waveAqua2));
+    --blue-focus: hsl(var(--kanagawa-crystalBlue));
+    --violet-focus: hsl(var(--kanagawa-oniViolet));
+    --purple-focus: hsl(var(--kanagawa-oniViolet));
+    --pink-focus: hsl(var(--kanagawa-sakuraPink));
+    --brown-focus: hsl(var(--kanagawa-boatYellow2));
+    --light-red-focus: hsl(var(--kanagawa-waveRed));
+    --light-orange-focus: hsl(var(--kanagawa-surimiOrange));
+    --light-yellow-focus: hsl(var(--kanagawa-carpYellow));
+    --light-olive-focus: hsl(var(--kanagawa-springGreen));
+    --light-green-focus: hsl(var(--kanagawa-springGreen));
+    --light-teal-focus: hsl(var(--kanagawa-waveAqua2));
+    --light-blue-focus: hsl(var(--kanagawa-springBlue));
+    --light-violet-focus: hsl(var(--kanagawa-oniViolet2));
+    --light-purple-focus: hsl(var(--kanagawa-oniViolet2));
+    --light-pink-focus: hsl(var(--kanagawa-sakuraPink));
+    --light-brown-focus: hsl(var(--kanagawa-boatYellow2));
+    --positive-color-focus: hsl(var(--kanagawa-springGreen));
+    --negative-color-focus: hsl(var(--kanagawa-autumnRed));
+    /*---  Down (pressed) states  ---*/
+    --primary-color-down: hsl(var(--kanagawa-crystalBlue));
+    --red-down: hsl(var(--kanagawa-waveRed) / 85%);
+    --orange-down: hsl(var(--kanagawa-surimiOrange) / 85%);
+    --yellow-down: hsl(var(--kanagawa-carpYellow) / 85%);
+    --olive-down: hsl(var(--kanagawa-springGreen) / 85%);
+    --green-down: hsl(var(--kanagawa-springGreen) / 85%);
+    --teal-down: hsl(var(--kanagawa-waveAqua2) / 85%);
+    --blue-down: hsl(var(--kanagawa-crystalBlue) / 85%);
+    --violet-down: hsl(var(--kanagawa-oniViolet) / 85%);
+    --purple-down: hsl(var(--kanagawa-oniViolet) / 85%);
+    --pink-down: hsl(var(--kanagawa-sakuraPink) / 85%);
+    --brown-down: hsl(var(--kanagawa-boatYellow2) / 85%);
+    --light-red-down: hsl(var(--kanagawa-waveRed) / 85%);
+    --light-orange-down: hsl(var(--kanagawa-surimiOrange) / 85%);
+    --light-yellow-down: hsl(var(--kanagawa-carpYellow) / 85%);
+    --light-olive-down: hsl(var(--kanagawa-springGreen) / 85%);
+    --light-green-down: hsl(var(--kanagawa-springGreen) / 85%);
+    --light-teal-down: hsl(var(--kanagawa-waveAqua2) / 85%);
+    --light-blue-down: hsl(var(--kanagawa-springBlue) / 85%);
+    --light-violet-down: hsl(var(--kanagawa-oniViolet2) / 85%);
+    --light-purple-down: hsl(var(--kanagawa-oniViolet2) / 85%);
+    --light-pink-down: hsl(var(--kanagawa-sakuraPink) / 85%);
+    --light-brown-down: hsl(var(--kanagawa-boatYellow2) / 85%);
+    --positive-color-down: hsl(var(--kanagawa-autumnGreen));
+    --negative-color-down: hsl(var(--kanagawa-autumnRed) / 85%);
+    /*---  Active states  ---*/
+    --primary-color-active: hsl(var(--kanagawa-crystalBlue));
+    --red-active: hsl(var(--kanagawa-waveRed) / 85%);
+    --orange-active: hsl(var(--kanagawa-surimiOrange) / 85%);
+    --yellow-active: hsl(var(--kanagawa-carpYellow) / 85%);
+    --olive-active: hsl(var(--kanagawa-springGreen) / 85%);
+    --green-active: hsl(var(--kanagawa-springGreen) / 85%);
+    --teal-active: hsl(var(--kanagawa-waveAqua2) / 85%);
+    --blue-active: hsl(var(--kanagawa-crystalBlue) / 85%);
+    --violet-active: hsl(var(--kanagawa-oniViolet) / 85%);
+    --purple-active: hsl(var(--kanagawa-oniViolet) / 85%);
+    --pink-active: hsl(var(--kanagawa-sakuraPink) / 85%);
+    --brown-active: hsl(var(--kanagawa-boatYellow2) / 85%);
+    --light-red-active: hsl(var(--kanagawa-waveRed) / 85%);
+    --light-orange-active: hsl(var(--kanagawa-surimiOrange) / 85%);
+    --light-yellow-active: hsl(var(--kanagawa-carpYellow) / 85%);
+    --light-olive-active: hsl(var(--kanagawa-springGreen) / 85%);
+    --light-green-active: hsl(var(--kanagawa-springGreen) / 85%);
+    --light-teal-active: hsl(var(--kanagawa-waveAqua2) / 85%);
+    --light-blue-active: hsl(var(--kanagawa-springBlue) / 85%);
+    --light-violet-active: hsl(var(--kanagawa-oniViolet2) / 85%);
+    --light-purple-active: hsl(var(--kanagawa-oniViolet2) / 85%);
+    --light-pink-active: hsl(var(--kanagawa-sakuraPink) / 85%);
+    --light-brown-active: hsl(var(--kanagawa-boatYellow2) / 85%);
+    --positive-color-active: hsl(var(--kanagawa-autumnGreen));
+    --negative-color-active: hsl(var(--kanagawa-autumnRed) / 85%);
+    /*---  Error placeholders & misc  ---*/
+    --input-error-placeholder-focus-color: hsl(var(--kanagawa-peachRed) / 90%);
+    --input-placeholder-error-color: hsl(var(--kanagawa-waveRed) / 80%);
+    --input-placeholder-error-focus-color: hsl(var(--kanagawa-waveRed));
+    --sidebar-notification-view-color: hsl(var(--kanagawa-sumiInk1) / 90%);
+    --preferences-sidebar-item-active-background: hsl(
+      var(--kanagawa-crystalBlue) / 20%
+    );
+  }
+
+  /*-------------------
+    Acrylic background window
+  --------------------*/
+
+  :root:has(body.acrylic-window) {
+    --page-background: transparent;
+    --sidebar-background: hsl(var(--kanagawa-sumiInk1) / 50%);
+    --note-list-bar-background: hsl(var(--kanagawa-sumiInk2) / 70%);
+    --editor-background: hsl(var(--kanagawa-sumiInk3) / 90%);
+    --inline-dropdown-menu-background: hsl(var(--kanagawa-sumiInk1));
+    --vertical-menu-background: hsl(var(--kanagawa-sumiInk1));
+  }
+
+  :root:has(body.acrylic-window.platform-win32) {
+    --page-background: hsl(var(--kanagawa-sumiInk0) / 40%);
+  }
+}

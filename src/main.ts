@@ -1,4 +1,14 @@
-import { app, BrowserWindow, ipcMain, session, shell } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  session,
+  shell,
+  protocol,
+  dialog,
+  nativeImage,
+  Menu,
+} from 'electron';
 import { registerExternalLinkHandler } from './main/ipc/external-link-handler';
 import type { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
@@ -24,6 +34,25 @@ import { createContentSecurityPolicy } from './main/security';
 import { getConfigPath, getDatabasePath } from './main/storage';
 import { createMainWindowOptions } from './main/window-options';
 import { IPC_CHANNELS } from './shared/ipc';
+import { coreConfig } from './application/core-config';
+import { ThemeService } from './main/themes/theme-service';
+import { ThemeRegistry } from './main/themes/theme-registry';
+import { downloadThemeResource } from './main/themes/download';
+import { registerThemeHandlers } from './main/ipc/theme-handlers';
+import { readAsset } from './main/asset-protocol';
+import { registerImageHandlers } from './main/ipc/image-handlers';
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'inknote-asset',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+    },
+  },
+]);
 
 if (started) {
   app.quit();
@@ -38,6 +67,8 @@ let mainWindow: BrowserWindow | null = null;
 let noteCommands: Disposable | null = null;
 let noteIpcHandlers: Disposable | null = null;
 let appearanceHandlers: Disposable | null = null;
+let themeHandlers: Disposable | null = null;
+let imageHandlers: Disposable | null = null;
 let externalLinkHandler: Disposable | null = null;
 let libraryHandlers: Disposable | null = null;
 let coreModules: ModuleRegistry | null = null;
@@ -76,6 +107,15 @@ function createWindow(activeConfiguration: Configuration): BrowserWindow {
   );
 
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  window.webContents.on('context-menu', (_event, params) => {
+    if (!activeConfiguration.get(coreConfig.appearance).developmentMode) return;
+    Menu.buildFromTemplate([
+      {
+        label: 'Inspeccionar elemento',
+        click: () => window.webContents.inspectElement(params.x, params.y),
+      },
+    ]).popup({ window });
+  });
   installCloseGuard(window, ipcMain);
   window.webContents.on('will-attach-webview', (event) => {
     event.preventDefault();
@@ -133,6 +173,63 @@ function initializeCoreModules(): Configuration {
     deactivate() {
       appearanceHandlers?.dispose();
       appearanceHandlers = null;
+    },
+  });
+  modules.register({
+    id: 'core.themes',
+    activate() {
+      const service = new ThemeService(app.getPath('userData'));
+      themeHandlers = registerThemeHandlers({
+        ipc: ipcMain,
+        service,
+        registry: new ThemeRegistry((url, max) =>
+          downloadThemeResource(fetch, url, max),
+        ),
+        getMainWebContents: () => mainWindow?.webContents ?? null,
+        isActive: (name) =>
+          configuration?.get(coreConfig.appearance).theme === name,
+        async chooseFolder() {
+          if (!mainWindow) return;
+          const result = await dialog.showOpenDialog(mainWindow, {
+            title: 'Importar tema de Inkdrop 6',
+            properties: ['openDirectory'],
+          });
+          return result.canceled ? undefined : result.filePaths[0];
+        },
+      });
+    },
+    deactivate() {
+      themeHandlers?.dispose();
+      themeHandlers = null;
+    },
+  });
+  modules.register({
+    id: 'core.images',
+    activate() {
+      imageHandlers = registerImageHandlers({
+        ipc: ipcMain,
+        userData: app.getPath('userData'),
+        getMainWebContents: () => mainWindow?.webContents ?? null,
+        isDecodable: (bytes) => !nativeImage.createFromBuffer(bytes).isEmpty(),
+        async chooseFile() {
+          if (!mainWindow) return;
+          const result = await dialog.showOpenDialog(mainWindow, {
+            title: 'Insertar imagen',
+            properties: ['openFile'],
+            filters: [
+              {
+                name: 'Imágenes',
+                extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'],
+              },
+            ],
+          });
+          return result.canceled ? undefined : result.filePaths[0];
+        },
+      });
+    },
+    deactivate() {
+      imageHandlers?.dispose();
+      imageHandlers = null;
     },
   });
   modules.register({
@@ -212,6 +309,9 @@ function initializeCoreModules(): Configuration {
 
 app.whenReady().then(() => {
   installSessionSecurity();
+  protocol.handle('inknote-asset', (request) =>
+    readAsset(request.url, app.getPath('userData')),
+  );
   const activeConfiguration = initializeCoreModules();
   mainWindow = createWindow(activeConfiguration);
 

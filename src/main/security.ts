@@ -22,12 +22,12 @@ export function createContentSecurityPolicy(
   return [
     "default-src 'self'",
     `script-src ${scriptSource}`,
-    `style-src ${styleSource}`,
+    `style-src ${styleSource} inknote-asset:`,
     // KaTeX/Pele emit numeric layout styles. Script execution stays self-only;
     // style elements still require the production nonce or an external sheet.
     "style-src-attr 'unsafe-inline'",
-    "img-src 'self' data:",
-    "font-src 'self'",
+    "img-src 'self' data: inknote-asset:",
+    "font-src 'self' inknote-asset:",
     `connect-src ${connectSource}`,
     "object-src 'none'",
     "base-uri 'none'",

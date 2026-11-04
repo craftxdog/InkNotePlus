@@ -1,0 +1,153 @@
+@layer theme.preview {
+  /*
+   * Kanagawa Wave — Markdown preview theme for Inkdrop v6.
+   *
+   * Mirrors the rendered look of kanagawa-wave-syntax so the preview pane matches
+   * the editor: headings carpYellow, strong peachRed, emphasis springGreen, links
+   * crystalBlue, ==marks== underlined roninYellow. Colors come from palette.css
+   * (--kanagawa-* HSL triplets); surfaces use the sumi inks.
+   */
+
+  :root {
+    /* Raised surfaces for code blocks, tables and images */
+    --kanagawa-preview-surface: hsl(var(--kanagawa-sumiInk4) / 60%);
+    --kanagawa-preview-surface-subtle: hsl(var(--kanagawa-sumiInk2) / 50%);
+
+    /* Links */
+    --mde-preview-link-color: hsl(var(--kanagawa-crystalBlue));
+
+    /* Lists */
+    --mde-preview-list-marker-color: hsl(var(--kanagawa-springBlue));
+    --mde-preview-list-marker-2-color: hsl(var(--kanagawa-surimiOrange));
+    --mde-preview-list-marker-3-color: hsl(var(--kanagawa-springGreen));
+
+    /* Code blocks */
+    --mde-preview-codeblock-background-color: var(
+      --kanagawa-preview-surface-subtle
+    );
+    --mde-preview-codeblock-meta-background-color: var(
+      --kanagawa-preview-surface
+    );
+    --mde-preview-inline-code-text-color: hsl(var(--kanagawa-oldWhite));
+    --mde-preview-inline-code-border-width: 1px;
+    --mde-preview-inline-code-border-color: hsl(var(--kanagawa-sumiInk6) / 50%);
+    --mde-preview-inline-code-background-color: hsl(
+      var(--kanagawa-sumiInk4) / 50%
+    );
+
+    /* Tables */
+    --mde-preview-table-head-text-color: hsl(var(--kanagawa-carpYellow));
+    --mde-preview-table-head-background-color: var(--kanagawa-preview-surface);
+    --mde-preview-table-row-background-color: var(--kanagawa-preview-surface);
+    --mde-preview-table-row-stripe-background-color: var(
+      --kanagawa-preview-surface-subtle
+    );
+
+    /* Images */
+    --mde-preview-image-background-color: var(--kanagawa-preview-surface);
+
+    /* Mark (==highlight==) */
+    --mde-preview-inline-mark-text-color: hsl(var(--kanagawa-fujiWhite));
+    --mde-preview-inline-mark-background-color: hsl(
+      var(--kanagawa-carpYellow) / 22%
+    );
+    --mde-preview-inline-mark-underline-color: hsl(var(--kanagawa-roninYellow));
+
+    /* Prose */
+    --mde-preview-heading-color: hsl(var(--kanagawa-carpYellow));
+    --mde-preview-strong-color: hsl(var(--kanagawa-peachRed));
+    --mde-preview-em-color: hsl(var(--kanagawa-springGreen));
+
+    /*
+     * Mermaid diagrams. Overriding these base tokens cascades to most node,
+     * actor, state, packet, tag and requirement surfaces via mermaid.css's
+     * own var() chain — the entries below only cover the token families that
+     * mermaid.css colors independently rather than cascading.
+     */
+    --mermaid-line-color: hsl(var(--kanagawa-autumnGreen));
+    --mermaid-node-background-color: hsl(var(--kanagawa-waveBlue1) / 55%);
+    --mermaid-node-border-color: hsl(var(--kanagawa-crystalBlue));
+    --mermaid-cluster-background-color: var(--kanagawa-preview-surface-subtle);
+    --mermaid-cluster-border-color: hsl(var(--kanagawa-sumiInk6) / 40%);
+    --mermaid-edge-label-background-color: hsl(var(--kanagawa-waveBlue2) / 70%);
+
+    /* Notes (sequence / state) */
+    --mermaid-note-background-color: hsl(var(--kanagawa-winterYellow));
+    --mermaid-note-border-color: hsl(var(--kanagawa-carpYellow));
+    --mermaid-note-text-color: hsl(var(--kanagawa-oldWhite));
+
+    /* Sequence */
+    --mermaid-sequence-number-color: hsl(var(--kanagawa-sumiInk0));
+
+    /* Sequence label box */
+    --mermaid-label-box-background-color: hsl(var(--kanagawa-autumnRed));
+    --mermaid-label-box-border-color: hsl(var(--kanagawa-autumnRed));
+    --mermaid-label-text-color: hsl(var(--kanagawa-fujiWhite));
+
+    /* Gantt */
+    --mermaid-section-background-color: hsl(var(--kanagawa-sumiInk6) / 20%);
+    --mermaid-alt-section-background-color: hsl(var(--kanagawa-sumiInk6) / 10%);
+    --mermaid-task-background-color: hsl(var(--kanagawa-waveBlue2) / 80%);
+    --mermaid-task-border-color: hsl(var(--kanagawa-crystalBlue));
+    --mermaid-active-task-background-color: hsl(
+      var(--kanagawa-oniViolet) / 70%
+    );
+    --mermaid-active-task-border-color: hsl(var(--kanagawa-oniViolet));
+    --mermaid-done-task-background-color: hsl(var(--kanagawa-sumiInk5));
+    --mermaid-done-task-border-color: hsl(var(--kanagawa-sumiInk6));
+    --mermaid-crit-task-background-color: hsl(var(--kanagawa-autumnRed) / 70%);
+    --mermaid-crit-task-border-color: hsl(var(--kanagawa-waveRed));
+    --mermaid-grid-color: hsl(var(--kanagawa-sumiInk6) / 40%);
+    --mermaid-today-line-color: hsl(var(--kanagawa-peachRed));
+
+    /* Seed palette — pie / git / quadrant categorical scales */
+    --mermaid-primary-color: color-mix(
+      in srgb,
+      hsl(var(--kanagawa-waveBlue2)),
+      white 20%
+    );
+    --mermaid-secondary-color: hsl(var(--kanagawa-waveRed));
+    --mermaid-tertiary-color: hsl(var(--kanagawa-boatYellow2));
+
+    /* Error */
+    --mermaid-error-background-color: hsl(var(--kanagawa-winterRed));
+    --mermaid-error-text-color: hsl(var(--kanagawa-waveRed));
+
+    /* Event modeling — one hue per element kind */
+    --mermaid-em-processor-background-color: hsl(
+      var(--kanagawa-oniViolet) / 35%
+    );
+    --mermaid-em-processor-border-color: hsl(var(--kanagawa-oniViolet));
+    --mermaid-em-read-model-background-color: hsl(
+      var(--kanagawa-springGreen) / 35%
+    );
+    --mermaid-em-read-model-border-color: hsl(var(--kanagawa-springGreen));
+    --mermaid-em-command-background-color: hsl(
+      var(--kanagawa-crystalBlue) / 35%
+    );
+    --mermaid-em-command-border-color: hsl(var(--kanagawa-crystalBlue));
+    --mermaid-em-event-background-color: hsl(var(--kanagawa-carpYellow) / 35%);
+    --mermaid-em-event-border-color: hsl(var(--kanagawa-carpYellow));
+
+    /* Wardley map */
+    --mermaid-wardley-evolution-color: hsl(var(--kanagawa-peachRed));
+
+    /* Cynefin — one hue per domain */
+    --mermaid-cynefin-cliff-color: hsl(var(--kanagawa-waveRed));
+    --mermaid-cynefin-complex-background-color: hsl(
+      var(--kanagawa-springGreen) / 35%
+    );
+    --mermaid-cynefin-complicated-background-color: hsl(
+      var(--kanagawa-crystalBlue) / 35%
+    );
+    --mermaid-cynefin-chaotic-background-color: hsl(
+      var(--kanagawa-autumnRed) / 35%
+    );
+    --mermaid-cynefin-clear-background-color: hsl(
+      var(--kanagawa-carpYellow) / 35%
+    );
+    --mermaid-cynefin-confusion-background-color: hsl(
+      var(--kanagawa-oniViolet) / 35%
+    );
+  }
+}

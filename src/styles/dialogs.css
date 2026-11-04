@@ -1,4 +1,69 @@
 @layer theme.ui.components {
+  .template-picker-dialog {
+    inline-size: min(900px, calc(100vw - 32px));
+  }
+  .template-picker-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    min-block-size: 0;
+  }
+  .template-picker-panes {
+    display: grid;
+    grid-template-columns: minmax(160px, 1fr) minmax(0, 2fr);
+    min-block-size: 200px;
+    block-size: min(55vh, 550px);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .template-choices,
+  .template-preview {
+    overflow: auto;
+    min-inline-size: 0;
+    padding: 12px;
+  }
+  .template-choices {
+    border-inline-end: 1px solid var(--border-color);
+  }
+  .template-choices button {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 10px;
+    inline-size: 100%;
+    border: 0;
+    background: none;
+    text-align: start;
+    border-radius: 4px;
+  }
+  .template-choices button[aria-selected='true'] {
+    background: var(--note-list-view-item-selected-background);
+  }
+  .template-choices small {
+    display: block;
+    color: var(--muted-text-color);
+  }
+  .template-preview .mde-preview {
+    padding: 0;
+  }
+  .empty-note-actions,
+  .builtin-template-library {
+    padding: 12px 16px;
+  }
+  .empty-note-actions .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .context-menu.popover {
+    position: fixed;
+    z-index: 1000;
+    inline-size: 250px;
+    max-block-size: 80vh;
+    overflow: auto;
+  }
   .app-dialog {
     inline-size: min(460px, calc(100vw - 32px));
     max-block-size: calc(100vh - 48px);
@@ -74,6 +139,7 @@
     accent-color: var(--primary-color);
   }
   .preferences-dialog {
+    background: var(--preferences-view-background);
     inline-size: min(900px, calc(100vw - 32px));
     block-size: min(720px, calc(100vh - 48px));
     overflow: hidden;
@@ -90,7 +156,7 @@
     gap: 4px;
     padding: 16px 8px;
     border-inline-end: 1px solid var(--border-color);
-    background: var(--sidebar-background);
+    background: var(--preferences-sidebar-background);
   }
   .preferences-navigation button {
     display: flex;
@@ -105,7 +171,7 @@
     font-size: var(--small);
   }
   .preferences-navigation button[aria-selected='true'] {
-    background: var(--sidebar-menu-item-active-background);
+    background: var(--preferences-sidebar-item-active-background);
     color: var(--text-color);
   }
   .preferences-panel {
@@ -250,33 +316,59 @@
   .theme-option[aria-pressed='true'] {
     border-color: var(--primary-color);
   }
-  .theme-swatch {
-    display: grid;
-    grid-template-columns: 25% 30% 45%;
-    block-size: 64px;
-    flex: 0 0 100%;
-    overflow: hidden;
-    border-radius: 4px;
-    background: #f8f9fa;
-    border: 1px solid #d6d8dc;
+  .theme-card {
+    display: flex;
+    flex: 1 1 200px;
+    min-inline-size: 0;
+    align-items: center;
+    gap: 4px;
   }
-  .theme-swatch i:first-child {
-    background: #e1e2e4;
+  .theme-option small {
+    display: block;
+    color: var(--muted-text-color);
+    margin-block-start: 4px;
   }
-  .theme-swatch i:nth-child(2) {
-    background: #f0f1f2;
-    border-inline: 1px solid #d6d8dc;
+  .settings-inline-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
   }
-  [data-theme-preview='inknote-dark'] .theme-swatch {
-    background: #0a0a0a;
-    border-color: #333;
+  .settings-inline-actions .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
-  [data-theme-preview='inknote-dark'] .theme-swatch i:first-child {
-    background: #171717;
+  .theme-registry-results {
+    list-style: none;
+    margin: 0;
+    padding: 0;
   }
-  [data-theme-preview='inknote-dark'] .theme-swatch i:nth-child(2) {
-    background: #101010;
-    border-color: #333;
+  .theme-registry-results li {
+    display: flex;
+    gap: 16px;
+    padding-block: 14px;
+    border-block-end: 1px solid var(--border-color);
+    align-items: center;
+  }
+  .theme-registry-results li > div {
+    flex: 1;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+  .theme-registry-results p {
+    margin-block: 5px;
+  }
+  .custom-styles-input {
+    inline-size: 100%;
+    min-block-size: 180px;
+    resize: vertical;
+    font-family: var(--editor-font-family, monospace);
+    font-size: 13px;
+    padding: 12px;
+    background: var(--input-background);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
   }
   @media (max-width: 640px) {
     .preferences-body {

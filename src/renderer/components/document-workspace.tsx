@@ -32,7 +32,13 @@ import {
   Trash2,
   RotateCcw,
   Files,
+  ImagePlus,
 } from 'lucide-react';
+import { imageAtCursor, resizeCurrentImage } from '../editor/image-dimensions';
+import {
+  insertManagedImages,
+  type ImageImportError,
+} from '../editor/image-insertion';
 import { useWorkspace } from '../state/workspace-context';
 import { MarkdownEditor } from '../editor/markdown-editor';
 import { MarkdownPreview } from '../editor/markdown-preview';
@@ -45,6 +51,7 @@ import { Modal } from './modal';
 import { CommitRange } from './commit-range';
 import { createScrollSync } from '../editor/scroll-sync';
 import { NotebookIcon } from './notebook-icon';
+import { UiSlot } from '../extensions/ui-slots';
 
 export function DocumentWorkspace({
   onShowNotes,
@@ -71,11 +78,29 @@ export function DocumentWorkspace({
   const navigation = useWorkspace((state) => state.navigation);
   const restore = useWorkspace((state) => state.restoreActiveNote);
   const trash = useWorkspace((state) => state.trashActiveNote);
+  const importImage = useWorkspace((state) => state.importImage);
   const view = useRef<EditorView | null>(null);
   const preview = useRef<HTMLElement>(null);
   const sync = useRef<ReturnType<typeof createScrollSync> | null>(null);
   const [confirmTrash, setConfirmTrash] = useState(false);
   const [splitRatio, setSplitRatio] = useState(preferences.splitRatio);
+  const [imageSelected, setImageSelected] = useState(false);
+  const [imageError, setImageError] = useState<ImageImportError>(null);
+  const insertImage = async (files?: File[]) => {
+    const editor = view.current;
+    if (!editor) return;
+    setImageError(null);
+    const result = await insertManagedImages(
+      editor,
+      importImage,
+      () => view.current === editor,
+      files,
+    );
+    if (view.current === editor) {
+      setImageError(result);
+      editor.focus();
+    }
+  };
   useEffect(
     () => setSplitRatio(preferences.splitRatio),
     [preferences.splitRatio],
@@ -186,6 +211,7 @@ export function DocumentWorkspace({
               <MoreVertical size={20} />
             </summary>
             <div className="popover">
+              <UiSlot name="editor-drawer-menu" />
               <button
                 type="button"
                 disabled={!draft.noteId || inTrash}
@@ -263,6 +289,8 @@ export function DocumentWorkspace({
             }}
           />
           <EditorMetadata disabled={inTrash} />
+          <UiSlot name="editor-header" />
+          <UiSlot name="editor-meta" />
           <div
             className="editor-toolbar"
             hidden={!preferences.showToolbar}
@@ -281,7 +309,39 @@ export function DocumentWorkspace({
                 }}
               />
             ))}
+            <IconButton
+              icon={ImagePlus}
+              label="Insertar imagen"
+              disabled={inTrash || mode === 'preview' || !nonce}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => void insertImage()}
+            />
+            {imageSelected && (
+              <label className="image-size-control">
+                Tamaño de imagen
+                <select
+                  aria-label="Tamaño de imagen"
+                  value=""
+                  onChange={(event) => {
+                    if (view.current)
+                      resizeCurrentImage(
+                        view.current,
+                        event.target.value as '' | '30%' | '50%' | '100%',
+                      );
+                  }}
+                >
+                  <option value="" disabled>
+                    Elegir tamaño
+                  </option>
+                  <option value="auto">Automático</option>
+                  <option value="30%">Pequeña · 30%</option>
+                  <option value="50%">Mitad · 50%</option>
+                  <option value="100%">Completa · 100%</option>
+                </select>
+              </label>
+            )}
             <span className="toolbar-spacer" />
+            <UiSlot name="editor-toolbar" />
             <label
               className="split-ratio-control"
               title="Reparto editor y preview"
@@ -301,7 +361,15 @@ export function DocumentWorkspace({
               />
             </label>
           </div>
+          {imageError && (
+            <div className="image-error" role="alert">
+              {imageError === 'changed'
+                ? 'El texto seleccionado cambió durante la importación. Vuelve a insertar la imagen.'
+                : 'No se pudo importar la imagen. Usa PNG, JPEG, GIF o WebP de hasta 5 MB y 16 megapíxeles.'}
+            </div>
+          )}
           <div className="editor-body">
+            <UiSlot name="mde" />
             <section className="pane pane--editor" aria-label="Edición de nota">
               {nonce && !inTrash ? (
                 <MarkdownEditor
@@ -310,10 +378,12 @@ export function DocumentWorkspace({
                   nonce={nonce}
                   preferences={preferences}
                   onChange={(body) => updateDraft({ body })}
+                  onImageFiles={(files) => void insertImage(files)}
                   onView={(instance) => {
                     sync.current?.destroy();
                     sync.current = null;
                     view.current = instance;
+                    setImageSelected(!!instance && !!imageAtCursor(instance));
                     // Bind to the actual view lifecycle, including StrictMode's replay.
                     if (instance && preview.current) {
                       sync.current = createScrollSync(
@@ -325,9 +395,11 @@ export function DocumentWorkspace({
                       );
                     }
                   }}
-                  onUpdate={(selectionChanged) =>
-                    sync.current?.editorChanged(selectionChanged)
-                  }
+                  onUpdate={(selectionChanged) => {
+                    sync.current?.editorChanged(selectionChanged);
+                    if (view.current)
+                      setImageSelected(!!imageAtCursor(view.current));
+                  }}
                 />
               ) : (
                 <div className="editor-loading">
@@ -356,6 +428,7 @@ export function DocumentWorkspace({
               palabras
             </span>
             <span>Markdown</span>
+            <UiSlot name="editor-status-bar" />
             <span className="editor-save-state">
               {isSaving
                 ? 'Guardando…'
@@ -406,6 +479,8 @@ export function DocumentWorkspace({
           </div>
         </Modal>
       )}
+      <UiSlot name="editor" />
+      <UiSlot name="editor-floating-actions" />
     </main>
   );
 }

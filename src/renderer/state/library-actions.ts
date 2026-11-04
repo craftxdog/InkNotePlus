@@ -37,11 +37,14 @@ export function matchesNavigation(
     case 'status':
       return metadata.status === navigation.status;
     case 'notebook':
-      return navigation.id === 'unfiled'
-        ? metadata.notebookId === null
-        : preferences.expandedNotebookIds.includes(navigation.id)
-          ? metadata.notebookId === navigation.id
-          : belongsTo(navigation.id);
+      return (
+        !['completed', 'dropped'].includes(metadata.status) &&
+        (navigation.id === 'unfiled'
+          ? metadata.notebookId === null
+          : preferences.expandedNotebookIds.includes(navigation.id)
+            ? metadata.notebookId === navigation.id
+            : belongsTo(navigation.id))
+      );
   }
 }
 
@@ -65,6 +68,7 @@ export function navigationFilter(
     case 'notebook':
       return {
         ...common,
+        excludeFinished: true,
         notebookId: navigation.id === 'unfiled' ? null : navigation.id,
         includeDescendants: !preferences?.expandedNotebookIds.includes(
           navigation.id,
@@ -93,8 +97,15 @@ export function createLibraryActions(
       },
     }));
   return {
-    setNotebookDialogOpen(notebookDialogOpen: boolean) {
-      set({ notebookDialogOpen });
+    setNotebookDialogOpen(
+      notebookDialogOpen: boolean,
+      parentId?: string | null,
+    ) {
+      set({
+        notebookDialogOpen,
+        notebookDialogParentId:
+          parentId === undefined ? get().preferences.notebookScopeId : parentId,
+      });
     },
     async refreshLibrary() {
       const request = ++libraryRequest;
@@ -103,8 +114,11 @@ export function createLibraryActions(
         const state = get();
         const result = await api.library.get({
           scopeId: state.preferences.notebookScopeId,
-          filter: navigationFilter(state.navigation, state.preferences),
+          filter: state.searchGlobal
+            ? { sort: state.preferences.noteSort }
+            : navigationFilter(state.navigation, state.preferences),
           query: state.searchQuery,
+          globalSearch: state.searchGlobal,
         });
         if (generation !== getGeneration() || request !== libraryRequest)
           return;
@@ -127,12 +141,16 @@ export function createLibraryActions(
       }
     },
     async navigate(navigation: Navigation) {
-      set({ navigation, searchQuery: '' });
+      set({ navigation, searchQuery: '', searchGlobal: false });
       await get().refreshNotes();
     },
     async focusNotebook(id: string | null) {
       if (id && !get().library.notebooks.some((book) => book.id === id)) return;
-      set({ navigation: { type: 'all' }, searchQuery: '' });
+      set({
+        navigation: { type: 'all' },
+        searchQuery: '',
+        searchGlobal: false,
+      });
       const saving = get().updatePreferences({ notebookScopeId: id });
       await get().refreshNotes();
       await saving;

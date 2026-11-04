@@ -2,7 +2,10 @@ import { z } from './validation';
 
 export const themeManifestSchema = z
   .object({
-    name: z.string().regex(/^[a-z][a-z0-9-]*$/),
+    name: z
+      .string()
+      .max(100)
+      .regex(/^[a-z][a-z0-9-]*$/),
     version: z.string().regex(/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/),
     theme: z.literal(true),
     themeAppearance: z.enum(['light', 'dark']),

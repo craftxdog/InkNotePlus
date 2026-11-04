@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
 import { DatabaseSync } from 'node:sqlite';
+import { verifyInkdropFeatures } from './smoke-inkdrop-features.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const packaged = process.argv.includes('--packaged');
@@ -85,7 +86,7 @@ try {
   browser = await puppeteer.connect({
     browserWSEndpoint: endpoint,
     defaultViewport: null,
-    protocolTimeout: 15000,
+    protocolTimeout: process.argv.includes('--catalog') ? 60_000 : 15_000,
   });
   const target = await browser.waitForTarget(
     (target) =>
@@ -496,6 +497,13 @@ try {
   console.log(
     'Native math, live Mermaid with math labels, pinch/pan/reset, icons, real counts, Detail and breadcrumbs passed.',
   );
+  await verifyInkdropFeatures({
+    page,
+    profile,
+    modifier,
+    settle,
+    catalogEnabled: process.argv.includes('--catalog'),
+  });
   if (reviewDatabase) {
     const source = new DatabaseSync(reviewDatabase, { readOnly: true });
     let notes;

@@ -2,6 +2,9 @@ import type { AppErrorCode, NoteProjection, Result } from '../../shared/ipc';
 import type { MainLayoutState } from '../layout/inkdrop-main-layout';
 import type { Preferences, PreferencesPatch } from '../../shared/preferences';
 import type { NotebookIconName } from '../../shared/notebook-icons';
+import type { InkNoteApi } from '../../preload/api';
+import type { InstalledTheme } from '../../shared/themes';
+import type { ManagedImage } from '../../shared/images';
 import type {
   LibrarySnapshot,
   NoteMetadata,
@@ -36,6 +39,13 @@ export interface NoteListState {
 }
 
 export interface WorkspaceState {
+  readonly installedThemes: readonly InstalledTheme[];
+  readonly themesReady: boolean;
+  readonly customStyles: string;
+  readonly customStylesDraft: string | null;
+  readonly themeError: string | null;
+  readonly themeRevision: number;
+  readonly templatePickerOpen: boolean;
   readonly preferences: Preferences;
   readonly styleNonce: string | null;
   readonly platform: 'darwin' | 'win32' | 'linux';
@@ -46,6 +56,8 @@ export interface WorkspaceState {
   readonly notebookDialogOpen: boolean;
   readonly activeNoteId: string | null;
   readonly searchQuery: string;
+  readonly searchGlobal: boolean;
+  readonly notebookDialogParentId: string | null;
   readonly mainLayout: MainLayoutState;
   readonly noteList: NoteListState;
   readonly document: DocumentState;
@@ -53,10 +65,30 @@ export interface WorkspaceState {
 }
 
 export interface WorkspaceActions {
+  importImage(base64?: string): Promise<Result<ManagedImage | null>>;
+  browseThemes: InkNoteApi['themes']['browse'];
+  installTheme(name?: string): Promise<void>;
+  removeTheme(name: string): Promise<void>;
+  saveCustomStyles(css: string): Promise<boolean>;
+  editCustomStyles(css: string): void;
+  flushThemeChanges(): Promise<boolean>;
+  themeDidLoad(): void;
+  themeDidFail(): void;
+  setTemplatePickerOpen(open: boolean): void;
+  getTemplateNotes(
+    query?: string,
+    offset?: number,
+  ): Promise<Result<NoteProjection[]>>;
+  applyTemplate(
+    source: Pick<NoteProjection, 'title' | 'body' | 'metadata'>,
+  ): Promise<string | null>;
+  customizeTemplate(
+    source: Pick<NoteProjection, 'title' | 'body' | 'metadata'>,
+  ): Promise<void>;
   openExternalLink(url: string): Promise<Result<boolean>>;
   updatePreferences(patch: PreferencesPatch): Promise<void>;
   setSettingsOpen(open: boolean): void;
-  setNotebookDialogOpen(open: boolean): void;
+  setNotebookDialogOpen(open: boolean, parentId?: string | null): void;
   navigate(navigation: Navigation): Promise<void>;
   focusNotebook(id: string | null): Promise<void>;
   toggleNotebook(id: string): Promise<void>;
@@ -69,6 +101,9 @@ export interface WorkspaceActions {
   refreshNotes(preserveLoaded?: boolean): Promise<void>;
   loadMoreNotes(): Promise<void>;
   setSearchQuery(query: string): Promise<void>;
+  setSearchGlobal(global: boolean): Promise<void>;
+  togglePin(): void;
+  setNoteStatus(status: NoteStatus): void;
   selectNote(id: string | null): void;
   setSidebarVisible(visible: boolean): void;
   setDistractionFreeEnabled(enabled: boolean): void;

@@ -27,6 +27,7 @@ import {
   matchesNavigation,
 } from './library-actions';
 import { loadNoteWindow } from './note-loading';
+import { createThemeActions } from './theme-actions';
 
 export function createWorkspaceStore(api: InkNoteApi) {
   let requestId = 0;
@@ -38,6 +39,7 @@ export function createWorkspaceStore(api: InkNoteApi) {
   let confirmedPreferences = defaultPreferences;
   let stopAutosave: (() => void) | undefined;
   let stopClose: (() => void) | undefined;
+  let stopStyles: (() => void) | undefined;
 
   const store: StoreApi<WorkspaceStore> = createStore<WorkspaceStore>()((
     set,
@@ -57,7 +59,9 @@ export function createWorkspaceStore(api: InkNoteApi) {
       const query = get().searchQuery;
       const offset = append ? get().noteList.notes.length : 0;
       const filter = {
-        ...navigationFilter(get().navigation, get().preferences),
+        ...(get().searchGlobal
+          ? { sort: get().preferences.noteSort }
+          : navigationFilter(get().navigation, get().preferences)),
       };
       set((state) => ({
         noteList: { ...state.noteList, status: 'loading', errorCode: null },
@@ -169,6 +173,9 @@ export function createWorkspaceStore(api: InkNoteApi) {
     };
 
     return {
+      importImage: (base64) =>
+        base64 ? api.images.write(base64) : api.images.importFile(),
+      ...createThemeActions(api, set, get),
       saveDraft: persistence.saveDraft,
       flushDrafts: persistence.flushDrafts,
       openExternalLink: (url) => api.links.openExternal(url),
@@ -176,6 +183,7 @@ export function createWorkspaceStore(api: InkNoteApi) {
       navigation: { type: 'all' },
       library: emptyLibrary,
       notebookDialogOpen: false,
+      notebookDialogParentId: null,
       preferences: defaultPreferences,
       styleNonce: null,
       platform: 'linux',
@@ -232,6 +240,7 @@ export function createWorkspaceStore(api: InkNoteApi) {
       },
       activeNoteId: null,
       searchQuery: '',
+      searchGlobal: false,
       mainLayout: { sidebarVisible: true, distractionFreeEnabled: false },
       noteList: {
         notes: [],
@@ -243,6 +252,83 @@ export function createWorkspaceStore(api: InkNoteApi) {
       },
       document: emptyDocument,
       parkedDrafts: {},
+      templatePickerOpen: false,
+      setTemplatePickerOpen(templatePickerOpen) {
+        if (
+          templatePickerOpen &&
+          (!get().document.noteId ||
+            get().document.body.trim() ||
+            get().navigation.type === 'trash' ||
+            get().document.metadata.isTemplate)
+        )
+          return;
+        set({ templatePickerOpen });
+      },
+      getTemplateNotes(query = '', offset = 0) {
+        return query.trim()
+          ? api.notes.search({ query, templates: true, offset, limit: 100 })
+          : api.notes.list({ templates: true, offset, limit: 100 });
+      },
+      async applyTemplate(source) {
+        const document = get().document;
+        if (
+          !document.noteId ||
+          document.body.trim() ||
+          get().navigation.type === 'trash' ||
+          document.metadata.isTemplate
+        )
+          return 'La plantilla sólo se puede aplicar a una nota vacía.';
+        try {
+          const { applyTemplate } =
+            await import('../templates/template-engine');
+          const next = applyTemplate(
+            source,
+            document.metadata,
+            get().library.notebooks,
+          );
+          if (
+            get().document.noteId !== document.noteId ||
+            get().document.body.trim()
+          )
+            return 'La nota cambió mientras se preparaba la plantilla.';
+          if (next.body.length > 1_000_000 || next.title.length > 512)
+            return 'La plantilla supera el tamaño admitido de una nota.';
+          get().updateDraft(next);
+          set({ templatePickerOpen: false });
+          return null;
+        } catch (error) {
+          return error instanceof Error
+            ? error.message
+            : 'No se pudo aplicar la plantilla.';
+        }
+      },
+      async customizeTemplate(source) {
+        if (get().noteList.isCreating) return;
+        const epoch = generation;
+        set((state) => ({ noteList: { ...state.noteList, isCreating: true } }));
+        try {
+          const result = await api.notes.create({
+            title: source.title,
+            body: source.body,
+            metadata: {
+              ...(source.metadata ?? defaultNoteMetadata),
+              isTemplate: true,
+            },
+          });
+          if (generation !== epoch) return;
+          if (!result.ok) {
+            reportFailure(result.error.code);
+            return;
+          }
+          await get().navigate({ type: 'templates' });
+          get().selectNote(result.data.id);
+        } finally {
+          if (generation === epoch)
+            set((state) => ({
+              noteList: { ...state.noteList, isCreating: false },
+            }));
+        }
+      },
       connect(beforeFlush = () => {}) {
         connections += 1;
         if (connections === 1) {
@@ -250,11 +336,28 @@ export function createWorkspaceStore(api: InkNoteApi) {
           stopClose = api.onBeforeClose(async () => {
             beforeFlush();
             await preferenceQueue;
-            return get().flushDrafts();
+            const stylesSaved = await get().flushThemeChanges();
+            const notesSaved = await get().flushDrafts();
+            return stylesSaved && notesSaved;
           });
           unsubscribe = api.onNoteChanged(onNoteChanged);
           void refreshNotes();
           const currentGeneration = generation;
+          stopStyles = api.themes.onCustomStylesChanged((customStyles) =>
+            set({ customStyles }),
+          );
+          void api.themes.list().then((result) => {
+            if (generation !== currentGeneration) return;
+            set({
+              installedThemes: result.ok ? result.data : [],
+              themesReady: true,
+              themeError: result.ok ? null : result.error.code,
+            });
+          });
+          void api.themes.getCustomStyles().then((result) => {
+            if (generation === currentGeneration && result.ok)
+              set({ customStyles: result.data });
+          });
           const revision = preferenceRevision;
           void api.preferences
             .get()
@@ -291,6 +394,8 @@ export function createWorkspaceStore(api: InkNoteApi) {
             stopAutosave = undefined;
             stopClose?.();
             stopClose = undefined;
+            stopStyles?.();
+            stopStyles = undefined;
             unsubscribe?.();
             unsubscribe = undefined;
             requestId += 1;
@@ -314,6 +419,22 @@ export function createWorkspaceStore(api: InkNoteApi) {
       async setSearchQuery(query) {
         set({ searchQuery: query.trim() });
         await refreshNotes();
+      },
+      async setSearchGlobal(searchGlobal) {
+        set({
+          searchGlobal,
+          ...(searchGlobal ? { navigation: { type: 'all' as const } } : {}),
+        });
+        await refreshNotes();
+      },
+      togglePin() {
+        if (!get().document.noteId || get().navigation.type === 'trash') return;
+        get().updateDraft({ isPinned: !get().document.isPinned });
+        void get().saveDraft();
+      },
+      setNoteStatus(status) {
+        if (!get().document.noteId || get().navigation.type === 'trash') return;
+        get().updateDraft({ metadata: { ...get().document.metadata, status } });
       },
       selectNote(noteId) {
         set((state) => selectDocument(state, noteId));

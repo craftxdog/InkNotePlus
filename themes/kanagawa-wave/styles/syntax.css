@@ -1,0 +1,293 @@
+@layer theme.syntax {
+  /*
+   * Kanagawa Wave syntax theme for Inkdrop v6 (CodeMirror 6 / Lezer).
+   *
+   * Token colors follow the canonical kanagawa.nvim `wave` theme
+   * (lua/kanagawa/themes.lua → syn / ui / diag / vcs tables):
+   *   string springGreen · number sakuraPink · constant surimiOrange
+   *   identifier carpYellow · parameter oniViolet2 · function crystalBlue
+   *   keyword oniViolet · operator boatYellow2 · type waveAqua2
+   *   preproc waveRed · punctuation springViolet2 · comment fujiGray
+   * Colors come from palette.css (--kanagawa-* HSL triplets).
+   */
+
+  :root {
+    /*── Editor chrome ────────────────────────────────────────────────────────*/
+    --editor-foreground-color: hsl(var(--kanagawa-fujiWhite)); /* ui.fg */
+    --editor-background-color: hsl(var(--kanagawa-sumiInk3)); /* ui.bg */
+    --editor-caret-color: hsl(var(--kanagawa-fujiWhite));
+    --editor-selection-background: hsl(
+      var(--kanagawa-sumiInk5)
+    ); /* unfocused */
+    --editor-focused-selection-background: hsl(
+      var(--kanagawa-waveBlue1)
+    ); /* ui.bg_visual */
+    --editor-active-line-background-color: hsl(
+      var(--kanagawa-sumiInk4) / 30%
+    ); /* ui.bg_p2 */
+    --editor-special-char-color: hsl(var(--kanagawa-sumiInk6)); /* ui.special */
+    --editor-spelling-error-color: var(--negative-color);
+
+    --editor-gutter-border-right: 1px solid hsl(var(--kanagawa-sumiInk4));
+    --editor-gutter-color: hsl(var(--kanagawa-sumiInk6)); /* ui.nontext */
+    --editor-gutter-background-color: transparent;
+    --editor-gutter-background-solid-color: hsl(
+      var(--kanagawa-sumiInk4)
+    ); /* ui.bg_gutter */
+    --editor-active-line-gutter-background-color: hsl(
+      var(--kanagawa-sumiInk4) / 30%
+    );
+
+    --editor-panel-background-color: hsl(var(--kanagawa-sumiInk1));
+    --editor-panel-color: hsl(var(--kanagawa-oldWhite));
+    --editor-panel-border-color: var(--border-color);
+
+    --editor-tooltip-border-style: solid;
+    --editor-tooltip-border-width: 1px;
+    --editor-tooltip-border-color: hsl(var(--kanagawa-sumiInk5));
+    --editor-tooltip-border-radius: 0.8em;
+    --editor-tooltip-background-color: hsl(
+      var(--kanagawa-sumiInk2)
+    ); /* pmenu.bg */
+    --editor-tooltip-box-shadow: 0px 1px 2px 0 hsl(var(--kanagawa-sumiInk0));
+    --editor-tooltip-autocomplete-padding: 0.2em;
+    --editor-tooltip-autocomplete-item-border-radius: 0.2em;
+    --editor-tooltip-autocomplete-item-padding: 0 0.8em;
+    --editor-tooltip-autocomplete-item-selected-background-color: hsl(
+      var(--kanagawa-waveBlue2)
+    ); /* pmenu.bg_sel */
+    --editor-tooltip-autocomplete-section-border-color: hsl(
+      var(--kanagawa-sumiInk6)
+    );
+    --editor-tooltip-autocomplete-item-selected-color: hsl(
+      var(--kanagawa-fujiWhite)
+    );
+    --editor-inline-tooltip-color: hsl(var(--kanagawa-oldWhite));
+    --editor-inline-tooltip-background-color: hsl(var(--kanagawa-sumiInk2));
+    --editor-inline-tooltip-outline: 1px solid hsl(var(--kanagawa-sumiInk5));
+
+    --editor-completion-label: hsl(var(--kanagawa-oldWhite));
+    --editor-completion-matched-text-color: hsl(var(--kanagawa-crystalBlue));
+    --editor-completion-matched-text-decoration: none;
+    --editor-completion-matched-text-font-style: normal;
+    --editor-completion-matched-text-font-weight: bold;
+    --editor-completion-detail-color: hsl(var(--kanagawa-fujiGray));
+    --editor-completion-detail-text-decoration: none;
+    --editor-completion-detail-font-style: normal;
+    --editor-completion-detail-font-weight: normal;
+
+    --editor-matching-bracket-outline: 1px solid
+      hsl(var(--kanagawa-springBlue) / 90%);
+    --editor-matching-bracket-background-color: hsl(
+      var(--kanagawa-springBlue) / 20%
+    );
+    --editor-nonmatching-bracket-outline: 1px solid
+      hsl(var(--kanagawa-autumnRed) / 60%);
+    --editor-nonmatching-bracket-background-color: transparent;
+
+    --editor-selection-match-background-color: hsl(
+      var(--kanagawa-waveAqua1) / 35%
+    );
+    --editor-selection-match-outline: none;
+    --editor-search-match-background-color: hsl(
+      var(--kanagawa-waveBlue2)
+    ); /* ui.bg_search */
+    --editor-search-match-outline: none;
+    --editor-search-match-selected-background-color: hsl(
+      var(--kanagawa-carpYellow) / 40%
+    );
+    --editor-search-match-selected-outline: 1px solid
+      hsl(var(--kanagawa-carpYellow));
+
+    --editor-placeholder-color: hsl(var(--kanagawa-sumiInk6));
+    --editor-nes-ghost-color: hsl(var(--kanagawa-sumiInk6));
+
+    --editor-highlight-space-color: hsl(
+      var(--kanagawa-sumiInk6)
+    ); /* ui.whitespace */
+    --editor-highlight-tab-background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="20"><path stroke="%23888" stroke-width="1" fill="none" d="M1 10H196L190 5M190 15L196 10M197 4L197 16"/></svg>');
+    --editor-highlight-tab-filter: "none";
+    --editor-highlight-tab-opacity: 0.3;
+    --editor-trailing-space-background-color: hsl(
+      var(--kanagawa-sakuraPink) / 35%
+    );
+
+    --editor-fold-placeholder-border-radius: 0.2em;
+    --editor-fold-placeholder-color: hsl(var(--kanagawa-sumiInk0));
+    --editor-fold-placeholder-border: 1px solid hsl(var(--kanagawa-sumiInk6));
+    --editor-fold-placeholder-background-color: hsl(var(--kanagawa-sumiInk6));
+
+    --editor-image-widget-backdrop-background-color: hsl(
+      var(--kanagawa-sumiInk5) / 40%
+    );
+    --editor-image-widget-backdrop-border: 1px solid
+      hsl(var(--kanagawa-sumiInk5));
+
+    /*── Markdown elements ────────────────────────────────────────────────────*/
+    --md-inline-code-padding: 1px;
+    --md-inline-code-border-color: hsl(var(--kanagawa-sumiInk6) / 50%);
+    --md-inline-code-border-width: 1px;
+    --md-inline-code-background-color: hsl(var(--kanagawa-sumiInk4) / 50%);
+    --md-codeblock-color: var(--editor-foreground-color);
+    --md-codeblock-border-color: hsl(var(--kanagawa-sumiInk4));
+    --md-codeblock-border-width: 1px;
+    --md-codeblock-background-color: hsl(var(--kanagawa-sumiInk2) / 50%);
+
+    --md-inline-mark-text-color: hsl(var(--kanagawa-fujiWhite));
+    --md-inline-mark-background-color: hsl(var(--kanagawa-carpYellow) / 22%);
+    --md-inline-mark-underline-color: hsl(var(--kanagawa-roninYellow));
+
+    --md-table-border-color: hsl(var(--kanagawa-sumiInk4));
+    --md-table-border-width: 1px;
+    --md-table-background-color: hsl(var(--kanagawa-sumiInk2) / 40%);
+
+    --md-blockquote-border-color: hsl(var(--kanagawa-sumiInk6));
+
+    --md-list-mark-color: hsl(var(--kanagawa-springBlue));
+    --md-list-mark-2-color: hsl(var(--kanagawa-surimiOrange));
+    --md-list-mark-3-color: hsl(var(--kanagawa-springGreen));
+    --md-task-marker-font-weight: bold;
+
+    /* Comments — fujiGray, italic */
+    --syntax-comment-color: hsl(var(--kanagawa-fujiGray));
+    --syntax-comment-font-style: italic;
+    --syntax-line-comment-color: var(--syntax-comment-color);
+    --syntax-line-comment-font-style: var(--syntax-comment-font-style);
+    --syntax-block-comment-color: var(--syntax-comment-color);
+    --syntax-block-comment-font-style: var(--syntax-comment-font-style);
+    --syntax-doc-comment-color: var(--syntax-comment-color);
+    --syntax-doc-comment-font-style: var(--syntax-comment-font-style);
+
+    /* Names — generic fg, definitions/functions crystalBlue, builtins springBlue */
+    --syntax-name-color: var(--editor-foreground-color);
+    --syntax-name-constant-color: hsl(var(--kanagawa-surimiOrange));
+    --syntax-name-standard-color: hsl(var(--kanagawa-springBlue));
+    --syntax-name-definition-color: hsl(var(--kanagawa-crystalBlue));
+    --syntax-name-function-color: hsl(var(--kanagawa-crystalBlue));
+    --syntax-name-special-color: hsl(var(--kanagawa-springBlue));
+    --syntax-name-local-color: var(--editor-foreground-color);
+
+    /* Variable names — fg (kanagawa keeps variables uncolored) */
+    --syntax-variable-name-color: var(--editor-foreground-color);
+    --syntax-variable-name-constant-color: hsl(var(--kanagawa-surimiOrange));
+    --syntax-variable-name-standard-color: var(--syntax-variable-name-color);
+    --syntax-variable-name-definition-color: var(--syntax-variable-name-color);
+    --syntax-variable-name-function-color: hsl(var(--kanagawa-crystalBlue));
+    --syntax-variable-name-special-color: hsl(var(--kanagawa-waveRed));
+    --syntax-variable-name-local-color: var(--syntax-variable-name-color);
+
+    /* Property / field names — carpYellow (identifier) */
+    --syntax-property-name-color: hsl(var(--kanagawa-carpYellow));
+    --syntax-property-name-constant-color: var(--syntax-property-name-color);
+    --syntax-property-name-standard-color: var(--syntax-property-name-color);
+    --syntax-property-name-definition-color: var(--syntax-property-name-color);
+    --syntax-property-name-function-color: hsl(var(--kanagawa-crystalBlue));
+    --syntax-property-name-special-color: var(--syntax-property-name-color);
+    --syntax-property-name-local-color: var(--syntax-property-name-color);
+
+    /* Other names */
+    --syntax-tag-name-color: hsl(var(--kanagawa-crystalBlue));
+    --syntax-attribute-name-color: hsl(var(--kanagawa-carpYellow));
+    --syntax-class-name-color: hsl(var(--kanagawa-waveAqua2)); /* type */
+    --syntax-label-name-color: hsl(var(--kanagawa-peachRed)); /* special3 */
+    --syntax-namespace-color: hsl(var(--kanagawa-waveAqua2));
+    --syntax-macro-name-color: hsl(var(--kanagawa-waveRed)); /* preproc */
+
+    /* Strings & regexps — springGreen, regex boatYellow2 */
+    --syntax-string-color: hsl(var(--kanagawa-springGreen));
+    --syntax-string-special-color: var(--syntax-string-color);
+    --syntax-string-constant-color: var(--syntax-string-color);
+    --syntax-string-standard-color: var(--syntax-string-color);
+
+    /* Numbers & literals — sakuraPink, constants surimiOrange */
+    --syntax-number-color: hsl(var(--kanagawa-sakuraPink));
+    --syntax-literal-color: var(--editor-foreground-color);
+    --syntax-character-color: hsl(var(--kanagawa-springGreen));
+    --syntax-integer-color: hsl(var(--kanagawa-sakuraPink));
+    --syntax-float-color: hsl(var(--kanagawa-sakuraPink));
+    --syntax-bool-color: hsl(var(--kanagawa-surimiOrange));
+    --syntax-regexp-color: hsl(var(--kanagawa-boatYellow2));
+    --syntax-color-color: hsl(var(--kanagawa-surimiOrange));
+    --syntax-url-color: hsl(var(--kanagawa-springBlue));
+    --syntax-attribute-value-color: hsl(var(--kanagawa-springGreen));
+
+    /* Keywords — oniViolet; constants/atoms surimiOrange; self/special waveRed */
+    --syntax-self-color: hsl(var(--kanagawa-waveRed));
+    --syntax-null-color: hsl(var(--kanagawa-surimiOrange));
+    --syntax-atom-color: hsl(var(--kanagawa-surimiOrange));
+    --syntax-unit-color: hsl(var(--kanagawa-surimiOrange));
+    --syntax-modifier-color: hsl(var(--kanagawa-oniViolet));
+    --syntax-operator-keyword-color: var(--syntax-keyword-color);
+    --syntax-control-keyword-color: var(--syntax-keyword-color);
+    --syntax-definition-keyword-color: var(--syntax-keyword-color);
+    --syntax-module-keyword-color: var(--syntax-keyword-color);
+    --syntax-keyword-color: hsl(var(--kanagawa-oniViolet));
+
+    /* Operators — boatYellow2 */
+    --syntax-operator-color: hsl(var(--kanagawa-boatYellow2));
+    --syntax-deref-operator-color: var(--syntax-operator-color);
+    --syntax-arithmetic-operator-color: var(--syntax-operator-color);
+    --syntax-logic-operator-color: var(--syntax-operator-color);
+    --syntax-bitwise-operator-color: var(--syntax-operator-color);
+    --syntax-compare-operator-color: var(--syntax-operator-color);
+    --syntax-update-operator-color: var(--syntax-operator-color);
+    --syntax-definition-operator-color: var(--syntax-operator-color);
+    --syntax-type-operator-color: var(--syntax-operator-color);
+    --syntax-control-operator-color: var(--syntax-operator-color);
+
+    /* Punctuation — springViolet2 */
+    --syntax-separator-color: hsl(var(--kanagawa-springViolet2));
+    --syntax-angle-bracket-color: hsl(var(--kanagawa-springViolet2));
+    --syntax-square-bracket-color: hsl(var(--kanagawa-springViolet2));
+    --syntax-paren-color: hsl(var(--kanagawa-springViolet2));
+    --syntax-brace-color: hsl(var(--kanagawa-springViolet2));
+    --syntax-bracket-color: hsl(var(--kanagawa-springViolet2));
+    --syntax-punctuation-color: hsl(var(--kanagawa-springViolet2));
+
+    /* Headings & prose */
+    --syntax-heading-color: hsl(var(--kanagawa-carpYellow));
+    --syntax-heading-font-weight: bold;
+    --syntax-heading-1-color: var(--syntax-heading-color);
+    --syntax-heading-1-font-weight: var(--syntax-heading-font-weight);
+    --syntax-heading-2-color: var(--syntax-heading-color);
+    --syntax-heading-2-font-weight: var(--syntax-heading-font-weight);
+    --syntax-heading-3-color: var(--syntax-heading-color);
+    --syntax-heading-3-font-weight: var(--syntax-heading-font-weight);
+    --syntax-heading-4-color: var(--syntax-heading-color);
+    --syntax-heading-4-font-weight: var(--syntax-heading-font-weight);
+    --syntax-heading-5-color: var(--syntax-heading-color);
+    --syntax-heading-5-font-weight: var(--syntax-heading-font-weight);
+    --syntax-heading-6-color: var(--syntax-heading-color);
+    --syntax-heading-6-font-weight: var(--syntax-heading-font-weight);
+    --syntax-content-separator-color: hsl(var(--kanagawa-peachRed));
+    --syntax-list-color: hsl(var(--kanagawa-springBlue));
+    --syntax-quote-color: hsl(var(--kanagawa-oldWhite));
+    --syntax-quote-font-style: italic;
+    --syntax-emphasis-color: hsl(var(--kanagawa-springGreen));
+    --syntax-emphasis-font-style: italic;
+    --syntax-strong-color: hsl(var(--kanagawa-peachRed));
+    --syntax-strong-font-weight: bold;
+    --syntax-link-color: hsl(var(--kanagawa-crystalBlue));
+    --syntax-link-text-decoration: underline;
+    --syntax-strikethrough-text-decoration: line-through;
+    --syntax-monospace-color: hsl(var(--kanagawa-oldWhite));
+    --syntax-content-color: var(--editor-foreground-color);
+
+    /* Diffs & meta */
+    --syntax-inserted-color: hsl(var(--kanagawa-autumnGreen)); /* vcs.added */
+    --syntax-deleted-color: hsl(var(--kanagawa-autumnRed)); /* vcs.removed */
+    --syntax-changed-color: hsl(var(--kanagawa-autumnYellow)); /* vcs.changed */
+    --syntax-document-meta-color: var(--editor-foreground-color);
+    --syntax-annotation-color: hsl(var(--kanagawa-surimiOrange));
+    --syntax-processing-instruction-color: hsl(var(--kanagawa-springGreen));
+    --syntax-meta-color: hsl(var(--kanagawa-waveRed)); /* preproc */
+
+    /* Diagnostics — sumiInk6 with a dotted samuraiRed underline */
+    --syntax-invalid-color: hsl(var(--kanagawa-sumiInk6));
+    --syntax-invalid-border-bottom: 1px dotted hsl(var(--kanagawa-samuraiRed));
+  }
+
+  :root:has(body.acrylic-window) {
+    --editor-background-color: transparent;
+  }
+}

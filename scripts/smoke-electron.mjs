@@ -39,6 +39,7 @@ const flags = [
   `--user-data-dir=${profile}`,
   '--remote-debugging-port=0',
   '--enable-logging=stderr',
+  ...(process.env.CI === 'true' ? ['--disable-gpu'] : []),
 ];
 const child = spawn(
   packaged ? binary : process.execPath,
@@ -92,14 +93,28 @@ try {
   browser = await puppeteer.connect({
     browserWSEndpoint: endpoint,
     defaultViewport: null,
-    protocolTimeout: process.argv.includes('--catalog') ? 60_000 : 15_000,
+    protocolTimeout:
+      process.env.CI === 'true' ||
+      process.argv.includes('--catalog') ||
+      process.argv.includes('--emulated')
+        ? 60_000
+        : 15_000,
   });
   const target = await browser.waitForTarget(
     (target) =>
       target.type() === 'page' && /^(file:|https?:)/.test(target.url()),
   );
   page = await target.page();
-  page.setDefaultTimeout(process.argv.includes('--emulated') ? 30_000 : 10_000);
+  page.setDefaultTimeout(
+    process.env.CI === 'true' || process.argv.includes('--emulated')
+      ? 30_000
+      : 10_000,
+  );
+  page.setDefaultNavigationTimeout(
+    process.env.CI === 'true' || process.argv.includes('--emulated')
+      ? 60_000
+      : 30_000,
+  );
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('requestfailed', (request) =>
     errors.push(`${request.url()}: ${request.failure()?.errorText}`),

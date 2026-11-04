@@ -11,4 +11,9 @@ Xvfb :99 -screen 0 1600x1000x24 &
 display_process=$!
 trap 'kill "$display_process" 2>/dev/null || true' EXIT
 export DISPLAY=:99
+for attempt in {1..50}; do
+  test -S /tmp/.X11-unix/X99 && break
+  sleep 0.1
+done
+test -S /tmp/.X11-unix/X99
 runuser --user inknote -- node scripts/smoke-electron.mjs --app-path=/usr/bin/inknote

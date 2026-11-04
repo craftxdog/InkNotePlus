@@ -9,7 +9,10 @@ import { DatabaseSync } from 'node:sqlite';
 import { verifyInkdropFeatures } from './smoke-inkdrop-features.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const packaged = process.argv.includes('--packaged');
+const appPath = process.argv
+  .find((argument) => argument.startsWith('--app-path='))
+  ?.slice('--app-path='.length);
+const packaged = process.argv.includes('--packaged') || !!appPath;
 const reviewDatabase = process.argv
   .find((argument) => argument.startsWith('--notes-database='))
   ?.slice('--notes-database='.length);
@@ -22,8 +25,11 @@ const bundle = path.join(
   'out',
   `${productName}-${process.platform}-${process.arch}`,
 );
-const binary =
-  process.platform === 'darwin'
+const binary = appPath
+  ? process.platform === 'darwin' && appPath.endsWith('.app')
+    ? path.join(appPath, 'Contents', 'MacOS', productName)
+    : appPath
+  : process.platform === 'darwin'
     ? path.join(bundle, `${productName}.app`, 'Contents', 'MacOS', productName)
     : path.join(
         bundle,
@@ -93,7 +99,7 @@ try {
       target.type() === 'page' && /^(file:|https?:)/.test(target.url()),
   );
   page = await target.page();
-  page.setDefaultTimeout(10000);
+  page.setDefaultTimeout(process.argv.includes('--emulated') ? 30_000 : 10_000);
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('requestfailed', (request) =>
     errors.push(`${request.url()}: ${request.failure()?.errorText}`),
@@ -646,6 +652,10 @@ try {
           root: document.querySelector('#root')?.innerHTML.slice(0, 500),
           scripts: [...document.scripts].map((s) => s.src),
           bridge: typeof window.inkNote,
+          previewLength:
+            document.querySelector('.mde-preview')?.textContent.length,
+          editorLength:
+            document.querySelector('.cm-content')?.textContent.length,
           resources: performance
             .getEntriesByType('resource')
             .slice(0, 10)

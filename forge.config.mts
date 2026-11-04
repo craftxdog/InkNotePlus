@@ -6,9 +6,12 @@ import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 import electronChecksums from 'electron/checksums.json' with { type: 'json' };
+import { macSigningConfiguration } from './config/distribution';
+import metadata from './package.json' with { type: 'json' };
 
 const config: ForgeConfig = {
   packagerConfig: {
+    ...macSigningConfiguration(process.env),
     asar: true,
     extraResource: ['resources/licenses'],
     download: {
@@ -16,7 +19,11 @@ const config: ForgeConfig = {
     },
   },
   rebuildConfig: {},
-  makers: [new MakerSquirrel({}), new MakerRpm({}), new MakerDeb({})],
+  makers: [
+    new MakerSquirrel({}),
+    new MakerRpm({ options: { bin: metadata.productName } }),
+    new MakerDeb({ options: { bin: metadata.productName } }),
+  ],
   plugins: [
     new VitePlugin({
       // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.

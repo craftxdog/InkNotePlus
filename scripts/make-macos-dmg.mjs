@@ -1,7 +1,22 @@
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  createReadStream,
+} from 'node:fs';
+import { writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import {
+  safeFileSegment,
+  stageMacDmg,
+  verifyMacDmgLayout,
+} from './lib/macos-dmg.mjs';
 
 const supportedArchitectures = new Set(['arm64', 'x64']);
 const projectRoot = path.resolve(
@@ -20,11 +35,8 @@ if (!supportedArchitectures.has(arch)) {
 const packageMetadata = JSON.parse(
   readFileSync(path.join(projectRoot, 'package.json'), 'utf8'),
 );
-const productName = readSafeFileSegment(
-  packageMetadata.productName,
-  'productName',
-);
-const version = readSafeFileSegment(packageMetadata.version, 'version');
+const productName = safeFileSegment(packageMetadata.productName, 'productName');
+const version = safeFileSegment(packageMetadata.version, 'version');
 const forgeCli = path.join(
   projectRoot,
   'node_modules',
@@ -58,27 +70,69 @@ if (!existsSync(appBundle)) {
   );
 }
 mkdirSync(outputDirectory, { mode: 0o700, recursive: true });
-run('/usr/bin/hdiutil', [
-  'create',
-  '-volname',
-  productName,
-  '-srcfolder',
+run('/usr/bin/codesign', [
+  '--verify',
+  '--deep',
+  '--strict',
+  '--verbose=2',
   appBundle,
-  '-ov',
-  '-format',
-  'UDZO',
-  outputPath,
 ]);
-
-function readSafeFileSegment(value, field) {
-  if (
-    typeof value !== 'string' ||
-    !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value)
-  ) {
-    throw new Error(`package.json ${field} must be a safe file segment.`);
+const temporary = mkdtempSync(path.join(outputDirectory, '.build-'));
+try {
+  const stage = path.join(temporary, productName);
+  await stageMacDmg(appBundle, stage, productName);
+  await verifyMacDmgLayout(stage, productName);
+  const image = path.join(temporary, `${productName}.dmg`);
+  const probe = spawnSync(
+    '/usr/sbin/diskutil',
+    ['image', 'create', 'from', '--help'],
+    { encoding: 'utf8' },
+  );
+  if (probe.status === 0 && probe.stdout.includes('--volumeName')) {
+    run('/usr/sbin/diskutil', [
+      'image',
+      'create',
+      'from',
+      '--volumeName',
+      productName,
+      '--format',
+      'UDZO',
+      stage,
+      image,
+    ]);
+  } else {
+    // Older supported macOS runners do not provide diskutil image create.
+    run('/usr/bin/hdiutil', [
+      'create',
+      '-volname',
+      productName,
+      '-srcfolder',
+      stage,
+      '-format',
+      'UDZO',
+      image,
+    ]);
   }
-
-  return value;
+  run('/usr/bin/hdiutil', ['verify', image]);
+  renameSync(image, outputPath);
+  const digest = createHash('sha256');
+  for await (const chunk of createReadStream(outputPath)) digest.update(chunk);
+  await writeFile(
+    `${outputPath}.sha256`,
+    `${digest.digest('hex')}  ${path.basename(outputPath)}\n`,
+  );
+  console.log(
+    `DMG verificado: ${outputPath}\nInstalación: arrastra ${productName}.app a Aplicaciones.`,
+  );
+  if (
+    !process.env.INKNOTE_MAC_SIGN_IDENTITY ||
+    process.env.INKNOTE_MAC_SIGN_IDENTITY === '-'
+  )
+    console.log(
+      'Firma local ad hoc. La distribución pública requiere Developer ID y notarización.',
+    );
+} finally {
+  rmSync(temporary, { recursive: true, force: true });
 }
 
 function run(command, args) {

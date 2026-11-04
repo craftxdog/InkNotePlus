@@ -18,12 +18,14 @@ jobs:
       matrix:
         include:
           - name: macOS Apple Silicon DMG
-            os: macos-14
+            os: macos-15
             command: pnpm run make:mac:arm64
+            arch: arm64
             artifact: inknote-macos-arm64
           - name: macOS Intel DMG
             os: macos-15-intel
             command: pnpm run make:mac:x64
+            arch: x64
             artifact: inknote-macos-x64
           - name: Windows x64 Setup
             os: windows-2022
@@ -51,7 +53,7 @@ jobs:
 
       - name: Install Linux packaging tools
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install --yes fakeroot rpm
+        run: sudo apt-get update && sudo apt-get install --yes fakeroot rpm xvfb
 
       - name: Install locked dependencies
         env:
@@ -66,6 +68,43 @@ jobs:
 
       - name: Build installer
         run: ${{ matrix.command }}
+
+      - name: Install and launch macOS DMG
+        if: runner.os == 'macOS'
+        run: node scripts/verify-macos-installer.mjs ${{ matrix.arch }} --smoke
+
+      - name: Install and launch Windows Setup
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $metadata = Get-Content package.json | ConvertFrom-Json
+          $installers = @(Get-ChildItem out/make -Recurse -Filter '*Setup.exe')
+          if ($installers.Count -ne 1) { throw 'Expected exactly one Setup.exe' }
+          $setup = Start-Process -FilePath $installers[0].FullName -ArgumentList '--silent' -Wait -PassThru
+          if ($setup.ExitCode -ne 0) { throw "Setup failed: $($setup.ExitCode)" }
+          $installed = Join-Path $env:LOCALAPPDATA "$($metadata.name)/app-$($metadata.version)/$($metadata.productName).exe"
+          if (!(Test-Path $installed)) { throw "Installed executable missing: $installed" }
+          # Squirrel launches once after installation; test a fresh, isolated profile.
+          Get-Process | Where-Object { $_.Path -eq $installed } | Stop-Process -Force
+          node scripts/smoke-electron.mjs "--app-path=$installed"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Install and launch Debian package
+        if: runner.os == 'Linux'
+        run: |
+          mapfile -t packages < <(find out/make/deb -name '*.deb')
+          test "${#packages[@]}" -eq 1
+          sudo apt-get install --yes "./${packages[0]}"
+          dpkg-query --show --showformat='${Status}\n' inknote | grep -Fx 'install ok installed'
+          xvfb-run -a node scripts/smoke-electron.mjs --app-path=/usr/bin/inknote
+
+      - name: Install and launch RPM on Fedora
+        if: runner.os == 'Linux'
+        run: |
+          docker run --rm --init --shm-size=1g \
+            --volume "$PWD:/workspace:ro" --workdir /workspace \
+            fedora:44 bash scripts/verify-rpm-installer.sh
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

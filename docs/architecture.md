@@ -449,14 +449,17 @@ el Markdown y el preview y se guarda automáticamente.
   validación de integridad.
 - Notas, rutas y SQL no se mandan a telemetría, APIs ni servicios externos.
 
-No se afirma cifrado extremo a extremo, firma de artefactos, autenticación ni
+No se afirma cifrado extremo a extremo, autenticación ni
 sincronización remota hasta que existan claves, recuperación y pruebas reales.
 
 ## Distribución
 
 Electron Forge empaqueta la aplicación. Los makers de Forge generan Windows y
-Linux; macOS empaqueta la app con Forge y crea un DMG UDZO con la herramienta
-nativa `hdiutil`, sin un maker de imagen, layout visual ni parser extra.
+Linux; macOS empaqueta la app con Forge y crea un DMG UDZO con
+`diskutil image create from`, o `hdiutil` cuando la API nueva no existe.
+El volumen contiene `InkNote.app` y el acceso a `/Applications`. La firma se
+aplica después de modificar plist, fuses y metadatos ASAR; se comprueba antes
+de crear la imagen. Cada DMG incluye un archivo SHA-256.
 Forge verifica las descargas y los archivos cacheados con los checksums
 oficiales incluidos en la dependencia Electron instalada. La verificación
 SHA-256 sigue activa sin exigir una consulta adicional a GitHub para obtener
@@ -473,11 +476,24 @@ El workflow de calidad corre en PR y main. Valida lockfile, audit de
 high/critical, lint, tipos, tests y package. El workflow de instaladores sólo
 corre manualmente o en tags v*, y también ejecuta audit, lint, tipos y tests
 antes de usar builders nativos para ARM macOS, Intel macOS, Windows y Linux.
-Las acciones de GitHub están fijadas a commits.
+Las acciones de GitHub están fijadas a commits. El workflow monta y copia el
+DMG a una carpeta temporal, instala Setup en Windows, DEB mediante apt en
+Ubuntu y RPM mediante dnf en Fedora 44. Cada instalación inicia la aplicación
+con un perfil temporal y ejecuta las pruebas reales del editor. No se desactiva
+el sandbox para ejecutar estas pruebas.
 
-Los artefactos son construibles, no firmados ni notarizados. Gatekeeper y
-SmartScreen pueden advertir al usuario hasta que se aporten certificados y se
-autorice configurar firma y notarización.
+Los DMG locales usan firma ad hoc, sin Team ID ni runtime endurecido. No son
+distribuciones notarizadas. `INKNOTE_MAC_SIGN_IDENTITY` permite usar Developer
+ID Application con runtime endurecido; `INKNOTE_MAC_NOTARY_PROFILE` selecciona
+credenciales ya guardadas en el llavero. `INKNOTE_REQUIRE_SIGNING=1` impide
+generar una distribución sin identidad real. La validación local de firma no
+equivale a aprobación de Gatekeeper. Windows requiere su certificado para
+firmar una distribución pública y establecer reputación de SmartScreen.
+
+Fuentes: [firma macOS de Forge](https://www.electronforge.io/guides/code-signing/code-signing-macos),
+[notarización de Apple](https://developer.apple.com/documentation/security/resolving-common-notarization-issues),
+[instalación Squirrel](https://github.com/Squirrel/Squirrel.Windows/blob/develop/docs/using/install-process.md)
+y [Electron en CI sin pantalla](https://www.electronjs.org/docs/latest/tutorial/testing-on-headless-ci).
 
 ## Comandos
 

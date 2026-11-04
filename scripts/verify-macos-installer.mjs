@@ -75,9 +75,9 @@ try {
   await mkdir(applications);
   run('/usr/bin/ditto', [path.join(mount, `${productName}.app`), app]);
   run('/usr/bin/lipo', [
+    path.join(app, 'Contents', 'MacOS', productName),
     '-verify_arch',
     arch === 'x64' ? 'x86_64' : 'arm64',
-    path.join(app, 'Contents', 'MacOS', productName),
   ]);
   run('/usr/bin/codesign', [
     '--verify',

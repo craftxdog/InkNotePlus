@@ -21,7 +21,14 @@ const config: ForgeConfig = {
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({}),
-    new MakerRpm({ options: { bin: metadata.productName } }),
+    new MakerRpm({
+      options: {
+        bin: metadata.productName,
+        // The RPM maker's cp -r staging drops the helper's setuid bit.
+        // Restore Chromium's required root ownership and mode after installation.
+        post: `chown root:root /usr/lib/${metadata.name}/chrome-sandbox && chmod 4755 /usr/lib/${metadata.name}/chrome-sandbox`,
+      },
+    }),
     new MakerDeb({ options: { bin: metadata.productName } }),
   ],
   plugins: [

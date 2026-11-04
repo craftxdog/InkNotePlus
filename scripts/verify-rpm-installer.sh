@@ -6,6 +6,9 @@ mapfile -t packages < <(find out/make/rpm -name '*.rpm')
 test "${#packages[@]}" -eq 1
 dnf install --assumeyes nodejs xorg-x11-server-Xvfb liberation-sans-fonts liberation-mono-fonts "./${packages[0]}"
 rpm --query inknote
+cmp assets/icons/512x512.png /usr/share/pixmaps/inknote.png
+cmp assets/icon.png /usr/lib/inknote/resources/icon.png
+grep -Fx 'Icon=inknote' /usr/share/applications/inknote.desktop
 useradd --create-home inknote
 Xvfb :99 -screen 0 1600x1000x24 &
 display_process=$!

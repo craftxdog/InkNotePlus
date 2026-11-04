@@ -33,6 +33,7 @@ import { SqliteLibraryRepository } from './infrastructure/sqlite/sqlite-library-
 import { createContentSecurityPolicy } from './main/security';
 import { getConfigPath, getDatabasePath } from './main/storage';
 import { createMainWindowOptions } from './main/window-options';
+import { configureAppIcon, getAppIconPath } from './main/app-icon';
 import { IPC_CHANNELS } from './shared/ipc';
 import { coreConfig } from './application/core-config';
 import { ThemeService } from './main/themes/theme-service';
@@ -103,6 +104,7 @@ function createWindow(activeConfiguration: Configuration): BrowserWindow {
       configuration: activeConfiguration,
       isDevelopment,
       preloadPath: path.join(__dirname, 'preload.cjs'),
+      iconPath: getAppIconPath(),
     }),
   );
 
@@ -308,6 +310,7 @@ function initializeCoreModules(): Configuration {
 }
 
 app.whenReady().then(() => {
+  configureAppIcon();
   installSessionSecurity();
   protocol.handle('inknote-asset', (request) =>
     readAsset(request.url, app.getPath('userData')),

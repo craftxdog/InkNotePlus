@@ -33,6 +33,7 @@ describe('main window options', () => {
       configuration: createConfiguration(),
       isDevelopment: false,
       preloadPath: '/app/preload.cjs',
+      iconPath: '/app/icon.png',
     });
 
     expect(options).toMatchObject({
@@ -41,6 +42,7 @@ describe('main window options', () => {
       minWidth: 640,
       resizable: true,
       show: false,
+      icon: '/app/icon.png',
       width: 1_280,
       webPreferences: {
         allowRunningInsecureContent: false,
@@ -68,6 +70,7 @@ describe('main window options', () => {
       configuration,
       isDevelopment: true,
       preloadPath: '/app/preload.cjs',
+      iconPath: '/app/icon.png',
     });
 
     expect(options.width).toBe(700);

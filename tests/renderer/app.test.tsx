@@ -52,7 +52,7 @@ describe('React workspace', () => {
     });
     const { container } = render(<App store={createWorkspaceStore(api)} />);
     await screen.findByRole('heading', { name: 'Seguro' });
-    expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('.mde-preview img')).toBeNull();
     expect(container.querySelector('.mde-preview script')).toBeNull();
     expect(screen.getByText('[Imagen: remota]')).toBeTruthy();
   });

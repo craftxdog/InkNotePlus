@@ -133,6 +133,15 @@ try {
   await page.waitForSelector('.inknote-shell', { timeout: 10_000 });
   await page.reload({ waitUntil: 'networkidle0' });
   await page.waitForSelector('.inknote-shell', { timeout: 10_000 });
+  await page.waitForFunction(() => {
+    const icon = document.querySelector('.app-wordmark img');
+    return (
+      icon instanceof HTMLImageElement &&
+      icon.complete &&
+      icon.naturalWidth === 64 &&
+      !!document.querySelector('link[rel="icon"][type="image/png"]')
+    );
+  });
   assert.equal(
     await page.$eval(
       '.inknote-shell',

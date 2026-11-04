@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import {
   installShortcuts,
   keystrokeMatches,
+  executeShortcut,
 } from '../../src/renderer/shortcuts';
 import { createWorkspaceStore } from '../../src/renderer/state/workspace-store';
 import { createApi } from '../support/renderer-api';
@@ -13,6 +14,24 @@ import {
 import { shortcutConflict } from '../../src/shared/keybindings';
 
 afterEach(() => vi.useRealTimers());
+it('exposes Inkdrop wrapping and line-number commands without inventing default shortcuts', async () => {
+  const { api } = createApi();
+  const store = createWorkspaceStore(api);
+  expect(executeShortcut(store, 'editor:toggle-line-wrapping', null)).toBe(
+    true,
+  );
+  await vi.waitFor(() =>
+    expect(store.getState().preferences.lineWrapping).toBe('off'),
+  );
+  executeShortcut(store, 'editor:toggle-line-wrapping', null);
+  await vi.waitFor(() =>
+    expect(store.getState().preferences.lineWrapping).toBe('cursor'),
+  );
+  executeShortcut(store, 'editor:toggle-line-numbers', null);
+  await vi.waitFor(() =>
+    expect(store.getState().preferences.lineNumbers).toBe(false),
+  );
+});
 it('rejects conflicting shortcut prefixes across editor and app contexts, including equivalent platform modifiers', () => {
   expect(shortcutConflict('core:new-note', 'Mod-k Mod-b', [], true)?.id).toBe(
     'editor:insert-link',

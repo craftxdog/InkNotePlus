@@ -57,6 +57,17 @@ export function executeShortcut(
     case 'core:save-note':
       void state.flushDrafts();
       return true;
+    case 'editor:toggle-line-wrapping':
+      void state.updatePreferences({
+        lineWrapping:
+          state.preferences.lineWrapping === 'off' ? 'cursor' : 'off',
+      });
+      return true;
+    case 'editor:toggle-line-numbers':
+      void state.updatePreferences({
+        lineNumbers: !state.preferences.lineNumbers,
+      });
+      return true;
     case 'core:focus-search':
       void state.setSearchGlobal(false);
       document.querySelector<HTMLInputElement>('#note-search')?.focus();

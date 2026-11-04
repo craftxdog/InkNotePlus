@@ -7,6 +7,11 @@ export const themeIdSchema = z
   .max(100)
   .regex(/^[a-z][a-z0-9-]*$/);
 export const editorModeSchema = z.enum(['edit', 'split', 'preview']);
+export const lineWrappingSchema = z.preprocess(
+  (value) => (value === true ? 'all' : value === false ? 'off' : value),
+  z.enum(['off', 'all', 'prose', 'cursor']),
+);
+export type LineWrapping = z.output<typeof lineWrappingSchema>;
 const fontFamilySchema = z
   .string()
   .max(240)
@@ -27,7 +32,7 @@ const fields = {
   editorFontSize: z.number().int().min(10).max(40),
   editorLineHeight: z.number().min(1).max(3),
   lineNumbers: z.boolean(),
-  lineWrapping: z.boolean(),
+  lineWrapping: lineWrappingSchema,
   activeLine: z.boolean(),
   spellcheck: z.boolean(),
   showToolbar: z.boolean(),
@@ -60,7 +65,7 @@ export const defaultPreferences: Preferences = {
   editorFontSize: 14,
   editorLineHeight: 1.6,
   lineNumbers: true,
-  lineWrapping: true,
+  lineWrapping: 'cursor',
   activeLine: true,
   spellcheck: true,
   showToolbar: true,

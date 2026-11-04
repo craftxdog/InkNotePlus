@@ -149,6 +149,18 @@ export const shortcutCommands = [
     scope: 'editor',
     key: 'Mod-k',
   },
+  {
+    id: 'editor:toggle-line-wrapping',
+    label: 'Alternar ajuste de líneas',
+    scope: 'app',
+    key: '',
+  },
+  {
+    id: 'editor:toggle-line-numbers',
+    label: 'Alternar números de línea',
+    scope: 'app',
+    key: '',
+  },
 ] as const;
 export type ShortcutCommand = (typeof shortcutCommands)[number]['id'];
 const commandIdSchema = z.enum(shortcutCommands.map((command) => command.id));

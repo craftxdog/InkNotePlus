@@ -9,6 +9,9 @@ import { DatabaseSync } from 'node:sqlite';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const packaged = process.argv.includes('--packaged');
+const reviewDatabase = process.argv
+  .find((argument) => argument.startsWith('--notes-database='))
+  ?.slice('--notes-database='.length);
 const profile = await mkdtemp(path.join(tmpdir(), 'inknote-electron-smoke-'));
 const { productName } = JSON.parse(
   await readFile(path.join(root, 'package.json'), 'utf8'),
@@ -150,6 +153,16 @@ try {
     );
   });
   await page.waitForSelector('.mde-preview h2');
+  const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+  await page.focus('.cm-content');
+  await page.keyboard.down(modifier);
+  await page.keyboard.press('f');
+  await page.keyboard.up(modifier);
+  await page.waitForSelector('.cm-search input[name="search"]');
+  await page.type('.cm-search input[name="search"]', 'Block 10');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('.cm-search', { hidden: true });
   console.log('Native autosave passed; checking task editing.');
   await page.click('.mde-preview input[type="checkbox"]');
   await page.waitForFunction(async () => {
@@ -166,7 +179,6 @@ try {
       element.textContent.includes('[x]'),
     ),
   );
-  const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
   await page.focus('.cm-content');
   await page.keyboard.down(modifier);
   await page.keyboard.press('z');
@@ -189,6 +201,15 @@ try {
   await page.type('dialog input', 'Native notebook');
   await page.click('dialog .button--primary');
   await page.waitForSelector('.empty-list-state');
+  await page.click('button[aria-label="Cambiar icono de Native notebook"]');
+  await page.click('button[aria-label="Usar icono Trabajo"]');
+  await page.waitForFunction(
+    async () =>
+      (await window.inkNote.library.get()).data.notebooks.find(
+        (book) => book.name === 'Native notebook',
+      ).icon === 'briefcase',
+  );
+  await page.click('dialog button[aria-label="Cerrar diálogo"]');
   await page.click('.navigation-item');
   await page.waitForSelector('.cm-content');
   const notebook = await page.evaluate(async () => {
@@ -280,8 +301,276 @@ try {
     stable.every((value, index) => Math.abs(value - positions[index]) < 2),
     'Scroll sync must settle without feedback loops.',
   );
+  const primaryNoteId = await page.evaluate(
+    async () => (await window.inkNote.notes.list()).data[0].id,
+  );
+  assert.equal(
+    await page.$eval(
+      '.navigation-item.status-onhold .navigation-count',
+      (element) => element.textContent,
+    ),
+    '1',
+  );
+  assert.ok(
+    await page.$$eval('.navigation-item .navigation-count', (counters) => {
+      const edge = document
+        .querySelector('.pane--sidebar')
+        .getBoundingClientRect().right;
+      return counters.every(
+        (counter) =>
+          counter.getBoundingClientRect().right <= edge + 1 &&
+          counter.getBoundingClientRect().width > 0 &&
+          getComputedStyle(counter).visibility === 'visible',
+      );
+    }),
+    'Sidebar counters must remain visible inside the panel. ' +
+      JSON.stringify(
+        await page.$$eval('.navigation-item .navigation-count', (counters) =>
+          counters.map((counter) => ({
+            label: counter.parentElement.textContent,
+            right: counter.getBoundingClientRect().right,
+            width: counter.getBoundingClientRect().width,
+            visibility: getComputedStyle(counter).visibility,
+            edge: document
+              .querySelector('.pane--sidebar')
+              .getBoundingClientRect().right,
+          })),
+        ),
+      ),
+  );
+  await page.evaluate(async (parentId) => {
+    const child = await window.inkNote.library.createNotebook({
+      name: 'Rendering child',
+      parentId,
+    });
+    const note = await window.inkNote.notes.create({
+      title: 'Math and Mermaid native',
+      body: 'Inline $O(n \\times m)$.\n\n$$\n\\frac{n}{v} \\approx 127\n$$\n\n```math\n\\sum_{i=1}^{n} i\n```\n\n```mermaid\nflowchart TD\n A[Start] --> B{Ready?}\n B -->|Yes| C[Ship]\n B -->|No| D[Fix]\n D --> B\n```',
+      metadata: {
+        notebookId: child.data.id,
+        tags: ['rendering'],
+        status: 'active',
+        isTemplate: false,
+      },
+    });
+    return { id: note.data.id, childId: child.data.id };
+  }, notebook);
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll('.note-list-item')].some((element) =>
+      element.textContent.includes('Math and Mermaid native'),
+    ),
+  );
+  await page.$$eval('.note-list-item', (elements) =>
+    elements
+      .find((element) =>
+        element.textContent.includes('Math and Mermaid native'),
+      )
+      .click(),
+  );
+  await page.waitForSelector('.mermaid-block svg');
+  await page.waitForFunction(
+    () => document.querySelectorAll('.inkdrop-math math').length === 3,
+  );
+  assert.ok(
+    await page.$eval(
+      '.inkdrop-math .katex',
+      (element) => element.getBoundingClientRect().height > 10,
+    ),
+  );
+  assert.ok(
+    await page.evaluate(() => document.fonts.check('16px KaTeX_Main')),
+    'KaTeX WOFF2 fonts must load locally under CSP.',
+  );
+  await page.hover('.mermaid-block');
+  await page.click('.mermaid-block button[aria-label="Pantalla completa"]');
+  await page.waitForSelector('.diagram-dialog .mermaid-diagram svg');
+  const svgSelector = '.diagram-dialog .mermaid-diagram svg';
+  const initialBox = await page.$eval(svgSelector, (element) =>
+    element.getAttribute('viewBox'),
+  );
+  const svg = await page.$(svgSelector);
+  const box = await svg.boundingBox();
+  const center = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  const devtools = await page.createCDPSession();
+  await devtools.send('Input.dispatchMouseEvent', {
+    type: 'mouseWheel',
+    ...center,
+    deltaX: 0,
+    deltaY: -160,
+    modifiers: 2,
+  });
+  await page.waitForFunction(
+    (selector, before) =>
+      document.querySelector(selector).getAttribute('viewBox') !== before,
+    {},
+    svgSelector,
+    initialBox,
+  );
+  const zoomed = await page.$eval(svgSelector, (element) =>
+    element.getAttribute('viewBox'),
+  );
+  await page.mouse.move(center.x, center.y);
+  await page.mouse.down();
+  await page.mouse.move(center.x + 45, center.y + 35, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForFunction(
+    (selector, before) =>
+      document.querySelector(selector).getAttribute('viewBox') !== before,
+    {},
+    svgSelector,
+    zoomed,
+  );
+  await page.click('.diagram-dialog button[aria-label="Restablecer zoom"]');
+  await page.waitForFunction(
+    (selector, before) =>
+      document.querySelector(selector).getAttribute('viewBox') === before,
+    {},
+    svgSelector,
+    initialBox,
+  );
+  await page.screenshot({ path: path.join(profile, 'mermaid-fullscreen.png') });
+  await page.click('.diagram-dialog button[aria-label="Cerrar diálogo"]');
+  const updatedDiagramBody = await page.evaluate(async () =>
+    (await window.inkNote.notes.list()).data
+      .find((note) => note.title === 'Math and Mermaid native')
+      .body.replace('A[Start]', () => 'A["$$E=mc^2$$"]')
+      .replace('C[Ship]', 'C[Released]'),
+  );
+  await page.focus('.cm-content');
+  await page.keyboard.down(modifier);
+  await page.keyboard.press('a');
+  await page.keyboard.up(modifier);
+  await page.keyboard.sendCharacter(updatedDiagramBody);
+  await page.waitForFunction(() =>
+    document
+      .querySelector('.mermaid-block svg')
+      ?.textContent.includes('Released'),
+  );
+  await page.waitForSelector('.mermaid-block svg math');
+  await page.$$eval(
+    '.notebook-detail',
+    (elements) =>
+      elements
+        .find(
+          (element) =>
+            element.getAttribute('aria-label') === 'Detail de Native notebook',
+        )
+        .click(),
+    notebook,
+  );
+  await page.waitForSelector('[aria-label="Ruta del notebook"]');
+  await page.waitForFunction(() =>
+    document
+      .querySelector('.note-list-footer')
+      .textContent.trim()
+      .startsWith('2 notas'),
+  );
+  await page.click('button[aria-label="Detail de Rendering child"]');
+  await page.waitForFunction(() =>
+    document
+      .querySelector('.note-list-footer')
+      .textContent.trim()
+      .startsWith('1 nota'),
+  );
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector('[aria-label="Ruta del notebook"]')
+        .textContent.includes('Native notebook') &&
+      document
+        .querySelector('[aria-label="Ruta del notebook"]')
+        .textContent.includes('Rendering child'),
+  );
+  await page.click('button[aria-label="Volver a biblioteca"]');
+  await page.waitForFunction(() =>
+    document
+      .querySelector('.note-list-footer')
+      .textContent.trim()
+      .startsWith('2 notas'),
+  );
+  await page.$$eval('.note-list-item', (elements) =>
+    elements
+      .find((element) => element.textContent.includes('Automatic title'))
+      .click(),
+  );
+  console.log(
+    'Native math, live Mermaid with math labels, pinch/pan/reset, icons, real counts, Detail and breadcrumbs passed.',
+  );
+  if (reviewDatabase) {
+    const source = new DatabaseSync(reviewDatabase, { readOnly: true });
+    let notes;
+    try {
+      notes = source
+        .prepare(
+          'SELECT id,title,body FROM notes WHERE deleted_at IS NULL ORDER BY created_at,id',
+        )
+        .all();
+    } finally {
+      source.close();
+    }
+    for (const note of notes) {
+      await page.evaluate(
+        async ({ title, body }) => {
+          const result = await window.inkNote.notes.create({ title, body });
+          if (!result.ok)
+            throw new Error('Could not create isolated review copy.');
+        },
+        { title: note.title, body: note.body },
+      );
+      await page.waitForFunction(
+        (title) =>
+          [...document.querySelectorAll('.note-row-title')].some(
+            (element) => element.textContent === title,
+          ),
+        {},
+        note.title,
+      );
+      await page.$$eval(
+        '.note-list-item',
+        (elements, title) =>
+          elements
+            .find(
+              (element) =>
+                element.querySelector('.note-row-title').textContent === title,
+            )
+            .click(),
+        note.title,
+      );
+      await page.waitForFunction(
+        (title) =>
+          document.querySelector('.document-title-input').value === title,
+        {},
+        note.title,
+      );
+      if (note.body.includes('$') || note.body.includes('```math'))
+        await page.waitForSelector('.inkdrop-math math');
+      if (note.body.includes('```mermaid'))
+        await page.waitForSelector('.mermaid-block svg');
+      assert.equal(
+        await page
+          .$$('.inkdrop-math-error')
+          .then((elements) => elements.length),
+        0,
+        `Invalid formula in ${note.title}`,
+      );
+      await settle();
+      await page.screenshot({
+        path: path.join(profile, `review-${note.id}.png`),
+      });
+    }
+    console.log(
+      `Reviewed ${notes.length} user notes in isolated copies; source database opened read-only.`,
+    );
+    await page.$$eval('.note-list-item', (elements) =>
+      elements
+        .find((element) => element.textContent.includes('Automatic title'))
+        .click(),
+    );
+  }
   await page.click('button[aria-label="Preferencias"]');
+  await page.click('[role="tab"][id="settings-tab-themes"]');
   await page.select('select[aria-label="Tema"]', 'inknote-dark');
+  await page.screenshot({ path: path.join(profile, 'preferences.png') });
   await page.waitForFunction(async () => {
     const result = await window.inkNote.preferences.get();
     return result.ok && result.data.preferences.theme === 'inknote-dark';
@@ -293,6 +582,16 @@ try {
       getComputedStyle(document.documentElement).colorScheme === 'dark',
   );
   await page.waitForSelector('.cm-content');
+  await page.$$eval('.note-list-item', (elements) =>
+    elements
+      .find((element) => element.textContent.includes('Automatic title'))
+      .click(),
+  );
+  await page.waitForFunction(
+    () =>
+      document.querySelector('.mde-preview h2')?.textContent ===
+      'Comprobacion nativa',
+  );
   assert.equal(
     await page.$eval('.mde-preview h2', (element) => element.textContent),
     'Comprobacion nativa',
@@ -316,8 +615,8 @@ try {
   try {
     assert.ok(
       database
-        .prepare('SELECT body FROM notes LIMIT 1')
-        .get()
+        .prepare('SELECT body FROM notes WHERE id = ?')
+        .get(primaryNoteId)
         .body.includes('Close flush sentinel'),
       'Closing must flush the last edit before the debounce expires.',
     );

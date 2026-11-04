@@ -1,0 +1,24 @@
+{
+  "inkdrop-mermaid": {
+    "repository": "https://github.com/inkdropapp/mermaid",
+    "commit": "3ab64f2f470de0be11119d816d032902c12a23e7",
+    "directory": "packages/mermaid",
+    "license": "MIT",
+    "reason": "The host-agnostic package was unavailable from npm when integrated.",
+    "changes": [
+      "Formatting",
+      "Only http/https diagram links are supported by the host",
+      "Remote diagram images are disabled"
+    ]
+  },
+  "inkdrop-math": {
+    "repository": "https://github.com/inkdropapp/inkdrop-math",
+    "commit": "dd3cc053b73d7f5abf2bc9b49e7273948a9ee94f",
+    "directory": "packages/math",
+    "license": "MIT",
+    "changes": [
+      "Formatting",
+      "Generated CSS references installed KaTeX WOFF2 assets without duplicating fonts"
+    ]
+  }
+}

@@ -1,5 +1,11 @@
 nodeLinker: hoisted
 
+# micromark's optional HTML renderer only calls renderToString. Keep it on the
+# same reviewed KaTeX as the host renderer instead of the vulnerable 0.16 copy
+# (GHSA-238p-pmpm-9mq7); math parsing and rendered output are covered by tests.
+overrides:
+  'micromark-extension-math>katex': '0.19.0'
+
 packages:
   - 'themes/*'
 

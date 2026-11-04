@@ -137,6 +137,9 @@
     inline-size: 28px;
     block-size: 26px;
   }
+  .editor-toolbar[hidden] {
+    display: none;
+  }
   .toolbar-spacer {
     flex: 1;
   }
@@ -234,6 +237,24 @@
   }
 }
 @layer theme.preview.components {
+  .mde-preview {
+    font-family: var(--preview-font-family, var(--page-font));
+    font-size: var(--preview-font-size, 16px);
+  }
+  .math-block {
+    overflow-x: auto;
+    padding-block: 4px;
+  }
+  .mermaid-block {
+    margin-block: 16px;
+    min-inline-size: 0;
+  }
+  .mde-preview .diagram-dialog h2 {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: var(--large);
+  }
   .mde-preview > :first-child {
     margin-block-start: 0;
   }

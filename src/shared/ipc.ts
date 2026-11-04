@@ -34,6 +34,10 @@ export const createNoteInputSchema = z
 export const listNotesInputSchema = z
   .object({
     limit: limitSchema.optional(),
+    offset: z.number().int().min(0).max(1_000_000).optional(),
+    scopeId: z.uuid().optional(),
+    includeDescendants: z.boolean().optional(),
+    sort: z.enum(['updated', 'title']).optional(),
     trashed: z.boolean().optional(),
     notebookId: z.uuid().nullable().optional(),
     status: noteStatusSchema.optional(),
@@ -53,15 +57,9 @@ export const updateNoteInputSchema = z
   })
   .strict();
 
-export const searchNotesInputSchema = z
-  .object({
+export const searchNotesInputSchema = listNotesInputSchema
+  .extend({
     query: z.string().trim().min(1).max(maxSearchQueryLength),
-    limit: limitSchema.optional(),
-    trashed: z.boolean().optional(),
-    notebookId: z.uuid().nullable().optional(),
-    status: noteStatusSchema.optional(),
-    tag: z.string().trim().min(1).max(40).optional(),
-    templates: z.boolean().optional(),
   })
   .strict();
 

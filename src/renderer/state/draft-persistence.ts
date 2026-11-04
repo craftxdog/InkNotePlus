@@ -71,15 +71,29 @@ export function createDraftPersistence(
             parkedDrafts,
             noteList: {
               ...state.noteList,
-              notes: mergeNote(state.noteList.notes, result.data),
+              notes:
+                state.noteList.hasMore ||
+                state.noteList.notes.length >= 50 ||
+                state.preferences.noteSort === 'title'
+                  ? state.noteList.notes.map((note) =>
+                      note.id === result.data.id ? result.data : note,
+                    )
+                  : mergeNote(state.noteList.notes, result.data),
               status: 'ready',
               errorCode: null,
             },
           };
         });
         void get().refreshLibrary();
-        if (get().searchQuery || get().navigation.type !== 'all')
-          await get().refreshNotes();
+        if (
+          get().searchQuery ||
+          get().navigation.type !== 'all' ||
+          get().preferences.notebookScopeId ||
+          get().preferences.noteSort === 'title' ||
+          get().noteList.hasMore ||
+          get().noteList.notes.length >= 50
+        )
+          await get().refreshNotes(true);
         return true;
       } catch {
         if (epoch === generation())

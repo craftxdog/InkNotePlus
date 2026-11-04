@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { noteFilter, toFtsQuery } from './note-query';
 import type { DatabaseSync } from 'node:sqlite';
 
 import {
@@ -155,10 +156,10 @@ export class SqliteNoteRepository implements NoteRepository {
         SELECT ${noteColumns}
         FROM notes
         WHERE ${filter.sql}
-        ORDER BY is_pinned DESC, updated_at DESC, id DESC
-        LIMIT ?
+        ORDER BY is_pinned DESC, ${input.sort === 'title' ? 'title COLLATE NOCASE,' : ''} updated_at DESC, id DESC
+        LIMIT ? OFFSET ?
       `)
-      .all(...filter.params, limit)
+      .all(...filter.params, limit, input.offset ?? 0)
       .map(parseNoteRow);
 
     return rows.map(toNote);
@@ -186,10 +187,15 @@ export class SqliteNoteRepository implements NoteRepository {
         FROM notes_fts
         INNER JOIN notes ON notes.rowid = notes_fts.rowid
         WHERE notes_fts MATCH ? AND ${filter.sql}
-        ORDER BY bm25(notes_fts), notes.updated_at DESC, notes.id DESC
-        LIMIT ?
+        ORDER BY notes.is_pinned DESC, ${input.sort === 'title' ? 'notes.title COLLATE NOCASE,' : 'bm25(notes_fts),'} notes.updated_at DESC, notes.id DESC
+        LIMIT ? OFFSET ?
       `)
-      .all(query, ...filter.params, normalizeLimit(input.limit))
+      .all(
+        query,
+        ...filter.params,
+        normalizeLimit(input.limit),
+        input.offset ?? 0,
+      )
       .map(parseNoteRow);
 
     return rows.map(toNote);
@@ -276,42 +282,6 @@ export class SqliteNoteRepository implements NoteRepository {
 
 function normalizeLimit(value: number | undefined): number {
   return Math.min(Math.max(value ?? 50, 1), 100);
-}
-
-function noteFilter(input: ListNotesInput): {
-  sql: string;
-  params: (string | number)[];
-} {
-  const clauses = ['(notes.deleted_at IS NOT NULL) = ?'];
-  const params: (string | number)[] = [Number(input.trashed ?? false)];
-  if (input.notebookId === null)
-    clauses.push("json_extract(notes.metadata_json,'$.notebookId') IS NULL");
-  if (input.notebookId) {
-    clauses.push("json_extract(notes.metadata_json,'$.notebookId') = ?");
-    params.push(input.notebookId);
-  }
-  if (input.status) {
-    clauses.push("json_extract(notes.metadata_json,'$.status') = ?");
-    params.push(input.status);
-  }
-  if (input.templates) {
-    clauses.push("json_extract(notes.metadata_json,'$.isTemplate') = 1");
-  }
-  if (input.tag) {
-    clauses.push(
-      "EXISTS(SELECT 1 FROM json_each(notes.metadata_json,'$.tags') WHERE value = ?)",
-    );
-    params.push(input.tag);
-  }
-  return { sql: clauses.join(' AND '), params };
-}
-
-function toFtsQuery(value: string): string {
-  const terms = value.match(/[\p{L}\p{N}_-]+/gu) ?? [];
-  return terms
-    .slice(0, 10)
-    .map((term) => `"${term}"`)
-    .join(' AND ');
 }
 
 function toNote(row: NoteRow): Note {

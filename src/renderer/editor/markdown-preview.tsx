@@ -7,9 +7,12 @@ import {
   useRef,
   type ReactNode,
   type ComponentProps,
+  lazy,
+  Suspense,
 } from 'react';
 import Markdown, { type Components, type ExtraProps } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
 import { highlightTree } from '@lezer/highlight';
 import { javascriptLanguage } from '@codemirror/lang-javascript';
 import { jsonLanguage } from '@codemirror/lang-json';
@@ -17,7 +20,9 @@ import { tokenHighlighter } from './token-highlighter';
 import { useWorkspace } from '../state/workspace-context';
 import { remarkSourceMap } from './markdown-source-map';
 
-const gfm = [remarkGfm, remarkSourceMap];
+const gfm = [remarkGfm, remarkMath, remarkSourceMap];
+const Equation = lazy(() => import('./math-equation'));
+const Diagram = lazy(() => import('./mermaid-diagram'));
 const PreviewContext = createContext<{
   body: string;
   disabled: boolean;
@@ -110,6 +115,7 @@ function PreviewLink({ href, children }: ComponentProps<'a'>) {
   );
 }
 const components: Components = {
+  pre: PreviewBlock,
   li: PreviewListItem,
   input: PreviewCheckbox,
   a: PreviewLink,
@@ -118,10 +124,71 @@ const components: Components = {
       {alt ? `[Imagen: ${alt}]` : '[Imagen]'}
     </span>
   ),
-  code: ({ children, className }) => (
-    <HighlightedCode className={className}>{String(children)}</HighlightedCode>
-  ),
+  code: PreviewCode,
 };
+
+function PreviewCode({ children, className }: ComponentProps<'code'>) {
+  const math = useWorkspace((state) => state.preferences.mathEnabled);
+  return className?.includes('math-inline') && math ? (
+    <Suspense fallback={<code>{children}</code>}>
+      <Equation code={String(children)} inline />
+    </Suspense>
+  ) : (
+    <HighlightedCode className={className}>{String(children)}</HighlightedCode>
+  );
+}
+
+function PreviewBlock({ node, children }: ComponentProps<'pre'> & ExtraProps) {
+  const code = node?.children[0];
+  const classes =
+    code?.type === 'element' ? code.properties.className : undefined;
+  const language = Array.isArray(classes)
+    ? classes.find(
+        (value) => typeof value === 'string' && value.startsWith('language-'),
+      )
+    : undefined;
+  const text =
+    code?.type === 'element'
+      ? code.children
+          .filter((child) => child.type === 'text')
+          .map((child) => child.value)
+          .join('')
+      : '';
+  const math = useWorkspace((state) => state.preferences.mathEnabled);
+  const mermaid = useWorkspace((state) => state.preferences.mermaidEnabled);
+  // Code fences own their source positions; react-markdown puts them on code.
+  const source =
+    code?.type === 'element'
+      ? Object.fromEntries(
+          Object.entries(code.properties).filter(([name]) =>
+            name.startsWith('data-source-'),
+          ),
+        )
+      : {};
+  if (language === 'language-math' && math)
+    return (
+      <div {...source} className="math-block">
+        <Suspense fallback={<code>{text}</code>}>
+          <Equation code={text} />
+        </Suspense>
+      </div>
+    );
+  if (language === 'language-mermaid' && mermaid)
+    return (
+      <div {...source} className="mermaid-block">
+        <Suspense
+          fallback={
+            <pre>
+              <code>{text}</code>
+            </pre>
+          }
+        >
+          <Diagram code={text} />
+        </Suspense>
+      </div>
+    );
+  return <pre {...source}>{children}</pre>;
+}
 
 function HighlightedCode({
   children,

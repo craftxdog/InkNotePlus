@@ -44,6 +44,7 @@ export function createApi(overrides: Partial<InkNoteApi['notes']> = {}) {
     library: {
       get: async () => success(emptyLibrary),
       createNotebook: async () => failure('unavailable'),
+      setNotebookIcon: async () => failure('unavailable'),
     },
     preferences: {
       get: async () =>

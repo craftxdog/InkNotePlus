@@ -109,4 +109,8 @@ export const migrations: readonly SqliteMigration[] = [
       CREATE INDEX notes_notebook_idx ON notes(json_extract(metadata_json, '$.notebookId')) WHERE deleted_at IS NULL;
     `,
   },
+  {
+    version: 4,
+    sql: `ALTER TABLE notebooks ADD COLUMN icon TEXT NOT NULL DEFAULT 'book-open';`,
+  },
 ];

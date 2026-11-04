@@ -29,6 +29,9 @@ export function NoteList({
   const create = useWorkspace((state) => state.createNote);
   const navigation = useWorkspace((state) => state.navigation);
   const books = useWorkspace((state) => state.library.notebooks);
+  const total = useWorkspace((state) => state.library.matching);
+  const hasMore = useWorkspace((state) => state.noteList.hasMore);
+  const loadMore = useWorkspace((state) => state.loadMoreNotes);
   const title =
     navigation.type === 'all'
       ? 'Todas las notas'
@@ -42,11 +45,13 @@ export function NoteList({
             : navigation.type === 'status'
               ? statusLabels[navigation.status]
               : navigation.name;
-  const [sort, setSort] = useState<'updated' | 'title'>('updated');
-  const sorted =
-    sort === 'title'
-      ? [...notes].sort((a, b) => a.title.localeCompare(b.title))
-      : notes;
+  const sort = useWorkspace((state) => state.preferences.noteSort);
+  const updatePreferences = useWorkspace((state) => state.updatePreferences);
+  const refresh = useWorkspace((state) => state.refreshNotes);
+  const setSort = (noteSort: 'updated' | 'title') => {
+    void updatePreferences({ noteSort });
+    void refresh();
+  };
   return (
     <section className="pane pane--note-list" aria-labelledby="note-list-title">
       <header className="note-list-header window-drag-region">
@@ -106,7 +111,7 @@ export function NoteList({
         aria-label="Resultados de notas"
         aria-busy={status === 'loading'}
       >
-        {sorted.map((note) => (
+        {notes.map((note) => (
           <NoteListItem
             key={note.id}
             note={note}
@@ -120,10 +125,22 @@ export function NoteList({
         {notes.length === 0 && status !== 'loading' && (
           <li className="empty-list-state">No hay notas en esta vista.</li>
         )}
+        {hasMore && (
+          <li className="load-more-notes">
+            <button
+              type="button"
+              className="button"
+              disabled={status === 'loading'}
+              onClick={() => void loadMore()}
+            >
+              Cargar más notas
+            </button>
+          </li>
+        )}
       </ul>
       <footer className="note-list-footer">
-        {notes.length} {notes.length === 1 ? 'nota' : 'notas'}
-        {notes.length >= 50 ? ' · vista limitada' : ''}
+        {total} {total === 1 ? 'nota' : 'notas'}
+        {hasMore ? ` · ${notes.length} cargadas` : ''}
       </footer>
     </section>
   );

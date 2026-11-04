@@ -1,6 +1,7 @@
 import type { AppErrorCode, NoteProjection, Result } from '../../shared/ipc';
 import type { MainLayoutState } from '../layout/inkdrop-main-layout';
 import type { Preferences, PreferencesPatch } from '../../shared/preferences';
+import type { NotebookIconName } from '../../shared/notebook-icons';
 import type {
   LibrarySnapshot,
   NoteMetadata,
@@ -31,6 +32,7 @@ export interface NoteListState {
   readonly errorCode: AppErrorCode | null;
   readonly isCreating: boolean;
   readonly isSaving: boolean;
+  readonly hasMore: boolean;
 }
 
 export interface WorkspaceState {
@@ -56,12 +58,16 @@ export interface WorkspaceActions {
   setSettingsOpen(open: boolean): void;
   setNotebookDialogOpen(open: boolean): void;
   navigate(navigation: Navigation): Promise<void>;
+  focusNotebook(id: string | null): Promise<void>;
+  toggleNotebook(id: string): Promise<void>;
   refreshLibrary(): Promise<void>;
   createNotebook(name: string, parentId?: string | null): Promise<void>;
+  setNotebookIcon(id: string, icon: NotebookIconName): Promise<void>;
   trashActiveNote(): Promise<void>;
   restoreActiveNote(): Promise<void>;
   connect(beforeFlush?: () => void): () => void;
-  refreshNotes(): Promise<void>;
+  refreshNotes(preserveLoaded?: boolean): Promise<void>;
+  loadMoreNotes(): Promise<void>;
   setSearchQuery(query: string): Promise<void>;
   selectNote(id: string | null): void;
   setSidebarVisible(visible: boolean): void;

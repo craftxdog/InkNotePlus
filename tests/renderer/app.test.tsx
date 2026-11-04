@@ -68,6 +68,7 @@ describe('React workspace', () => {
     const { container, unmount } = render(<App store={store} />);
     await screen.findByText('No hay notas en esta vista.');
     fireEvent.click(screen.getByRole('button', { name: 'Preferencias' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Temas' }));
     fireEvent.change(screen.getByRole('combobox', { name: 'Tema' }), {
       target: { value: 'inknote-dark' },
     });

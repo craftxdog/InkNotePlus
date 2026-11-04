@@ -109,6 +109,35 @@ describe('persistent shell library', () => {
       }),
     ).toThrow();
   });
+  it('persists notebook icons and sorts every search page by the chosen order, keeping pins first', () => {
+    const library = new SqliteLibraryRepository(database);
+    const notes = new SqliteNoteRepository(database);
+    const book = library.createNotebook({ name: 'Work', icon: 'briefcase' });
+    library.setNotebookIcon({ id: book.id, icon: 'rocket' });
+    expect(library.getSnapshot().notebooks[0].icon).toBe('rocket');
+    for (let index = 55; index >= 0; index--)
+      notes.create({
+        title: `Item ${String(index).padStart(2, '0')}`,
+        body: 'needle',
+      });
+    const pinned = notes.create({ title: 'Z pinned', body: 'needle' });
+    notes.update({
+      id: pinned.id,
+      title: pinned.title,
+      body: pinned.body,
+      expectedRevision: 1,
+      isPinned: true,
+    });
+    const first = notes.search({ query: 'needle', sort: 'title', limit: 50 });
+    const second = notes.search({ query: 'needle', sort: 'title', offset: 50 });
+    expect(first[0].title).toBe('Z pinned');
+    expect([...first, ...second].slice(1).map((note) => note.title)).toEqual(
+      Array.from(
+        { length: 56 },
+        (_, index) => `Item ${String(index).padStart(2, '0')}`,
+      ),
+    );
+  });
   it('combines notebook, status, tag and full-text filters without mixing sections', () => {
     const library = new SqliteLibraryRepository(database);
     const book = library.createNotebook({ name: 'Work' });
@@ -166,5 +195,54 @@ describe('persistent shell library', () => {
     expect(
       database.prepare('SELECT count(*) AS count FROM sync_outbox').get(),
     ).toMatchObject({ count: 0 });
+  });
+  it('scopes Detail counts, tags and filtered search to the selected subtree, including totals beyond a page', () => {
+    const library = new SqliteLibraryRepository(database);
+    const notes = new SqliteNoteRepository(database);
+    const parent = library.createNotebook({ name: 'Parent' });
+    const child = library.createNotebook({
+      name: 'Child',
+      parentId: parent.id,
+    });
+    notes.create({
+      title: 'Outside',
+      body: '',
+      metadata: { ...defaultNoteMetadata, tags: ['outside'] },
+    });
+    for (let index = 0; index < 53; index++)
+      notes.create({
+        title: `Scoped ${index}`,
+        body: 'needle',
+        metadata: {
+          ...defaultNoteMetadata,
+          notebookId: child.id,
+          tags: ['inside'],
+          status: 'completed',
+        },
+      });
+    expect(notes.list({ notebookId: parent.id })).toHaveLength(0);
+    expect(
+      notes.list({ notebookId: parent.id, includeDescendants: true }),
+    ).toHaveLength(50);
+    expect(notes.list({ scopeId: parent.id, offset: 50 })).toHaveLength(3);
+    expect(
+      library.getSnapshot({
+        scopeId: parent.id,
+        query: 'needle',
+        filter: { status: 'completed' },
+      }),
+    ).toMatchObject({
+      total: 53,
+      matching: 53,
+      unfiled: 0,
+      statuses: { active: 0, completed: 53 },
+      tags: [{ name: 'inside', count: 53 }],
+    });
+    expect(
+      library.getSnapshot().notebooks.find((book) => book.id === parent.id),
+    ).toMatchObject({ count: 0, descendantCount: 53 });
+    expect(
+      notes.search({ query: 'needle', scopeId: parent.id, status: 'active' }),
+    ).toEqual([]);
   });
 });

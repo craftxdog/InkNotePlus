@@ -21,6 +21,7 @@ const blocks = new Set([
   'table',
   'tableRow',
   'thematicBreak',
+  'math',
 ]);
 
 // Use the parser's source positions. Text inside fenced code never becomes a task.

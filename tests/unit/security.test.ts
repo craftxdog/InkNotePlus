@@ -19,7 +19,8 @@ describe('createContentSecurityPolicy', () => {
 
     expect(policy).toContain("connect-src 'self'");
     expect(policy).not.toContain('localhost');
-    expect(policy).not.toContain("'unsafe-inline'");
+    expect(policy).toContain("style-src-attr 'unsafe-inline'");
+    expect(policy).not.toContain("style-src 'self' 'unsafe-inline'");
   });
 
   it('allows only local Vite connections during development without inline scripts', () => {

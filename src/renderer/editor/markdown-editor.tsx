@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { Annotation, EditorState } from '@codemirror/state';
+import { Annotation, Compartment, EditorState } from '@codemirror/state';
+import { search } from '@codemirror/search';
+import type { Preferences } from '../../shared/preferences';
 import {
   EditorView,
   drawSelection,
@@ -31,22 +33,24 @@ export function MarkdownEditor({
   value,
   nonce,
   onChange,
-  onSave,
   onView,
   onUpdate,
+  preferences,
 }: {
   value: string;
   nonce: string;
   onChange: (value: string) => void;
-  onSave: () => void;
   onView: (view: EditorView | null) => void;
   onUpdate?: (selectionChanged: boolean) => void;
+  preferences: Preferences;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const callbacks = useRef({ onChange, onSave, onView, onUpdate });
-  callbacks.current = { onChange, onSave, onView, onUpdate };
+  const callbacks = useRef({ onChange, onView, onUpdate });
+  callbacks.current = { onChange, onView, onUpdate };
   const initialValue = useRef(value);
+  const settings = useRef(new Compartment()).current;
+  const initialSettings = useRef(preferences);
   useEffect(() => {
     if (!container.current) return;
     const view = new EditorView({
@@ -55,9 +59,7 @@ export function MarkdownEditor({
         doc: initialValue.current,
         extensions: [
           EditorView.cspNonce.of(nonce),
-          lineNumbers(),
-          highlightActiveLineGutter(),
-          foldGutter(),
+          settings.of(editorSettings(initialSettings.current)),
           EditorView.theme({
             '&': {
               height: '100%',
@@ -70,7 +72,7 @@ export function MarkdownEditor({
               fontFamily:
                 'var(--editor-font-family, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)',
               fontSize: 'var(--editor-font-size, 14px)',
-              lineHeight: '1.6',
+              lineHeight: 'var(--editor-line-height, 1.6)',
             },
             '.cm-content': {
               padding: '12px 0',
@@ -100,10 +102,9 @@ export function MarkdownEditor({
             '.cm-foldGutter': { width: '12px' },
           }),
           history(),
+          search({ top: true }),
           drawSelection(),
-          highlightActiveLine(),
           bracketMatching(),
-          EditorView.lineWrapping,
           markdown({
             base: markdownLanguage,
             codeLanguages: (info) =>
@@ -114,21 +115,7 @@ export function MarkdownEditor({
                   : null,
           }),
           syntaxHighlighting(tokenHighlighter),
-          keymap.of([
-            {
-              key: 'Mod-s',
-              run: () => {
-                callbacks.current.onSave();
-                return true;
-              },
-            },
-            ...defaultKeymap,
-            ...historyKeymap,
-          ]),
-          EditorView.contentAttributes.of({
-            'aria-label': 'Contenido Markdown de la nota',
-            spellcheck: 'true',
-          }),
+          keymap.of([...defaultKeymap, ...historyKeymap]),
           EditorView.updateListener.of((update) => {
             if (
               update.docChanged ||
@@ -159,6 +146,17 @@ export function MarkdownEditor({
     };
   }, [nonce]);
   useEffect(() => {
+    viewRef.current?.dispatch({
+      effects: settings.reconfigure(editorSettings(preferences)),
+    });
+  }, [
+    settings,
+    preferences.lineNumbers,
+    preferences.lineWrapping,
+    preferences.activeLine,
+    preferences.spellcheck,
+  ]);
+  useEffect(() => {
     const view = viewRef.current;
     const normalized = view?.state.toText(value).toString();
     if (
@@ -172,4 +170,19 @@ export function MarkdownEditor({
       });
   }, [value]);
   return <div className="markdown-editor" ref={container} />;
+}
+
+function editorSettings(preferences: Preferences) {
+  return [
+    ...(preferences.lineNumbers
+      ? [lineNumbers(), highlightActiveLineGutter()]
+      : []),
+    foldGutter(),
+    ...(preferences.activeLine ? [highlightActiveLine()] : []),
+    ...(preferences.lineWrapping ? [EditorView.lineWrapping] : []),
+    EditorView.contentAttributes.of({
+      'aria-label': 'Contenido Markdown de la nota',
+      spellcheck: String(preferences.spellcheck),
+    }),
+  ];
 }

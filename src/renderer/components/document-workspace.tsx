@@ -44,6 +44,7 @@ import { statusIcons, statusLabels } from './sidebar';
 import { Modal } from './modal';
 import { CommitRange } from './commit-range';
 import { createScrollSync } from '../editor/scroll-sync';
+import { NotebookIcon } from './notebook-icon';
 
 export function DocumentWorkspace({
   onShowNotes,
@@ -84,12 +85,12 @@ export function DocumentWorkspace({
   const inTrash = navigation.type === 'trash';
   const mode = preferences.editorMode;
   const previewRendered = useCallback(
-    () => sync.current?.refresh(mode === 'split'),
-    [mode],
+    () => sync.current?.refresh(mode === 'split' && preferences.syncScroll),
+    [mode, preferences.syncScroll],
   );
   useEffect(() => {
-    sync.current?.refresh(mode === 'split');
-  }, [draft.body, mode, splitRatio, preferences.theme]);
+    sync.current?.refresh(mode === 'split' && preferences.syncScroll);
+  }, [draft.body, mode, splitRatio, preferences]);
   useEffect(() => {
     view.current?.requestMeasure();
   }, [mode, splitRatio]);
@@ -264,6 +265,7 @@ export function DocumentWorkspace({
           <EditorMetadata disabled={inTrash} />
           <div
             className="editor-toolbar"
+            hidden={!preferences.showToolbar}
             role="toolbar"
             aria-label="Formato Markdown"
           >
@@ -306,10 +308,8 @@ export function DocumentWorkspace({
                   key={draft.noteId}
                   value={draft.body}
                   nonce={nonce}
+                  preferences={preferences}
                   onChange={(body) => updateDraft({ body })}
-                  onSave={() => {
-                    void save();
-                  }}
                   onView={(instance) => {
                     sync.current?.destroy();
                     sync.current = null;
@@ -320,7 +320,9 @@ export function DocumentWorkspace({
                         instance,
                         preview.current,
                       );
-                      sync.current.refresh(mode === 'split');
+                      sync.current.refresh(
+                        mode === 'split' && preferences.syncScroll,
+                      );
                     }
                   }}
                   onUpdate={(selectionChanged) =>
@@ -423,7 +425,10 @@ function EditorMetadata({ disabled }: { disabled: boolean }) {
   return (
     <div className="editor-meta">
       <label className="meta-select">
-        <BookOpen size={17} />
+        <NotebookIcon
+          name={books.find((book) => book.id === metadata.notebookId)?.icon}
+          size={17}
+        />
         <span className="visually-hidden">Notebook de la nota</span>
         <select
           aria-label="Notebook de la nota"

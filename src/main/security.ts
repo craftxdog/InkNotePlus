@@ -23,6 +23,9 @@ export function createContentSecurityPolicy(
     "default-src 'self'",
     `script-src ${scriptSource}`,
     `style-src ${styleSource}`,
+    // KaTeX/Pele emit numeric layout styles. Script execution stays self-only;
+    // style elements still require the production nonce or an external sheet.
+    "style-src-attr 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
     `connect-src ${connectSource}`,

@@ -119,6 +119,7 @@
     padding-block-end: var(--14px);
   }
   .navigation-item {
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     gap: var(--8px);
@@ -151,6 +152,138 @@
     color: var(--unselected-text-color);
     font-size: var(--tiny);
     font-variant-numeric: tabular-nums;
+  }
+  .notebook-row {
+    display: flex;
+    align-items: center;
+    position: relative;
+    min-block-size: 34px;
+    padding-inline: 8px 16px;
+  }
+  .notebook-row[data-active='true'] {
+    background: var(--sidebar-menu-item-active-background);
+    color: var(--sidebar-menu-active-item-color);
+  }
+  .notebook-row:hover {
+    background: var(--sidebar-menu-item-inactive-background);
+  }
+  .notebook-select {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-inline-size: 0;
+    border: 0;
+    background: transparent;
+    padding: 6px 0;
+    text-align: start;
+  }
+  .notebook-select > svg {
+    flex: none;
+  }
+  .notebook-icon-action {
+    display: grid;
+    place-items: center;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    margin-inline-end: 8px;
+    inline-size: 20px;
+    block-size: 28px;
+    flex: none;
+    border-radius: 4px;
+  }
+  .notebook-icon-action:hover {
+    background: var(--input-highlight-background);
+  }
+  .notebook-icon-picker {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .notebook-icon-picker .icon-button {
+    inline-size: 100%;
+    block-size: 44px;
+  }
+  .notebook-disclosure {
+    display: grid;
+    place-items: center;
+    flex: 0 0 18px;
+    inline-size: 18px;
+    block-size: 28px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+  }
+  .notebook-disclosure[aria-expanded='false'] svg {
+    transform: rotate(-90deg);
+  }
+  .notebook-detail {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    position: absolute;
+    inset-inline-end: 10px;
+    visibility: hidden;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 2px 5px 2px 8px;
+    background: var(--sidebar-background);
+    font-size: var(--tiny);
+    color: var(--muted-text-color);
+  }
+  .notebook-row:hover .notebook-detail,
+  .notebook-row:focus-within .notebook-detail {
+    visibility: visible;
+  }
+  .notebook-row:hover .navigation-count,
+  .notebook-row:focus-within .navigation-count {
+    visibility: hidden;
+  }
+  .notebook-breadcrumbs {
+    padding: 4px 8px 10px;
+    border-block-end: 1px solid var(--border-color);
+  }
+  .notebook-breadcrumbs ol {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .notebook-breadcrumbs li,
+  .notebook-breadcrumbs button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-inline-size: 0;
+  }
+  .notebook-breadcrumbs li {
+    max-inline-size: 100%;
+  }
+  .notebook-breadcrumbs button {
+    background: transparent;
+    border: 0;
+    padding: 4px;
+    font-size: var(--small);
+    text-align: start;
+    overflow-wrap: anywhere;
+  }
+  .notebook-breadcrumbs button[aria-current] {
+    font-weight: var(--font-weights-semibold);
+  }
+  .load-more-notes {
+    padding: 12px;
+    text-align: center;
+  }
+  @media (hover: none) {
+    .notebook-detail {
+      position: static;
+      visibility: visible;
+      font-size: 0;
+    }
   }
   .sidebar-section {
     margin-block: var(--8px);
@@ -233,6 +366,18 @@
   }
   .navigation-item[class*='status-'] {
     color: var(--sidebar-menu-item-color);
+  }
+  :is(.status-active, .status-completed, .status-dropped) > svg circle,
+  svg:is(.status-active, .status-completed, .status-dropped) circle {
+    fill: currentColor;
+  }
+  :is(.status-active, .status-completed, .status-dropped) > svg path,
+  svg:is(.status-active, .status-completed, .status-dropped) path {
+    stroke: var(--page-background);
+  }
+  .status-active > svg path,
+  svg.status-active path {
+    fill: var(--page-background);
   }
   .note-list-header {
     justify-content: space-between;

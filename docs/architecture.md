@@ -143,12 +143,27 @@ valor por defecto, lectura, escritura y observación de cambios.
   - core.window.initialHeight: 800
   - core.window.minimumWidth: 640
   - core.window.minimumHeight: 480
-  - core.appearance: tema, anchos de panel, modo del editor y proporción del split.
+  - core.appearance: tema, paneles, tipografía, opciones del editor/preview,
+    notebook predeterminado, contexto de biblioteca y atajos personalizados.
 
 Las preferencias pasan por un IPC propio validado y persisten en config.json.
 Los cambios se ordenan para evitar que una respuesta antigua reemplace la
 selección reciente. Un fallo de escritura restaura la última preferencia
 confirmada y se informa en Preferencias.
+La pantalla reúne General, Edición, Vista previa, Temas y Atajos. Sólo muestra
+opciones implementadas. Los ajustes de CodeMirror se reconfiguran con un
+Compartment, conservando documento, selección e historial. Los atajos usan
+comandos/contextos, admiten secuencias y detectan conflictos de prefijo. Los
+atajos de aplicación se resuelven fuera del keymap interno de CodeMirror;
+Buscar abre el panel oficial de búsqueda/reemplazo del editor.
+
+Los contadores se consultan en SQLite, separados de las páginas de 50 notas.
+Detail limita notas, estados y etiquetas al notebook y sus descendientes;
+los breadcrumbs permiten volver a sus padres o a la biblioteca. Un notebook
+expandido filtra notas directas; uno contraído incluye descendientes. Los
+filtros y la ordenación se aplican antes de paginar. Los eventos vuelven a
+consultar la ventana cargada para evitar omisiones al fijar/desfijar notas.
+La migración 4 añade iconos persistentes a notebooks sin modificar notas.
 
 La ventana es redimensionable. Las dimensiones iniciales nunca bajan de sus
 mínimos. El `--page-min-width: 320px` de `@inkdropapp/css` queda como límite
@@ -190,6 +205,23 @@ y una actualización por frame. Las medidas se invalidan al cambiar contenido,
 anchura o tema; la conexión sigue la instancia real de CodeMirror en StrictMode.
 El estado de scroll no pasa por Zustand ni provoca un render de React.
 
+Las fórmulas inline, display y fences `math` usan el componente MIT público de
+Inkdrop con KaTeX 0.19.0, estilos aislados y fuentes WOFF2 locales. Mermaid usa
+su componente público y Pele 1.9.0, la versión fijada por ese repositorio.
+Ambos se cargan a demanda. Los commits, licencias y cambios locales constan en
+`src/renderer/vendor/sources.json`; las licencias se incluyen en el paquete.
+`pnpm run build:math-styles` regenera la hoja aislada usando el generador de Inkdrop.
+La dependencia opcional de KaTeX del parser se unifica con la versión revisada
+del host: sólo consume `renderToString`, y evita distribuir la copia vulnerable
+0.16 de `micromark-extension-math` (GHSA-238p-pmpm-9mq7).
+
+Los diagramas conservan controles, pantalla completa, pinch/zoom, arrastre,
+teclado y colores de los tokens oficiales. En línea, Inkdrop sólo habilita zoom
+cuando el diagrama se reduce para caber; en pantalla completa siempre puede
+ampliarse. Pele cubre las 33 familias de las muestras del repositorio de Inkdrop;
+su layout no promete equivalencia geométrica con Mermaid.js ni versiones futuras.
+No se ejecutan directivas de JavaScript ni se cargan imágenes remotas del diagrama.
+
 Las tareas GFM del preview son controles accesibles: cambian sólo el carácter del
 marcador correspondiente en el Markdown, actualizan CodeMirror y entran en el
 autoguardado. Se conserva el cursor con cambios mínimos y el cambio admite deshacer.
@@ -209,12 +241,18 @@ Esto corrige el montaje vacío reproducido en el arranque frío de Electron con
 el entry estático de desarrollo; no se añade una recarga automática ni un retraso.
 La CSP de estilos de desarrollo usa `unsafe-inline` para HMR sin mezclar un
 nonce, porque esa mezcla hace que el navegador ignore `unsafe-inline`.
-Producción conserva exclusivamente el nonce para los estilos de CodeMirror.
+Producción conserva hojas locales y nonce para los elementos de estilo dinámicos.
+`style-src-attr 'unsafe-inline'` permite las medidas que KaTeX y Pele generan
+en atributos de estilo; no autoriza scripts inline ni HTML crudo de las notas.
 
 `pnpm run test:desktop` arranca Forge y Electron con un perfil temporal, sin
 mocks de preload o IPC. Comprueba el primer montaje, CSS aplicado, escritura
 SQLite sin guardado manual, metadata, tareas y deshacer, scroll bidireccional,
 última edición al cerrar, preferencias persistidas tras recargar y CSP.
+También verifica fuentes de math, Mermaid con pinch/pan/reset, iconos de
+notebooks, contadores visibles, Detail y breadcrumbs. La opción
+`--notes-database=/ruta/a/base.sqlite` revisa notas existentes mediante copias
+en el perfil temporal; abre la base original exclusivamente en modo lectura.
 `pnpm run test:desktop:package` comprueba el paquete nativo previamente construido.
 El cliente `puppeteer-core` es sólo de desarrollo y usa Electron existente;
 no descarga ni distribuye otro navegador. Estas pruebas necesitan un escritorio
@@ -329,7 +367,8 @@ entorno limitado; no acceso directo a la DB ni a Electron.
   validación no intenta generar código dinámico bajo la CSP.
 - Desarrollo permite sólo conexiones Vite locales y estilos inline necesarios
   para HMR. Producción autoriza las hojas de CodeMirror mediante nonce aleatorio,
-  sin permitir scripts inline ni estilos arbitrarios globales.
+  sin permitir scripts inline. Los atributos de estilo de los renderers están
+  permitidos; las notas no pasan por un parser de HTML crudo.
 - Fuses desactivan RunAsNode, NODE_OPTIONS e inspect arguments; ASAR tiene
   validación de integridad.
 - Notas, rutas y SQL no se mandan a telemetría, APIs ni servicios externos.
@@ -412,5 +451,8 @@ requiere contrato y pruebas de recuperación antes de activarse.
 - Electron, [seguridad](https://www.electronjs.org/docs/latest/tutorial/security/).
 - Zod, [validación sin compilación dinámica bajo CSP](https://zod.dev/compile#content-security-policy).
 - [React Markdown](https://github.com/remarkjs/react-markdown) y [Lucide](https://github.com/lucide-icons/lucide).
+- Inkdrop, [organización de notebooks, Detail y contadores](https://docs.inkdrop.app/reference/organize-notebooks), [atajos](https://docs.inkdrop.app/reference/key-customizations) y [comandos](https://developers.inkdrop.app/guides/list-of-commands).
+- Inkdrop, [renderer Mermaid](https://github.com/inkdropapp/mermaid/tree/3ab64f2f470de0be11119d816d032902c12a23e7/packages/mermaid) y [renderer Math](https://github.com/inkdropapp/inkdrop-math/tree/dd3cc053b73d7f5abf2bc9b49e7273948a9ee94f/packages/math).
+- KaTeX, [opciones y trust](https://katex.org/docs/options), y CodeMirror, [búsqueda](https://github.com/codemirror/search).
 - Electron Forge, [CLI](https://www.electronforge.io/cli), [Squirrel.Windows](https://www.electronforge.io/config/makers/squirrel.windows), [DEB](https://www.electronforge.io/config/makers/deb) y [RPM](https://www.electronforge.io/config/makers/rpm).
 - npm audit, [advisory de minimatch](https://github.com/advisories/GHSA-g3hv-75wg-m249) y [advisory de glob](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4).

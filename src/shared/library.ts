@@ -1,7 +1,8 @@
 import { z } from './validation';
-import { appErrorSchema } from './ipc';
+import { appErrorSchema, listNotesInputSchema } from './ipc';
 
 import { noteStatusSchema } from './note-metadata';
+import { notebookIconSchema } from './notebook-icons';
 export {
   noteStatusSchema,
   noteMetadataSchema,
@@ -15,12 +16,15 @@ export const notebookSchema = z
     name: z.string().min(1).max(80),
     parentId: z.uuid().nullable(),
     count: z.number().int().nonnegative(),
+    descendantCount: z.number().int().nonnegative().default(0),
+    icon: notebookIconSchema.default('book-open'),
   })
   .strict();
 export const createNotebookSchema = z
   .object({
     name: z.string().trim().min(1).max(80),
     parentId: z.uuid().nullable().default(null),
+    icon: notebookIconSchema.optional(),
   })
   .strict();
 export const librarySchema = z
@@ -33,14 +37,25 @@ export const librarySchema = z
     total: z.number().int().nonnegative(),
     trash: z.number().int().nonnegative(),
     templates: z.number().int().nonnegative(),
+    unfiled: z.number().int().nonnegative().default(0),
+    matching: z.number().int().nonnegative().default(0),
   })
   .strict();
 export type LibrarySnapshot = z.output<typeof librarySchema>;
 export type Notebook = z.output<typeof notebookSchema>;
 export type CreateNotebookInput = z.input<typeof createNotebookSchema>;
+export const libraryInputSchema = z
+  .object({
+    scopeId: z.uuid().nullable().optional(),
+    filter: listNotesInputSchema.optional(),
+    query: z.string().max(512).optional(),
+  })
+  .strict();
+export type LibraryInput = z.output<typeof libraryInputSchema>;
 export const LIBRARY_CHANNELS = {
   get: 'library:get',
   createNotebook: 'library:create-notebook',
+  setNotebookIcon: 'library:set-notebook-icon',
 } as const;
 export const libraryResultSchema = z.discriminatedUnion('ok', [
   z.object({ ok: z.literal(true), data: librarySchema }),
@@ -57,4 +72,6 @@ export const emptyLibrary: LibrarySnapshot = {
   total: 0,
   trash: 0,
   templates: 0,
+  unfiled: 0,
+  matching: 0,
 };

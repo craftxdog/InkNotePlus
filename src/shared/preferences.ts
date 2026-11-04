@@ -1,21 +1,84 @@
 import { z } from './validation';
 import { appErrorSchema } from './ipc';
+import { keybindingsSchema } from './keybindings';
 
 export const themeIdSchema = z.enum(['inknote-light', 'inknote-dark']);
 export const editorModeSchema = z.enum(['edit', 'split', 'preview']);
-export const preferencesSchema = z
-  .object({
-    theme: themeIdSchema,
-    sidebarWidth: z.number().int().min(160).max(400),
-    noteListWidth: z.number().int().min(220).max(480),
-    editorMode: editorModeSchema,
-    splitRatio: z.number().int().min(20).max(80).default(50),
-  })
-  .strict();
-export const preferencesPatchSchema = preferencesSchema
-  .partial()
-  .extend({ splitRatio: z.number().int().min(20).max(80).optional() })
-  .strict();
+const fontFamilySchema = z
+  .string()
+  .max(240)
+  .regex(/^[\p{L}\p{N}\s_,'"\u002e-]*$/u);
+const fields = {
+  theme: themeIdSchema,
+  sidebarWidth: z.number().int().min(160).max(400),
+  noteListWidth: z.number().int().min(220).max(480),
+  editorMode: editorModeSchema,
+  splitRatio: z.number().int().min(20).max(80),
+  defaultNotebookId: z.uuid().nullable(),
+  notebookScopeId: z.uuid().nullable(),
+  expandedNotebookIds: z.array(z.uuid()).max(1000),
+  showNoteCounts: z.boolean(),
+  noteSort: z.enum(['updated', 'title']),
+  editorFontFamily: fontFamilySchema,
+  editorFontSize: z.number().int().min(10).max(40),
+  editorLineHeight: z.number().min(1).max(3),
+  lineNumbers: z.boolean(),
+  lineWrapping: z.boolean(),
+  activeLine: z.boolean(),
+  spellcheck: z.boolean(),
+  showToolbar: z.boolean(),
+  previewFontFamily: fontFamilySchema,
+  previewFontSize: z.number().int().min(10).max(40),
+  previewLineHeight: z.number().min(1).max(3),
+  syncScroll: z.boolean(),
+  mathEnabled: z.boolean(),
+  mermaidEnabled: z.boolean(),
+  mermaidPanZoom: z.boolean(),
+  mermaidToolbar: z.boolean(),
+  keybindings: keybindingsSchema,
+};
+const recordSchema = z.object(fields).strict();
+export type Preferences = z.output<typeof recordSchema>;
+export const defaultPreferences: Preferences = {
+  theme: 'inknote-light',
+  sidebarWidth: 220,
+  noteListWidth: 300,
+  editorMode: 'split',
+  splitRatio: 50,
+  defaultNotebookId: null,
+  notebookScopeId: null,
+  expandedNotebookIds: [],
+  showNoteCounts: true,
+  noteSort: 'updated',
+  // Empty families inherit the theme/platform stack instead of downloading fonts.
+  editorFontFamily: '',
+  editorFontSize: 14,
+  editorLineHeight: 1.6,
+  lineNumbers: true,
+  lineWrapping: true,
+  activeLine: true,
+  spellcheck: true,
+  showToolbar: true,
+  previewFontFamily: '',
+  previewFontSize: 16,
+  previewLineHeight: 1.5,
+  syncScroll: true,
+  mathEnabled: true,
+  mermaidEnabled: true,
+  mermaidPanZoom: true,
+  mermaidToolbar: true,
+  keybindings: [],
+};
+// Fill newly introduced settings on existing installations, preserving every
+// stored value. Patches use raw fields so defaults never reset another setting.
+export const preferencesSchema = z.preprocess(
+  (value) =>
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? { ...defaultPreferences, ...value }
+      : value,
+  recordSchema,
+);
+export const preferencesPatchSchema = recordSchema.partial().strict();
 export const bootstrapSchema = z
   .object({
     preferences: preferencesSchema,
@@ -25,16 +88,8 @@ export const bootstrapSchema = z
   .strict();
 export type ThemeId = z.output<typeof themeIdSchema>;
 export type EditorMode = z.output<typeof editorModeSchema>;
-export type Preferences = z.output<typeof preferencesSchema>;
 export type PreferencesPatch = z.output<typeof preferencesPatchSchema>;
 export type AppBootstrap = z.output<typeof bootstrapSchema>;
-export const defaultPreferences: Preferences = {
-  theme: 'inknote-light',
-  sidebarWidth: 220,
-  noteListWidth: 300,
-  editorMode: 'split',
-  splitRatio: 50,
-};
 export const PREFERENCES_CHANNELS = {
   get: 'preferences:get',
   update: 'preferences:update',

@@ -17,6 +17,8 @@ import {
   createNotebookSchema,
   libraryResultSchema,
   notebookResultSchema,
+  libraryInputSchema,
+  type LibraryInput,
   type CreateNotebookInput,
   type LibrarySnapshot,
   type Notebook,
@@ -54,13 +56,18 @@ import {
 } from '../shared/ipc';
 
 type InputSchema<T> = Pick<ZodType<T>, 'safeParse'>;
+import {
+  setNotebookIconSchema,
+  type SetNotebookIconInput,
+} from '../shared/notebook-icons';
 
 export interface InkNoteApi {
   onBeforeClose(listener: () => Promise<boolean>): () => void;
   links: { openExternal(url: string): Promise<Result<boolean>> };
   library: {
-    get(): Promise<Result<LibrarySnapshot>>;
+    get(input?: LibraryInput): Promise<Result<LibrarySnapshot>>;
     createNotebook(input: CreateNotebookInput): Promise<Result<Notebook>>;
+    setNotebookIcon(input: SetNotebookIconInput): Promise<Result<Notebook>>;
   };
   preferences: {
     get(): Promise<Result<AppBootstrap>>;
@@ -128,12 +135,12 @@ export function createInkNoteApi(
         ),
     },
     library: {
-      get: () =>
+      get: (input = {}) =>
         invoke(
           ipcRenderer,
           LIBRARY_CHANNELS.get,
-          {},
-          emptyPreferencesInputSchema,
+          input,
+          libraryInputSchema,
           libraryResultSchema,
         ),
       createNotebook: (input) =>
@@ -142,6 +149,14 @@ export function createInkNoteApi(
           LIBRARY_CHANNELS.createNotebook,
           input,
           createNotebookSchema,
+          notebookResultSchema,
+        ),
+      setNotebookIcon: (input) =>
+        invoke(
+          ipcRenderer,
+          LIBRARY_CHANNELS.setNotebookIcon,
+          input,
+          setNotebookIconSchema,
           notebookResultSchema,
         ),
     },

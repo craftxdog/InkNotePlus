@@ -27,6 +27,10 @@ export interface UpdateNoteInput extends CreateNoteInput {
 
 export interface ListNotesInput {
   limit?: number;
+  offset?: number;
+  scopeId?: string;
+  includeDescendants?: boolean;
+  sort?: 'updated' | 'title';
   trashed?: boolean;
   notebookId?: string | null;
   status?: NoteMetadata['status'];

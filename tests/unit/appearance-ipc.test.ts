@@ -133,6 +133,7 @@ describe('appearance and external link IPC', () => {
       "style-src 'self' 'nonce-testNonce012345678901234567890123'",
     );
     expect(policy).toContain("script-src 'self'");
-    expect(policy).not.toContain('unsafe-inline');
+    expect(policy).not.toContain("script-src 'self' 'unsafe-inline'");
+    expect(policy).not.toContain("style-src 'self' 'unsafe-inline'");
   });
 });

@@ -12,7 +12,7 @@ import {
   emptyDocument,
   mergeNote,
   selectDocument,
-  sortNotes,
+  toDocument,
 } from './note-projection';
 import type { WorkspaceStore } from './workspace-types';
 import {
@@ -24,7 +24,9 @@ import {
   createLibraryActions,
   navigationFilter,
   metadataForNewNote,
+  matchesNavigation,
 } from './library-actions';
+import { loadNoteWindow } from './note-loading';
 
 export function createWorkspaceStore(api: InkNoteApi) {
   let requestId = 0;
@@ -47,37 +49,72 @@ export function createWorkspaceStore(api: InkNoteApi) {
         noteList: { ...state.noteList, status: 'error', errorCode },
       }));
 
-    const refreshNotes = async (): Promise<void> => {
+    const refreshNotes = async (
+      append = false,
+      preserveLoaded = false,
+    ): Promise<void> => {
       const currentRequest = ++requestId;
       const query = get().searchQuery;
-      const filter = navigationFilter(get().navigation);
+      const offset = append ? get().noteList.notes.length : 0;
+      const filter = {
+        ...navigationFilter(get().navigation, get().preferences),
+      };
       set((state) => ({
         noteList: { ...state.noteList, status: 'loading', errorCode: null },
       }));
       try {
-        const result = query
-          ? await api.notes.search({ query, ...filter })
-          : await api.notes.list(filter);
+        const count =
+          preserveLoaded && !append
+            ? Math.max(50, Math.ceil(get().noteList.notes.length / 50) * 50)
+            : 50;
+        const result = await loadNoteWindow(
+          api,
+          query,
+          filter,
+          offset,
+          count,
+          () => currentRequest === requestId,
+        );
+        if (!result) return;
         if (currentRequest !== requestId) return;
         if (!result.ok) {
           reportFailure(result.error.code);
           return;
         }
         set((state) => {
-          const notes = sortNotes(
-            result.data,
-            get().navigation.type === 'trash',
-          );
+          const notes = append
+            ? [
+                ...state.noteList.notes,
+                ...result.data.notes.filter(
+                  (note) =>
+                    !state.noteList.notes.some(
+                      (existing) => existing.id === note.id,
+                    ),
+                ),
+              ]
+            : result.data.notes;
           const activeNoteId = notes.some(({ id }) => id === state.activeNoteId)
             ? state.activeNoteId
             : (notes[0]?.id ?? null);
           return {
-            ...selectDocument(state, activeNoteId, notes),
+            ...((preserveLoaded || state.noteList.isCreating) &&
+            !state.searchQuery &&
+            matchesNavigation(
+              state.document.metadata,
+              state.navigation,
+              state.preferences,
+              state.library.notebooks,
+            ) &&
+            state.document.noteId &&
+            !notes.some((note) => note.id === state.document.noteId)
+              ? {}
+              : selectDocument(state, activeNoteId, notes)),
             noteList: {
               ...state.noteList,
               notes,
               status: 'ready',
               errorCode: null,
+              hasMore: result.data.hasMore,
             },
           };
         });
@@ -107,12 +144,24 @@ export function createWorkspaceStore(api: InkNoteApi) {
       });
 
     const onNoteChanged = (event: NoteChangedEvent) => {
+      if (event.type === 'trashed' && get().activeNoteId === event.note.id)
+        get().selectNote(null);
+      else if (
+        get().activeNoteId === event.note.id &&
+        !get().document.isDirty &&
+        event.note.revision >= (get().document.revision ?? 0)
+      )
+        set({ document: toDocument(event.note) });
       if (
         get().searchQuery ||
+        get().preferences.notebookScopeId ||
         get().navigation.type !== 'all' ||
-        get().noteList.status === 'loading'
+        get().noteList.status === 'loading' ||
+        get().noteList.hasMore ||
+        get().noteList.notes.length >= 50 ||
+        get().preferences.noteSort === 'title'
       ) {
-        void refreshNotes();
+        void refreshNotes(false, true);
       } else {
         applyNote(event.note);
       }
@@ -142,6 +191,20 @@ export function createWorkspaceStore(api: InkNoteApi) {
           return Promise.resolve();
         }
         const revision = ++preferenceRevision;
+        const commit = (
+          preferences: typeof defaultPreferences,
+          preferencesError: boolean,
+        ) => {
+          const old = get().preferences;
+          set({ preferences, preferencesError });
+          if (
+            old.notebookScopeId !== preferences.notebookScopeId ||
+            old.noteSort !== preferences.noteSort ||
+            JSON.stringify(old.expandedNotebookIds) !==
+              JSON.stringify(preferences.expandedNotebookIds)
+          )
+            void refreshNotes(false, true);
+        };
         const currentGeneration = generation;
         set((state) => ({
           preferences: { ...state.preferences, ...parsed.data },
@@ -153,19 +216,16 @@ export function createWorkspaceStore(api: InkNoteApi) {
             if (currentGeneration !== generation) return;
             if (result.ok) confirmedPreferences = result.data;
             if (revision === preferenceRevision)
-              set({
-                preferences: result.ok ? result.data : confirmedPreferences,
-                preferencesError: !result.ok,
-              });
+              commit(
+                result.ok ? result.data : confirmedPreferences,
+                !result.ok,
+              );
           } catch {
             if (
               revision === preferenceRevision &&
               currentGeneration === generation
             )
-              set({
-                preferences: confirmedPreferences,
-                preferencesError: true,
-              });
+              commit(confirmedPreferences, true);
           }
         });
         return preferenceQueue;
@@ -179,6 +239,7 @@ export function createWorkspaceStore(api: InkNoteApi) {
         errorCode: null,
         isCreating: false,
         isSaving: false,
+        hasMore: false,
       },
       document: emptyDocument,
       parkedDrafts: {},
@@ -213,6 +274,7 @@ export function createWorkspaceStore(api: InkNoteApi) {
                     : state.preferences,
                 preferencesError: false,
               }));
+              void refreshNotes();
             })
             .catch(() => {
               if (currentGeneration === generation)
@@ -243,7 +305,12 @@ export function createWorkspaceStore(api: InkNoteApi) {
           }
         };
       },
-      refreshNotes,
+      refreshNotes: (preserveLoaded = false) =>
+        refreshNotes(false, preserveLoaded),
+      async loadMoreNotes() {
+        if (get().noteList.hasMore && get().noteList.status !== 'loading')
+          await refreshNotes(true);
+      },
       async setSearchQuery(query) {
         set({ searchQuery: query.trim() });
         await refreshNotes();
@@ -271,7 +338,7 @@ export function createWorkspaceStore(api: InkNoteApi) {
           const result = await api.notes.create({
             title: 'Nota sin título',
             body: '',
-            metadata: metadataForNewNote(get().navigation),
+            metadata: metadataForNewNote(get().navigation, get().preferences),
           });
           if (currentGeneration !== generation) return;
           if (!result.ok) {

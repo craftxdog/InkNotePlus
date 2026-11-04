@@ -14,6 +14,16 @@
   .app-dialog::backdrop {
     background: hsl(var(--hsl-black)/30%);
   }
+  .diagram-dialog {
+    inline-size: calc(100vw - 48px);
+    block-size: calc(100vh - 48px);
+    display: flex;
+    flex-direction: column;
+  }
+  .diagram-dialog > .mermaid-diagram {
+    flex: 1;
+    min-block-size: 0;
+  }
   .dialog-header {
     display: flex;
     justify-content: space-between;
@@ -62,6 +72,232 @@
   }
   .settings-content input[type='range'] {
     accent-color: var(--primary-color);
+  }
+  .preferences-dialog {
+    inline-size: min(900px, calc(100vw - 32px));
+    block-size: min(720px, calc(100vh - 48px));
+    overflow: hidden;
+  }
+  .preferences-body {
+    display: grid;
+    grid-template-columns: 176px minmax(0, 1fr);
+    block-size: calc(100% - 55px);
+    min-block-size: 0;
+  }
+  .preferences-navigation {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 8px;
+    border-inline-end: 1px solid var(--border-color);
+    background: var(--sidebar-background);
+  }
+  .preferences-navigation button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    text-align: start;
+    padding: 10px 12px;
+    color: var(--muted-text-color);
+    font-size: var(--small);
+  }
+  .preferences-navigation button[aria-selected='true'] {
+    background: var(--sidebar-menu-item-active-background);
+    color: var(--text-color);
+  }
+  .preferences-panel {
+    min-inline-size: 0;
+    min-block-size: 0;
+    overflow: auto;
+  }
+  .settings-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .settings-saved {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--tiny);
+    color: var(--muted-text-color);
+  }
+  .settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px 0;
+    margin: 0;
+    border: 0;
+    border-block-start: 1px solid var(--border-color);
+    min-inline-size: 0;
+  }
+  .settings-group legend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-inline-end: 12px;
+    font-size: var(--small);
+    font-weight: var(--font-weights-semibold);
+  }
+  .settings-content input[type='text'],
+  .settings-content input[type='search'],
+  .settings-content input[type='number'] {
+    inline-size: 100%;
+    border: var(--input-border);
+    border-radius: 4px;
+    background: var(--input-background);
+    color: var(--input-color);
+    padding: 8px;
+    font: inherit;
+  }
+  .settings-content input[type='number'] {
+    max-inline-size: 100px;
+  }
+  .settings-content .settings-toggle {
+    flex-direction: row;
+    align-items: start;
+    gap: 10px;
+    cursor: pointer;
+  }
+  .settings-toggle input {
+    margin-block-start: 3px;
+    accent-color: var(--primary-color);
+  }
+  .settings-toggle span {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .settings-toggle strong {
+    font-weight: var(--font-weights-medium);
+  }
+  .settings-toggle small {
+    color: var(--muted-text-color);
+    line-height: 1.5;
+  }
+  .settings-content .settings-search {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+  .keybinding-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .keybinding-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-block-end: 1px solid var(--internal-border-color);
+    padding-block: 10px;
+  }
+  .keybinding-row > span {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+  .keybinding-row strong {
+    font-size: var(--small);
+    font-weight: var(--font-weights-medium);
+  }
+  .keybinding-row small {
+    font-size: var(--tiny);
+    color: var(--muted-text-color);
+  }
+  .keybinding-row small[role='alert'] {
+    color: var(--negative-color);
+  }
+  .keybinding-row input {
+    max-inline-size: 170px;
+    font-size: var(--small);
+  }
+  .keybinding-row kbd {
+    font-size: var(--tiny);
+    white-space: nowrap;
+  }
+  .keybinding-list h4 {
+    margin-block: 24px 4px;
+    font-size: var(--small);
+  }
+  .theme-options {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .theme-option {
+    display: flex;
+    flex: 1;
+    min-inline-size: 140px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border: 1px solid var(--border-color);
+    padding: 10px;
+    border-radius: 6px;
+    color: var(--text-color);
+    background: var(--page-background);
+    font-size: var(--small);
+  }
+  .theme-option[aria-pressed='true'] {
+    border-color: var(--primary-color);
+  }
+  .theme-swatch {
+    display: grid;
+    grid-template-columns: 25% 30% 45%;
+    block-size: 64px;
+    flex: 0 0 100%;
+    overflow: hidden;
+    border-radius: 4px;
+    background: #f8f9fa;
+    border: 1px solid #d6d8dc;
+  }
+  .theme-swatch i:first-child {
+    background: #e1e2e4;
+  }
+  .theme-swatch i:nth-child(2) {
+    background: #f0f1f2;
+    border-inline: 1px solid #d6d8dc;
+  }
+  [data-theme-preview='inknote-dark'] .theme-swatch {
+    background: #0a0a0a;
+    border-color: #333;
+  }
+  [data-theme-preview='inknote-dark'] .theme-swatch i:first-child {
+    background: #171717;
+  }
+  [data-theme-preview='inknote-dark'] .theme-swatch i:nth-child(2) {
+    background: #101010;
+    border-color: #333;
+  }
+  @media (max-width: 640px) {
+    .preferences-body {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+    .preferences-navigation {
+      flex-direction: row;
+      overflow-x: auto;
+      padding: 8px;
+      border-inline-end: 0;
+      border-block-end: 1px solid var(--border-color);
+    }
+    .preferences-navigation button {
+      flex: none;
+      gap: 6px;
+      padding: 8px;
+    }
+    .keybinding-row input {
+      max-inline-size: 130px;
+    }
   }
   .dialog-actions {
     display: flex;

@@ -6,7 +6,6 @@ import {
   Search,
   Plus,
   Inbox,
-  BookOpen,
   CirclePlay,
   CirclePause,
   CircleCheck,
@@ -20,6 +19,7 @@ import { useWorkspace } from '../state/workspace-context';
 import type { Navigation } from '../state/workspace-types';
 import { IconButton } from './icon-button';
 import { tagColor } from './tag-badge';
+import { NotebookTree, NotebookBreadcrumbs } from './notebook-tree';
 
 export const statusLabels = {
   active: 'Activo',
@@ -44,6 +44,8 @@ export function Sidebar({
   drawer?: boolean;
 }) {
   const library = useWorkspace((state) => state.library);
+  const scope = useWorkspace((state) => state.preferences.notebookScopeId);
+  const counts = useWorkspace((state) => state.preferences.showNoteCounts);
   const [tagSearch, setTagSearch] = useState<string | null>(null);
   const navigation = useWorkspace((state) => state.navigation);
   const navigate = useWorkspace((state) => state.navigate);
@@ -67,26 +69,11 @@ export function Sidebar({
       label={label}
       icon={icon}
       active={isActive(target)}
-      count={count}
+      count={counts ? count : undefined}
       className={className}
       onClick={() => select(target)}
     />
   );
-  function notebookTree(parentId: string | null, depth = 0): ReactNode {
-    return library.notebooks
-      .filter((book) => book.parentId === parentId)
-      .map((book) => (
-        <div className={depth ? 'notebook-children' : undefined} key={book.id}>
-          {row(
-            book.name,
-            BookOpen,
-            { type: 'notebook', id: book.id },
-            book.count,
-          )}
-          {notebookTree(book.id, depth + 1)}
-        </div>
-      ));
-  }
   return (
     <nav className="pane pane--sidebar" aria-label="Biblioteca">
       <header className="sidebar-header window-drag-region">
@@ -100,6 +87,7 @@ export function Sidebar({
           onClick={() => openSettings(true)}
         />
       </header>
+      <NotebookBreadcrumbs />
       <div className="sidebar-scroll">
         {row('Todas las notas', FileText, { type: 'all' }, library.total)}
         {row(
@@ -118,8 +106,14 @@ export function Sidebar({
             />
           }
         >
-          {row('Sin notebook', Inbox, { type: 'notebook', id: 'unfiled' })}
-          {notebookTree(null)}
+          {!scope &&
+            row(
+              'Sin notebook',
+              Inbox,
+              { type: 'notebook', id: 'unfiled' },
+              library.unfiled,
+            )}
+          <NotebookTree parentId={scope} onNavigate={onNavigate} />
         </SidebarSection>
         <SidebarSection title="Estado">
           {(Object.keys(statusLabels) as (keyof typeof statusLabels)[]).map(
@@ -172,7 +166,9 @@ export function Sidebar({
                 >
                   <span className={`tag-dot tag-color-${tagColor(tag.name)}`} />
                   <span className="navigation-label">{tag.name}</span>
-                  <span className="navigation-count">{tag.count}</span>
+                  {counts && (
+                    <span className="navigation-count">{tag.count}</span>
+                  )}
                 </button>
               ))
           )}

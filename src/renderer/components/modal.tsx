@@ -6,12 +6,20 @@ export function Modal({
   title,
   onClose,
   children,
+  className = '',
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  className?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const close = () => {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && dialog.current?.contains(active))
+      active.blur();
+    onClose();
+  };
   useEffect(() => {
     const element = dialog.current;
     if (element?.showModal) element.showModal();
@@ -21,11 +29,11 @@ export function Modal({
   return (
     <dialog
       ref={dialog}
-      className="app-dialog"
+      className={`app-dialog ${className}`}
       aria-label={title}
       onCancel={(event) => {
         event.preventDefault();
-        onClose();
+        close();
       }}
       onClick={(event) => {
         if (event.target === event.currentTarget) {
@@ -36,13 +44,13 @@ export function Modal({
             event.clientY < bounds.top ||
             event.clientY > bounds.bottom
           )
-            onClose();
+            close();
         }
       }}
     >
       <header className="dialog-header">
         <h2>{title}</h2>
-        <IconButton icon={X} label="Cerrar diálogo" onClick={onClose} />
+        <IconButton icon={X} label="Cerrar diálogo" onClick={close} />
       </header>
       {children}
     </dialog>

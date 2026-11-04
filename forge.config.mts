@@ -10,6 +10,7 @@ import electronChecksums from 'electron/checksums.json' with { type: 'json' };
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    extraResource: ['resources/licenses'],
     download: {
       checksums: electronChecksums,
     },

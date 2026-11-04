@@ -72,6 +72,12 @@ export function AppShell() {
         {
           '--sidebar-width': `${sidebarWidth}px`,
           '--note-list-width': `${noteListWidth}px`,
+          '--editor-font-family': preferences.editorFontFamily || undefined,
+          '--editor-font-size': `${preferences.editorFontSize}px`,
+          '--editor-line-height': preferences.editorLineHeight,
+          '--preview-font-family': preferences.previewFontFamily || undefined,
+          '--preview-font-size': `${preferences.previewFontSize}px`,
+          '--mde-preview-line-height': preferences.previewLineHeight,
         } as CSSProperties
       }
     >

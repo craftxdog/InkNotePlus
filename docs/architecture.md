@@ -170,8 +170,32 @@ Soporta el montaje y desmontaje adicional de StrictMode. Los identificadores
 de petición descartan resultados antiguos de búsquedas; al desconectar se
 invalidan las peticiones pendientes. Los guardados conservan texto escrito
 mientras la operación está en curso y no reemplazan el documento de otra nota.
-Los borradores sin guardar se conservan en memoria al cambiar de selección;
-no se promete recuperación de esos borradores después de cerrar la aplicación.
+Los cambios de título, cuerpo, notebook, estado, etiquetas, pin y plantilla se
+guardan automáticamente, también en borradores aparcados al cambiar de nota.
+InkNote agrupa escrituras después de 600 ms de pausa, con un límite de 2 s durante
+escritura continua; estos intervalos son decisiones de InkNote. Un guardado en
+curso conserva las ediciones nuevas y actualiza su revisión antes de la siguiente
+escritura. Los títulos preservan espacios mientras se escribe.
+
+Al cerrar la ventana, un handshake IPC con UUID y validación de emisor espera a
+que terminen preferencias y borradores pendientes. Si SQLite rechaza la escritura,
+la ventana permanece abierta y el borrador conserva su contenido. La DB y módulos
+se cierran en `will-quit`, después de ese guardado. No se promete recuperación
+del texto pendiente ante un cierre forzado del proceso o fallo del sistema.
+
+El preview sigue el Markdown en vivo y usa posiciones del AST para mapear bloques
+entre ambos paneles. El scroll se sincroniza en ambas direcciones, con anclajes
+de línea/columna compatibles con LF y CRLF, caché de medidas, listeners pasivos
+y una actualización por frame. Las medidas se invalidan al cambiar contenido,
+anchura o tema; la conexión sigue la instancia real de CodeMirror en StrictMode.
+El estado de scroll no pasa por Zustand ni provoca un render de React.
+
+Las tareas GFM del preview son controles accesibles: cambian sólo el carácter del
+marcador correspondiente en el Markdown, actualizan CodeMirror y entran en el
+autoguardado. Se conserva el cursor con cambios mínimos y el cambio admite deshacer.
+Los callbacks de un preview desactualizado no sobreescriben texto nuevo. Las notas
+de la papelera permanecen de sólo lectura; el código con apariencia de tarea no
+se interpreta como una casilla editable.
 
 Vite transpila TSX con el runtime JSX automático configurado en TypeScript.
 El renderer usa el soporte nativo de Vite, sin el plugin de React Fast Refresh
@@ -189,7 +213,8 @@ Producción conserva exclusivamente el nonce para los estilos de CodeMirror.
 
 `pnpm run test:desktop` arranca Forge y Electron con un perfil temporal, sin
 mocks de preload o IPC. Comprueba el primer montaje, CSS aplicado, escritura
-SQLite, CodeMirror, preview, preferencias persistidas tras recargar y CSP.
+SQLite sin guardado manual, metadata, tareas y deshacer, scroll bidireccional,
+última edición al cerrar, preferencias persistidas tras recargar y CSP.
 `pnpm run test:desktop:package` comprueba el paquete nativo previamente construido.
 El cliente `puppeteer-core` es sólo de desarrollo y usa Electron existente;
 no descarga ni distribuye otro navegador. Estas pruebas necesitan un escritorio

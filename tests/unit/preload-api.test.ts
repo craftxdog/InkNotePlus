@@ -51,7 +51,7 @@ function createIpc(response: unknown = success(note)) {
 }
 
 describe('InkNote preload API', () => {
-  it('uses a fixed channel and normalizes note input before invoking IPC', async () => {
+  it('uses a fixed channel and preserves note text before invoking IPC', async () => {
     const { invocations, ipc } = createIpc();
     const api = createInkNoteApi(ipc);
 
@@ -61,7 +61,7 @@ describe('InkNote preload API', () => {
     expect(invocations).toEqual([
       {
         channel: IPC_CHANNELS.notes.create,
-        input: { title: 'Architecture', body: 'Local-first.' },
+        input: { title: '  Architecture  ', body: 'Local-first.' },
       },
     ]);
   });
@@ -93,7 +93,7 @@ describe('InkNote preload API', () => {
         channel: IPC_CHANNELS.notes.update,
         input: {
           id: note.id,
-          title: 'Updated',
+          title: '  Updated  ',
           body: 'Local-first.',
           expectedRevision: 1,
         },

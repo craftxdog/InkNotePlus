@@ -39,6 +39,7 @@ export function createApi(overrides: Partial<InkNoteApi['notes']> = {}) {
   const listeners = new Set<(event: NoteChangedEvent) => void>();
   let preferences = { ...defaultPreferences };
   const api: InkNoteApi = {
+    onBeforeClose: () => () => {},
     links: { openExternal: async () => success(true) },
     library: {
       get: async () => success(emptyLibrary),

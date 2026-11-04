@@ -25,7 +25,7 @@ export const IPC_CHANNELS = {
 
 export const createNoteInputSchema = z
   .object({
-    title: z.string().trim().max(maxTitleLength),
+    title: z.string().max(maxTitleLength),
     body: z.string().max(maxBodyLength),
     metadata: noteMetadataSchema.optional(),
   })
@@ -45,7 +45,7 @@ export const listNotesInputSchema = z
 export const updateNoteInputSchema = z
   .object({
     id: noteIdSchema,
-    title: z.string().trim().max(maxTitleLength),
+    title: z.string().max(maxTitleLength),
     body: z.string().max(maxBodyLength),
     expectedRevision: z.number().int().positive(),
     metadata: noteMetadataSchema.optional(),

@@ -4,6 +4,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import started from 'electron-squirrel-startup';
+import { installCloseGuard } from './main/close-guard';
 
 import { Configuration } from './application/config';
 import { coreConfigDefinitions } from './application/core-config';
@@ -41,6 +42,7 @@ let externalLinkHandler: Disposable | null = null;
 let libraryHandlers: Disposable | null = null;
 let coreModules: ModuleRegistry | null = null;
 let configuration: Configuration | null = null;
+let quitting = false;
 
 function installSessionSecurity() {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
@@ -74,6 +76,7 @@ function createWindow(activeConfiguration: Configuration): BrowserWindow {
   );
 
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  installCloseGuard(window, ipcMain);
   window.webContents.on('will-attach-webview', (event) => {
     event.preventDefault();
   });
@@ -220,12 +223,15 @@ app.whenReady().then(() => {
 });
 
 app.on('before-quit', () => {
+  quitting = true;
+});
+app.on('will-quit', () => {
   coreModules?.deactivateAll();
   coreModules = null;
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  if (process.platform !== 'darwin' || quitting) {
     app.quit();
   }
 });

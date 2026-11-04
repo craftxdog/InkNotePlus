@@ -1,4 +1,6 @@
-import { createStore } from 'zustand/vanilla';
+import { createStore, type StoreApi } from 'zustand/vanilla';
+import { createDraftPersistence, startAutosave } from './draft-persistence';
+import { updateTaskMarker } from '../editor/markdown-source-map';
 
 import type { InkNoteApi } from '../../preload/api';
 import type {
@@ -11,7 +13,6 @@ import {
   mergeNote,
   selectDocument,
   sortNotes,
-  toDocument,
 } from './note-projection';
 import type { WorkspaceStore } from './workspace-types';
 import {
@@ -33,8 +34,14 @@ export function createWorkspaceStore(api: InkNoteApi) {
   let preferenceQueue = Promise.resolve();
   let preferenceRevision = 0;
   let confirmedPreferences = defaultPreferences;
+  let stopAutosave: (() => void) | undefined;
+  let stopClose: (() => void) | undefined;
 
-  return createStore<WorkspaceStore>()((set, get) => {
+  const store: StoreApi<WorkspaceStore> = createStore<WorkspaceStore>()((
+    set,
+    get,
+  ) => {
+    const persistence = createDraftPersistence(api, set, get, () => generation);
     const reportFailure = (errorCode: AppErrorCode) =>
       set((state) => ({
         noteList: { ...state.noteList, status: 'error', errorCode },
@@ -113,6 +120,8 @@ export function createWorkspaceStore(api: InkNoteApi) {
     };
 
     return {
+      saveDraft: persistence.saveDraft,
+      flushDrafts: persistence.flushDrafts,
       openExternalLink: (url) => api.links.openExternal(url),
       ...createLibraryActions(api, set, get, () => generation),
       navigation: { type: 'all' },
@@ -173,9 +182,15 @@ export function createWorkspaceStore(api: InkNoteApi) {
       },
       document: emptyDocument,
       parkedDrafts: {},
-      connect() {
+      connect(beforeFlush = () => {}) {
         connections += 1;
         if (connections === 1) {
+          stopAutosave = startAutosave(store, persistence.save);
+          stopClose = api.onBeforeClose(async () => {
+            beforeFlush();
+            await preferenceQueue;
+            return get().flushDrafts();
+          });
           unsubscribe = api.onNoteChanged(onNoteChanged);
           void refreshNotes();
           const currentGeneration = generation;
@@ -210,6 +225,10 @@ export function createWorkspaceStore(api: InkNoteApi) {
           disconnected = true;
           connections -= 1;
           if (connections === 0) {
+            stopAutosave?.();
+            stopAutosave = undefined;
+            stopClose?.();
+            stopClose = undefined;
             unsubscribe?.();
             unsubscribe = undefined;
             requestId += 1;
@@ -311,78 +330,18 @@ export function createWorkspaceStore(api: InkNoteApi) {
           };
         });
       },
-      async saveDraft() {
-        const draft = get().document;
+      toggleTask(snapshot, offset, checked) {
         if (
-          !draft.noteId ||
-          draft.revision === null ||
-          !draft.isDirty ||
-          get().noteList.isSaving
+          get().navigation.type === 'trash' ||
+          get().document.body !== snapshot
         )
           return;
-        const currentGeneration = generation;
-        set((state) => ({
-          noteList: { ...state.noteList, isSaving: true, errorCode: null },
-        }));
-        try {
-          const result = await api.notes.update({
-            id: draft.noteId,
-            title: draft.title,
-            body: draft.body,
-            expectedRevision: draft.revision,
-            metadata: draft.metadata,
-            isPinned: draft.isPinned,
-          });
-          if (currentGeneration !== generation) return;
-          if (!result.ok) {
-            reportFailure(result.error.code);
-            return;
-          }
-          set((state) => {
-            const current =
-              state.document.noteId === draft.noteId
-                ? state.document
-                : state.parkedDrafts[draft.noteId!];
-            const saved =
-              current &&
-              (current.title !== draft.title ||
-                current.body !== draft.body ||
-                JSON.stringify(current.metadata) !==
-                  JSON.stringify(draft.metadata) ||
-                current.isPinned !== draft.isPinned)
-                ? { ...current, revision: result.data.revision, isDirty: true }
-                : toDocument(result.data);
-            const parkedDrafts = { ...state.parkedDrafts };
-            if (state.document.noteId !== draft.noteId) {
-              if (saved.isDirty) parkedDrafts[draft.noteId!] = saved;
-              else delete parkedDrafts[draft.noteId!];
-            }
-            return {
-              document:
-                state.document.noteId === draft.noteId ? saved : state.document,
-              parkedDrafts,
-              noteList: {
-                ...state.noteList,
-                notes: mergeNote(state.noteList.notes, result.data),
-                status: 'ready',
-                errorCode: null,
-              },
-            };
-          });
-          void get().refreshLibrary();
-          if (get().searchQuery || get().navigation.type !== 'all')
-            await refreshNotes();
-        } catch {
-          if (currentGeneration === generation) reportFailure('unavailable');
-        } finally {
-          if (currentGeneration === generation)
-            set((state) => ({
-              noteList: { ...state.noteList, isSaving: false },
-            }));
-        }
+        const body = updateTaskMarker(snapshot, offset, checked);
+        if (body !== null) get().updateDraft({ body });
       },
     };
   });
+  return store;
 }
 
 export type WorkspaceStoreApi = ReturnType<typeof createWorkspaceStore>;

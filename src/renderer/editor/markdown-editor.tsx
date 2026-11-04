@@ -8,7 +8,12 @@ import {
   keymap,
   lineNumbers,
 } from '@codemirror/view';
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  isolateHistory,
+} from '@codemirror/commands';
 import {
   bracketMatching,
   foldGutter,
@@ -18,6 +23,7 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { javascriptLanguage } from '@codemirror/lang-javascript';
 import { jsonLanguage } from '@codemirror/lang-json';
 import { tokenHighlighter } from './token-highlighter';
+import { minimalTextChange } from './markdown-source-map';
 
 const externalChange = Annotation.define<boolean>();
 
@@ -27,17 +33,19 @@ export function MarkdownEditor({
   onChange,
   onSave,
   onView,
+  onUpdate,
 }: {
   value: string;
   nonce: string;
   onChange: (value: string) => void;
   onSave: () => void;
   onView: (view: EditorView | null) => void;
+  onUpdate?: (selectionChanged: boolean) => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const callbacks = useRef({ onChange, onSave, onView });
-  callbacks.current = { onChange, onSave, onView };
+  const callbacks = useRef({ onChange, onSave, onView, onUpdate });
+  callbacks.current = { onChange, onSave, onView, onUpdate };
   const initialValue = useRef(value);
   useEffect(() => {
     if (!container.current) return;
@@ -58,6 +66,7 @@ export function MarkdownEditor({
             },
             '&.cm-focused': { outline: 'none' },
             '.cm-scroller': {
+              overflow: 'auto',
               fontFamily:
                 'var(--editor-font-family, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)',
               fontSize: 'var(--editor-font-size, 14px)',
@@ -122,6 +131,15 @@ export function MarkdownEditor({
           }),
           EditorView.updateListener.of((update) => {
             if (
+              update.docChanged ||
+              update.selectionSet ||
+              update.geometryChanged ||
+              update.viewportChanged
+            )
+              callbacks.current.onUpdate?.(
+                update.docChanged || update.selectionSet,
+              );
+            if (
               update.docChanged &&
               !update.transactions.some((transaction) =>
                 transaction.annotation(externalChange),
@@ -142,10 +160,15 @@ export function MarkdownEditor({
   }, [nonce]);
   useEffect(() => {
     const view = viewRef.current;
-    if (view && view.state.doc.toString() !== value)
+    const normalized = view?.state.toText(value).toString();
+    if (
+      view &&
+      normalized !== undefined &&
+      view.state.doc.toString() !== normalized
+    )
       view.dispatch({
-        changes: { from: 0, to: view.state.doc.length, insert: value },
-        annotations: externalChange.of(true),
+        changes: minimalTextChange(view.state.doc.toString(), normalized),
+        annotations: [externalChange.of(true), isolateHistory.of('full')],
       });
   }, [value]);
   return <div className="markdown-editor" ref={container} />;

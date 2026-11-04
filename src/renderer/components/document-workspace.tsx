@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  type CSSProperties,
+} from 'react';
 import type { EditorView } from '@codemirror/view';
 import {
   ArrowLeft,
@@ -37,6 +43,7 @@ import { TagBadge } from './tag-badge';
 import { statusIcons, statusLabels } from './sidebar';
 import { Modal } from './modal';
 import { CommitRange } from './commit-range';
+import { createScrollSync } from '../editor/scroll-sync';
 
 export function DocumentWorkspace({
   onShowNotes,
@@ -64,6 +71,8 @@ export function DocumentWorkspace({
   const restore = useWorkspace((state) => state.restoreActiveNote);
   const trash = useWorkspace((state) => state.trashActiveNote);
   const view = useRef<EditorView | null>(null);
+  const preview = useRef<HTMLElement>(null);
+  const sync = useRef<ReturnType<typeof createScrollSync> | null>(null);
   const [confirmTrash, setConfirmTrash] = useState(false);
   const [splitRatio, setSplitRatio] = useState(preferences.splitRatio);
   useEffect(
@@ -74,6 +83,13 @@ export function DocumentWorkspace({
   const current = notes[index];
   const inTrash = navigation.type === 'trash';
   const mode = preferences.editorMode;
+  const previewRendered = useCallback(
+    () => sync.current?.refresh(mode === 'split'),
+    [mode],
+  );
+  useEffect(() => {
+    sync.current?.refresh(mode === 'split');
+  }, [draft.body, mode, splitRatio, preferences.theme]);
   useEffect(() => {
     view.current?.requestMeasure();
   }, [mode, splitRatio]);
@@ -150,7 +166,11 @@ export function DocumentWorkspace({
         </div>
         <div className="editor-actions">
           <span className="save-status" role="status">
-            {isSaving ? 'Guardando…' : draft.isDirty ? 'Sin guardar' : ''}
+            {isSaving
+              ? 'Guardando…'
+              : draft.isDirty
+                ? 'Autoguardado pendiente'
+                : ''}
           </span>
           <IconButton
             icon={Save}
@@ -291,8 +311,21 @@ export function DocumentWorkspace({
                     void save();
                   }}
                   onView={(instance) => {
+                    sync.current?.destroy();
+                    sync.current = null;
                     view.current = instance;
+                    // Bind to the actual view lifecycle, including StrictMode's replay.
+                    if (instance && preview.current) {
+                      sync.current = createScrollSync(
+                        instance,
+                        preview.current,
+                      );
+                      sync.current.refresh(mode === 'split');
+                    }
                   }}
+                  onUpdate={(selectionChanged) =>
+                    sync.current?.editorChanged(selectionChanged)
+                  }
                 />
               ) : (
                 <div className="editor-loading">
@@ -303,10 +336,15 @@ export function DocumentWorkspace({
               )}
             </section>
             <aside
+              ref={preview}
               className="pane pane--preview mde-preview-container"
               aria-label="Vista previa"
             >
-              <MarkdownPreview body={draft.body} />
+              <MarkdownPreview
+                body={draft.body}
+                readOnly={inTrash}
+                onRendered={previewRendered}
+              />
             </aside>
           </div>
           <footer className="editor-statusbar">
@@ -320,7 +358,7 @@ export function DocumentWorkspace({
               {isSaving
                 ? 'Guardando…'
                 : draft.isDirty
-                  ? 'Cambios sin guardar'
+                  ? 'Autoguardado pendiente'
                   : 'Guardado localmente'}
             </span>
           </footer>
@@ -376,6 +414,12 @@ function EditorMetadata({ disabled }: { disabled: boolean }) {
   const books = useWorkspace((state) => state.library.notebooks);
   const [tag, setTag] = useState('');
   const StatusIcon = statusIcons[metadata.status];
+  const commitTag = () => {
+    const value = tag.trim();
+    if (value && !metadata.tags.includes(value) && metadata.tags.length < 32)
+      update({ metadata: { ...metadata, tags: [...metadata.tags, value] } });
+    setTag('');
+  };
   return (
     <div className="editor-meta">
       <label className="meta-select">
@@ -449,15 +493,11 @@ function EditorMetadata({ disabled }: { disabled: boolean }) {
           maxLength={40}
           value={tag}
           onChange={(event) => setTag(event.target.value)}
+          onBlur={commitTag}
           onKeyDown={(event) => {
             if (event.key === 'Enter' || event.key === ',') {
               event.preventDefault();
-              const value = tag.trim();
-              if (value && !metadata.tags.includes(value))
-                update({
-                  metadata: { ...metadata, tags: [...metadata.tags, value] },
-                });
-              setTag('');
+              commitTag();
             }
           }}
         />

@@ -81,6 +81,8 @@ export function createLibraryActions(
       const id = get().activeNoteId;
       if (!id) return;
       try {
+        if (!(await get().flushDrafts()) || generation !== getGeneration())
+          return;
         const result = await api.notes.moveToTrash({ id });
         if (generation !== getGeneration()) return;
         if (!result.ok) {

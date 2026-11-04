@@ -1,6 +1,13 @@
 import type { IpcRenderer } from 'electron';
 import type { ZodType } from 'zod';
 import {
+  WINDOW_CHANNELS,
+  closeRequestSchema,
+  closeReadinessSchema,
+  closeConfirmationSchema,
+  closeResultSchema,
+} from '../shared/window-lifecycle';
+import {
   EXTERNAL_LINK_CHANNEL,
   externalLinkSchema,
   externalLinkResultSchema,
@@ -49,6 +56,7 @@ import {
 type InputSchema<T> = Pick<ZodType<T>, 'safeParse'>;
 
 export interface InkNoteApi {
+  onBeforeClose(listener: () => Promise<boolean>): () => void;
   links: { openExternal(url: string): Promise<Result<boolean>> };
   library: {
     get(): Promise<Result<LibrarySnapshot>>;
@@ -73,6 +81,42 @@ export function createInkNoteApi(
   ipcRenderer: Pick<IpcRenderer, 'invoke' | 'on' | 'removeListener'>,
 ): InkNoteApi {
   return {
+    onBeforeClose(listener) {
+      const handler = (_event: unknown, input: unknown) => {
+        const parsed = closeRequestSchema.safeParse(input);
+        if (!parsed.success) return;
+        void Promise.resolve()
+          .then(listener)
+          .catch(() => false)
+          .then((saved) =>
+            invoke(
+              ipcRenderer,
+              WINDOW_CHANNELS.confirm,
+              { ...parsed.data, saved },
+              closeConfirmationSchema,
+              closeResultSchema,
+            ),
+          );
+      };
+      ipcRenderer.on(WINDOW_CHANNELS.prepare, handler);
+      void invoke(
+        ipcRenderer,
+        WINDOW_CHANNELS.readiness,
+        { ready: true },
+        closeReadinessSchema,
+        closeResultSchema,
+      );
+      return () => {
+        ipcRenderer.removeListener(WINDOW_CHANNELS.prepare, handler);
+        void invoke(
+          ipcRenderer,
+          WINDOW_CHANNELS.readiness,
+          { ready: false },
+          closeReadinessSchema,
+          closeResultSchema,
+        );
+      };
+    },
     links: {
       openExternal: (url) =>
         invoke(

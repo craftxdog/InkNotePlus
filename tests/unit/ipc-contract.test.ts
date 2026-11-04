@@ -30,14 +30,14 @@ describe('shared IPC contract', () => {
     });
   });
 
-  it('normalizes valid note creation input and rejects unexpected fields', () => {
+  it('preserves valid note creation text and rejects unexpected fields', () => {
     expect(
       createNoteInputSchema.parse({
         title: '  Architecture  ',
         body: 'SQLite lives in the main process.',
       }),
     ).toEqual({
-      title: 'Architecture',
+      title: '  Architecture  ',
       body: 'SQLite lives in the main process.',
     });
 
@@ -82,7 +82,7 @@ describe('shared IPC contract', () => {
       }),
     ).toEqual({
       id: '5a5115f8-747f-416d-82d5-d9c12e34d323',
-      title: 'Updated',
+      title: '  Updated  ',
       body: 'New content',
       expectedRevision: 2,
     });

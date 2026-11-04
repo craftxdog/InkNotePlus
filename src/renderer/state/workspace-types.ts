@@ -60,7 +60,7 @@ export interface WorkspaceActions {
   createNotebook(name: string, parentId?: string | null): Promise<void>;
   trashActiveNote(): Promise<void>;
   restoreActiveNote(): Promise<void>;
-  connect(): () => void;
+  connect(beforeFlush?: () => void): () => void;
   refreshNotes(): Promise<void>;
   setSearchQuery(query: string): Promise<void>;
   selectNote(id: string | null): void;
@@ -73,6 +73,8 @@ export interface WorkspaceActions {
     >,
   ): void;
   saveDraft(): Promise<void>;
+  flushDrafts(): Promise<boolean>;
+  toggleTask(snapshot: string, offset: number, checked: boolean): void;
 }
 
 export type WorkspaceStore = WorkspaceState & WorkspaceActions;

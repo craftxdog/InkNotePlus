@@ -14,7 +14,7 @@ export function ThemeStyles() {
         <link
           key={`${theme}/${file}`}
           rel="stylesheet"
-          href={assets[file as keyof typeof assets]}
+          href={assets[file as keyof typeof assets] || undefined}
           data-theme-package={theme}
           data-theme-area={file.replace('.css', '')}
         />

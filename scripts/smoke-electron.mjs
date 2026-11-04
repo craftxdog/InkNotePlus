@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
 import { DatabaseSync } from 'node:sqlite';
 import { verifyInkdropFeatures } from './smoke-inkdrop-features.mjs';
+import { verifyEditorLayout } from './smoke-editor-layout.mjs';
+import { verifyLineWrapping } from './smoke-line-wrapping.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const appPath = process.argv
@@ -525,6 +527,8 @@ try {
     settle,
     catalogEnabled: process.argv.includes('--catalog'),
   });
+  await verifyEditorLayout(page);
+  await verifyLineWrapping(page);
   if (reviewDatabase) {
     const source = new DatabaseSync(reviewDatabase, { readOnly: true });
     let notes;

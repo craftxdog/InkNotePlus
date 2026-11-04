@@ -205,6 +205,27 @@ y una actualización por frame. Las medidas se invalidan al cambiar contenido,
 anchura o tema; la conexión sigue la instancia real de CodeMirror en StrictMode.
 El estado de scroll no pasa por Zustand ni provoca un render de React.
 
+El renderer conserva posiciones de texto inline además de las de bloque.
+Las coordenadas reales de CodeMirror y DOM Range siguen el cursor dentro de
+una línea partida visualmente, incluso con enlaces cuyo destino no aparece
+en el preview. El punto de referencia al desplazar es el texto visible en la
+zona de lectura; al escribir es la posición del cursor. Un preview diferido
+sólo participa cuando corresponde al borrador actual. Código, fórmulas e
+imágenes mantienen el mapa de bloques como respaldo.
+
+Preferencias → Edición incluye los cuatro modos de Inkdrop 6.2: desactivado,
+todas las líneas, sólo prosa y sin ajuste en el bloque del cursor. El último
+es el valor inicial para perfiles nuevos. Valores antiguos `true` y `false`
+se conservan como `all` y `off`. Los cambios reconfiguran la instancia existente
+de CodeMirror; no modifican Markdown, selección ni historial de deshacer.
+Los comandos `editor:toggle-line-wrapping` y `editor:toggle-line-numbers`
+pueden asignarse en Atajos; no se inventan combinaciones predeterminadas.
+
+Fuente: [wrap de Inkdrop 6.2](https://forum.inkdrop.app/t/inkdrop-desktop-v6-2-0/5603),
+[extensión del editor](https://developers.inkdrop.app/modules/markdown-editor),
+[configuración y comandos del editor](https://developers.inkdrop.app/guides/customize-the-editor)
+y [plugins del renderer](https://developers.inkdrop.app/modules/markdown-renderer).
+
 Las fórmulas inline, display y fences `math` usan el componente MIT público de
 Inkdrop con KaTeX 0.19.0, estilos aislados y fuentes WOFF2 locales. Mermaid usa
 su componente público y Pele 1.9.0, la versión fijada por ese repositorio.

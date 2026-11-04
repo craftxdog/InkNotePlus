@@ -82,6 +82,9 @@ export function DocumentWorkspace({
   const view = useRef<EditorView | null>(null);
   const preview = useRef<HTMLElement>(null);
   const sync = useRef<ReturnType<typeof createScrollSync> | null>(null);
+  const currentBody = useRef(draft.body);
+  currentBody.current = draft.body;
+  const renderedBody = useRef<string | null>(null);
   const [confirmTrash, setConfirmTrash] = useState(false);
   const [splitRatio, setSplitRatio] = useState(preferences.splitRatio);
   const [imageSelected, setImageSelected] = useState(false);
@@ -110,7 +113,10 @@ export function DocumentWorkspace({
   const inTrash = navigation.type === 'trash';
   const mode = preferences.editorMode;
   const previewRendered = useCallback(
-    () => sync.current?.refresh(mode === 'split' && preferences.syncScroll),
+    (body: string) => {
+      renderedBody.current = body;
+      sync.current?.refresh(mode === 'split' && preferences.syncScroll);
+    },
     [mode, preferences.syncScroll],
   );
   useEffect(() => {
@@ -389,6 +395,7 @@ export function DocumentWorkspace({
                       sync.current = createScrollSync(
                         instance,
                         preview.current,
+                        () => renderedBody.current === currentBody.current,
                       );
                       sync.current.refresh(
                         mode === 'split' && preferences.syncScroll,

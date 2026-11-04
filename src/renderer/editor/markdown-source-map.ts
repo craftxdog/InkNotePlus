@@ -25,6 +25,45 @@ const blocks = new Set([
   'image',
 ]);
 
+interface RenderNode {
+  type: string;
+  tagName?: string;
+  value?: string;
+  position?: SourceNode['position'];
+  properties?: Record<string, string | number>;
+  children?: RenderNode[];
+}
+
+// Preserve inline text positions after Markdown removes link destinations and
+// formatting markers. Scroll sync can then follow an actual wrapped text row.
+export function rehypeSourceText() {
+  return (tree: RenderNode) => {
+    function visit(node: RenderNode) {
+      if (!node.children || ['pre', 'code'].includes(node.tagName ?? ''))
+        return;
+      node.children = node.children.map((child) => {
+        const position = child.position;
+        if (child.type === 'text' && child.value?.trim() && position) {
+          return {
+            type: 'element',
+            tagName: 'span',
+            properties: {
+              'data-source-text-line': position.start.line,
+              'data-source-text-column': position.start.column,
+              'data-source-text-end-line': position.end.line,
+              'data-source-text-end-column': position.end.column,
+            },
+            children: [child],
+          };
+        }
+        visit(child);
+        return child;
+      });
+    }
+    visit(tree);
+  };
+}
+
 // Use the parser's source positions. Text inside fenced code never becomes a task.
 export function remarkSourceMap() {
   return (tree: SourceNode, file: { value: unknown }) => {

@@ -1,4 +1,5 @@
 import type { EditorView } from '@codemirror/view';
+import { previewAtSource, sourceAtPreview } from './preview-source-position';
 
 export interface ScrollAnchor {
   editor: number;
@@ -31,12 +32,17 @@ export function mapScroll(
   );
 }
 
-export function createScrollSync(view: EditorView, preview: HTMLElement) {
+export function createScrollSync(
+  view: EditorView,
+  preview: HTMLElement,
+  isPreviewCurrent = () => true,
+) {
   let anchors: ScrollAnchor[] = [];
   let dirty = true,
     frame = 0,
     enabled = true;
   let owner: Pane = 'editor';
+  let followCursor = false;
   const expected: Partial<Record<Pane, number>> = {};
   const editor = view.scrollDOM;
   function measure() {
@@ -94,6 +100,7 @@ export function createScrollSync(view: EditorView, preview: HTMLElement) {
     frame = 0;
     if (
       !enabled ||
+      !isPreviewCurrent() ||
       !editor.clientHeight ||
       !preview.clientHeight ||
       !preview.clientWidth
@@ -105,25 +112,61 @@ export function createScrollSync(view: EditorView, preview: HTMLElement) {
       to = owner === 'editor' ? 'preview' : 'editor';
     const maximum = source.scrollHeight - source.clientHeight;
     let value = mapScroll(anchors, source.scrollTop, owner);
-    if (owner === 'editor' && view.hasFocus) {
-      const cursor = view.lineBlockAt(view.state.selection.main.head);
-      const cursorY =
-        cursor.top +
-        (view.documentTop -
-          editor.getBoundingClientRect().top +
-          editor.scrollTop);
-      if (
-        cursorY >= source.scrollTop &&
-        cursorY < source.scrollTop + source.clientHeight
-      ) {
-        const previewY = mapScroll(anchors, cursorY, 'editor');
-        if (previewY < value) value = previewY;
-        else if (previewY > value + target.clientHeight - 32)
-          value = previewY - target.clientHeight + 32;
+    const editorBounds = editor.getBoundingClientRect();
+    if (owner === 'editor') {
+      const position =
+        followCursor && view.hasFocus
+          ? view.state.selection.main.head
+          : view.posAtCoords(
+              {
+                x: Math.max(
+                  editorBounds.left + 1,
+                  view.contentDOM.getBoundingClientRect().left + 13,
+                ),
+                y: editorBounds.top + editor.clientHeight * 0.35,
+              },
+              false,
+            );
+      if (position !== null) {
+        // coordsAtPos measures a visual row, including soft wrapping.
+        // https://codemirror.net/docs/ref/#view.EditorView.coordsAtPos
+        const cursor = view.coordsAtPos(position);
+        const previewY = previewAtSource(view, preview, position);
+        if (
+          cursor &&
+          previewY !== null &&
+          cursor.bottom > editorBounds.top &&
+          cursor.top < editorBounds.bottom
+        )
+          value = previewY - (cursor.top - editorBounds.top);
+      }
+    } else {
+      const point = sourceAtPreview(view, preview);
+      if (point) {
+        const coordinates = view.coordsAtPos(point.position);
+        const block = view.lineBlockAt(point.position);
+        const padding = view.documentTop - editorBounds.top + editor.scrollTop;
+        // An offscreen, virtualized row is first estimated. CodeMirror's viewport
+        // update schedules a second pass with its measured character coordinates.
+        const editorY = coordinates
+          ? coordinates.top - editorBounds.top + editor.scrollTop
+          : padding +
+            block.top +
+            (block.height * (point.position - block.from)) /
+              Math.max(1, block.to - block.from);
+        value = editorY - point.y;
       }
     }
-    if (source.scrollTop < 1) value = 0;
-    else if (maximum > 0 && source.scrollTop >= maximum - 1)
+    if (
+      !(owner === 'editor' && followCursor && view.hasFocus) &&
+      source.scrollTop < 1
+    )
+      value = 0;
+    else if (
+      !(owner === 'editor' && followCursor && view.hasFocus) &&
+      maximum > 0 &&
+      source.scrollTop >= maximum - 1
+    )
       value = target.scrollHeight - target.clientHeight;
     value = Math.max(
       0,
@@ -150,9 +193,10 @@ export function createScrollSync(view: EditorView, preview: HTMLElement) {
       owner = pane;
       schedule();
     };
-    const interact = () => {
+    const interact = (event: Event) => {
       delete expected[pane];
       owner = pane;
+      if (event.type !== 'keydown') followCursor = false;
     };
     element.addEventListener('scroll', scroll, { passive: true });
     for (const event of ['wheel', 'pointerdown', 'touchstart', 'keydown'])
@@ -183,7 +227,10 @@ export function createScrollSync(view: EditorView, preview: HTMLElement) {
     },
     editorChanged(selectionChanged = false) {
       dirty = true;
-      if (selectionChanged && view.hasFocus) owner = 'editor';
+      if (selectionChanged && view.hasFocus) {
+        owner = 'editor';
+        followCursor = true;
+      }
       schedule();
     },
     destroy() {

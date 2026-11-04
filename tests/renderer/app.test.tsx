@@ -34,7 +34,11 @@ describe('React workspace', () => {
         changes: { from: 0, to: view.state.doc.length, insert: 'Edited body' },
       }),
     );
-    await screen.findByText('Edited body', { selector: '.mde-preview p' });
+    await waitFor(() =>
+      expect(document.querySelector('.mde-preview p')?.textContent).toBe(
+        'Edited body',
+      ),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
     await waitFor(() => expect(store.getState().document.isDirty).toBe(false));
     expect(store.getState().document.revision).toBe(2);

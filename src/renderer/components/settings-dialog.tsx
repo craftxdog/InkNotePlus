@@ -244,7 +244,31 @@ export function SettingsDialog() {
                 </SettingGroup>
                 <SettingGroup title="Comportamiento">
                   {toggle('lineNumbers', 'Mostrar números de línea')}
-                  {toggle('lineWrapping', 'Ajustar líneas al ancho del editor')}
+                  <label>
+                    Ajuste de líneas (word wrap)
+                    <select
+                      aria-label="Ajuste de líneas (word wrap)"
+                      value={preferences.lineWrapping}
+                      onChange={(event) =>
+                        void update({
+                          lineWrapping: event.target
+                            .value as Preferences['lineWrapping'],
+                        })
+                      }
+                    >
+                      <option value="off">Desactivado</option>
+                      <option value="all">Todas las líneas</option>
+                      <option value="prose">Sólo prosa</option>
+                      <option value="cursor">
+                        Sin ajuste en el bloque del cursor
+                      </option>
+                    </select>
+                  </label>
+                  <p className="settings-description">
+                    El ajuste es visual: no añade saltos de línea al Markdown.
+                    Los bloques de código y tablas pueden desplazarse
+                    horizontalmente.
+                  </p>
                   {toggle('activeLine', 'Resaltar línea activa')}
                   {toggle('spellcheck', 'Revisión ortográfica del sistema')}
                   {toggle('showToolbar', 'Mostrar barra de formato')}

@@ -7,9 +7,14 @@ import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
 import { DatabaseSync } from 'node:sqlite';
 import { verifyInkdropFeatures } from './smoke-inkdrop-features.mjs';
+import { verifyEditorLayout } from './smoke-editor-layout.mjs';
+import { verifyLineWrapping } from './smoke-line-wrapping.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const packaged = process.argv.includes('--packaged');
+const appPath = process.argv
+  .find((argument) => argument.startsWith('--app-path='))
+  ?.slice('--app-path='.length);
+const packaged = process.argv.includes('--packaged') || !!appPath;
 const reviewDatabase = process.argv
   .find((argument) => argument.startsWith('--notes-database='))
   ?.slice('--notes-database='.length);
@@ -22,8 +27,11 @@ const bundle = path.join(
   'out',
   `${productName}-${process.platform}-${process.arch}`,
 );
-const binary =
-  process.platform === 'darwin'
+const binary = appPath
+  ? process.platform === 'darwin' && appPath.endsWith('.app')
+    ? path.join(appPath, 'Contents', 'MacOS', productName)
+    : appPath
+  : process.platform === 'darwin'
     ? path.join(bundle, `${productName}.app`, 'Contents', 'MacOS', productName)
     : path.join(
         bundle,
@@ -33,6 +41,7 @@ const flags = [
   `--user-data-dir=${profile}`,
   '--remote-debugging-port=0',
   '--enable-logging=stderr',
+  ...(process.env.CI === 'true' ? ['--disable-gpu'] : []),
 ];
 const child = spawn(
   packaged ? binary : process.execPath,
@@ -86,14 +95,28 @@ try {
   browser = await puppeteer.connect({
     browserWSEndpoint: endpoint,
     defaultViewport: null,
-    protocolTimeout: process.argv.includes('--catalog') ? 60_000 : 15_000,
+    protocolTimeout:
+      process.env.CI === 'true' ||
+      process.argv.includes('--catalog') ||
+      process.argv.includes('--emulated')
+        ? 60_000
+        : 15_000,
   });
   const target = await browser.waitForTarget(
     (target) =>
       target.type() === 'page' && /^(file:|https?:)/.test(target.url()),
   );
   page = await target.page();
-  page.setDefaultTimeout(10000);
+  page.setDefaultTimeout(
+    process.env.CI === 'true' || process.argv.includes('--emulated')
+      ? 30_000
+      : 10_000,
+  );
+  page.setDefaultNavigationTimeout(
+    process.env.CI === 'true' || process.argv.includes('--emulated')
+      ? 60_000
+      : 30_000,
+  );
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('requestfailed', (request) =>
     errors.push(`${request.url()}: ${request.failure()?.errorText}`),
@@ -504,6 +527,8 @@ try {
     settle,
     catalogEnabled: process.argv.includes('--catalog'),
   });
+  await verifyEditorLayout(page);
+  await verifyLineWrapping(page);
   if (reviewDatabase) {
     const source = new DatabaseSync(reviewDatabase, { readOnly: true });
     let notes;
@@ -646,6 +671,10 @@ try {
           root: document.querySelector('#root')?.innerHTML.slice(0, 500),
           scripts: [...document.scripts].map((s) => s.src),
           bridge: typeof window.inkNote,
+          previewLength:
+            document.querySelector('.mde-preview')?.textContent.length,
+          editorLength:
+            document.querySelector('.cm-content')?.textContent.length,
           resources: performance
             .getEntriesByType('resource')
             .slice(0, 10)

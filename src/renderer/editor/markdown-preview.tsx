@@ -24,9 +24,10 @@ import { javascriptLanguage } from '@codemirror/lang-javascript';
 import { jsonLanguage } from '@codemirror/lang-json';
 import { tokenHighlighter } from './token-highlighter';
 import { useWorkspace } from '../state/workspace-context';
-import { remarkSourceMap } from './markdown-source-map';
+import { remarkSourceMap, rehypeSourceText } from './markdown-source-map';
 
 const gfm = [remarkGfm, remarkMath, remarkSourceMap];
+const sourceText = [rehypeSourceText];
 const Equation = lazy(() => import('./math-equation'));
 const Diagram = lazy(() => import('./mermaid-diagram'));
 const PreviewContext = createContext<{
@@ -44,12 +45,12 @@ export const MarkdownPreview = memo(function MarkdownPreview({
 }: {
   body: string;
   readOnly?: boolean;
-  onRendered?: () => void;
+  onRendered?: (body: string) => void;
 }) {
   const deferredBody = useDeferredValue(body);
   const rendered = useRef(onRendered);
   rendered.current = onRendered;
-  useEffect(() => rendered.current?.(), [deferredBody]);
+  useEffect(() => rendered.current?.(deferredBody), [deferredBody]);
   const openLink = useWorkspace((state) => state.openExternalLink);
   const toggle = useWorkspace((state) => state.toggleTask);
   return (
@@ -64,6 +65,7 @@ export const MarkdownPreview = memo(function MarkdownPreview({
       <div className="mde-preview" aria-label="Vista previa Markdown">
         <Markdown
           remarkPlugins={gfm}
+          rehypePlugins={sourceText}
           skipHtml
           components={components}
           urlTransform={(url, key) =>

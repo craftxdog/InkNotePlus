@@ -6,9 +6,20 @@ import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 import electronChecksums from 'electron/checksums.json' with { type: 'json' };
+import { macSigningConfiguration } from './config/distribution';
+import metadata from './package.json' with { type: 'json' };
+
+// electron-installer-redhat supports post scripts; Forge's option type omits it.
+const rpmOptions = {
+  bin: metadata.productName,
+  // The RPM maker's cp -r staging drops the helper's setuid bit.
+  // Restore Chromium's required root ownership and mode after installation.
+  post: `chown root:root /usr/lib/${metadata.name}/chrome-sandbox && chmod 4755 /usr/lib/${metadata.name}/chrome-sandbox`,
+};
 
 const config: ForgeConfig = {
   packagerConfig: {
+    ...macSigningConfiguration(process.env),
     asar: true,
     extraResource: ['resources/licenses'],
     download: {
@@ -16,7 +27,11 @@ const config: ForgeConfig = {
     },
   },
   rebuildConfig: {},
-  makers: [new MakerSquirrel({}), new MakerRpm({}), new MakerDeb({})],
+  makers: [
+    new MakerSquirrel({}),
+    new MakerRpm({ options: rpmOptions }),
+    new MakerDeb({ options: { bin: metadata.productName } }),
+  ],
   plugins: [
     new VitePlugin({
       // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.

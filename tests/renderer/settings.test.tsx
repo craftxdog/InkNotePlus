@@ -12,8 +12,53 @@ import { createWorkspaceStore } from '../../src/renderer/state/workspace-store';
 import { createApi, firstNote } from '../support/renderer-api';
 import { success } from '../../src/shared/ipc';
 import { EditorView } from '@codemirror/view';
+import { undo, undoDepth } from '@codemirror/commands';
 
 afterEach(cleanup);
+it('changes all four wrapping modes without replacing the editor, changing Markdown or losing undo', async () => {
+  const { api } = createApi({ list: async () => success([firstNote]) });
+  const store = createWorkspaceStore(api);
+  render(<App store={store} />);
+  const content = await screen.findByRole('textbox', {
+    name: 'Contenido Markdown de la nota',
+  });
+  const view = EditorView.findFromDOM(content)!;
+  view.dispatch({
+    changes: {
+      from: view.state.doc.length,
+      insert: '\n\nA long prose line remains unchanged.',
+    },
+  });
+  const body = view.state.doc.toString(),
+    depth = undoDepth(view.state);
+  view.dispatch({ selection: { anchor: Math.min(5, view.state.doc.length) } });
+  const selection = view.state.selection;
+  fireEvent.click(screen.getByRole('button', { name: 'Preferencias' }));
+  fireEvent.click(screen.getByRole('tab', { name: 'Edición' }));
+  const select = screen.getByRole('combobox', {
+    name: 'Ajuste de líneas (word wrap)',
+  });
+  for (const mode of ['off', 'all', 'prose', 'cursor']) {
+    fireEvent.change(select, { target: { value: mode } });
+    await waitFor(() =>
+      expect(store.getState().preferences.lineWrapping).toBe(mode),
+    );
+    expect(EditorView.findFromDOM(content)).toBe(view);
+    await waitFor(() =>
+      expect(content.classList.contains('cm-lineWrapping')).toBe(
+        mode !== 'off',
+      ),
+    );
+    expect(view.state.doc.toString()).toBe(body);
+    expect(view.state.selection.eq(selection)).toBe(true);
+    expect(undoDepth(view.state)).toBe(depth);
+  }
+  expect(await api.preferences.get()).toMatchObject({
+    data: { preferences: { lineWrapping: 'cursor' } },
+  });
+  undo(view);
+  expect(view.state.doc.toString()).toBe(firstNote.body);
+});
 it('opens the native editor search panel and closes it through the command registry', async () => {
   const { api } = createApi({ list: async () => success([firstNote]) });
   const { container } = render(<App store={createWorkspaceStore(api)} />);

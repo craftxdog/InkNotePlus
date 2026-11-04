@@ -26,6 +26,7 @@ import { javascriptLanguage } from '@codemirror/lang-javascript';
 import { jsonLanguage } from '@codemirror/lang-json';
 import { tokenHighlighter } from './token-highlighter';
 import { minimalTextChange } from './markdown-source-map';
+import { lineWrappingExtension } from './line-wrapping';
 
 const externalChange = Annotation.define<boolean>();
 
@@ -209,7 +210,7 @@ function editorSettings(preferences: Preferences) {
       : []),
     foldGutter(),
     ...(preferences.activeLine ? [highlightActiveLine()] : []),
-    ...(preferences.lineWrapping ? [EditorView.lineWrapping] : []),
+    lineWrappingExtension(preferences.lineWrapping),
     EditorView.contentAttributes.of({
       'aria-label': 'Contenido Markdown de la nota',
       spellcheck: String(preferences.spellcheck),

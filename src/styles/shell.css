@@ -87,9 +87,17 @@
     margin-inline-start: auto;
   }
   .app-wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--8px);
     font-weight: var(--font-weights-semibold);
     font-size: var(--small);
     color: var(--muted-text-color);
+  }
+  .app-wordmark img {
+    inline-size: var(--24px);
+    block-size: var(--24px);
+    object-fit: contain;
   }
   .inknote-shell[data-platform='darwin'] .sidebar-header {
     padding-inline-start: 88px;

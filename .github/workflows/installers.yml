@@ -89,6 +89,7 @@ jobs:
           Get-Process | Where-Object { $_.Path -eq $installed } | Stop-Process -Force
           node scripts/smoke-electron.mjs "--app-path=$installed"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./scripts/verify-windows-icons.ps1 -InstalledExe $installed -SetupExe $installers[0].FullName
 
       - name: Install and launch Debian package
         if: runner.os == 'Linux'
@@ -98,6 +99,9 @@ jobs:
           sudo apt-get install --yes "./${packages[0]}"
           dpkg-query --show --showformat='${Status}\n' inknote | grep -Fx 'install ok installed'
           xvfb-run -a node scripts/smoke-electron.mjs --app-path=/usr/bin/inknote
+          cmp assets/icons/512x512.png /usr/share/pixmaps/inknote.png
+          cmp assets/icon.png /usr/lib/inknote/resources/icon.png
+          grep -Fx 'Icon=inknote' /usr/share/applications/inknote.desktop
 
       - name: Install and launch RPM on Fedora
         if: runner.os == 'Linux'

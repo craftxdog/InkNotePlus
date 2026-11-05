@@ -8,10 +8,16 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 import electronChecksums from 'electron/checksums.json' with { type: 'json' };
 import { macSigningConfiguration } from './config/distribution';
 import metadata from './package.json' with { type: 'json' };
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const assets = fileURLToPath(new URL('./assets/', import.meta.url));
+const linuxIcon = path.join(assets, 'icons', '512x512.png');
 
 // electron-installer-redhat supports post scripts; Forge's option type omits it.
 const rpmOptions = {
   bin: metadata.productName,
+  icon: linuxIcon,
   // The RPM maker's cp -r staging drops the helper's setuid bit.
   // Restore Chromium's required root ownership and mode after installation.
   post: `chown root:root /usr/lib/${metadata.name}/chrome-sandbox && chmod 4755 /usr/lib/${metadata.name}/chrome-sandbox`,
@@ -20,17 +26,26 @@ const rpmOptions = {
 const config: ForgeConfig = {
   packagerConfig: {
     ...macSigningConfiguration(process.env),
+    // Packager selects .icns on macOS and .ico on Windows.
+    // https://www.electronforge.io/guides/create-and-add-icons
+    icon: path.join(assets, 'icon'),
     asar: true,
-    extraResource: ['resources/licenses'],
+    extraResource: ['resources/licenses', path.join(assets, 'icon.png')],
     download: {
       checksums: electronChecksums,
     },
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
+    new MakerSquirrel({
+      setupIcon: path.join(assets, 'icon.ico'),
+      // Omit optional remote icon metadata; installed branding is entirely local.
+      nuspecTemplate: fileURLToPath(
+        new URL('./config/windows-installer.nuspec', import.meta.url),
+      ),
+    }),
     new MakerRpm({ options: rpmOptions }),
-    new MakerDeb({ options: { bin: metadata.productName } }),
+    new MakerDeb({ options: { bin: metadata.productName, icon: linuxIcon } }),
   ],
   plugins: [
     new VitePlugin({

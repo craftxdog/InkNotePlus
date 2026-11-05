@@ -74,6 +74,29 @@ try {
   await verifyMacDmgLayout(mount, productName);
   await mkdir(applications);
   run('/usr/bin/ditto', [path.join(mount, `${productName}.app`), app]);
+  const resources = path.join(app, 'Contents', 'Resources');
+  const iconName = spawnSync(
+    '/usr/libexec/PlistBuddy',
+    ['-c', 'Print CFBundleIconFile', path.join(app, 'Contents', 'Info.plist')],
+    { encoding: 'utf8' },
+  );
+  assert.equal(iconName.status, 0, 'The installed app must declare its icon.');
+  const iconFile = iconName.stdout.trim();
+  assert.deepEqual(
+    await readFile(
+      path.join(
+        resources,
+        iconFile.endsWith('.icns') ? iconFile : `${iconFile}.icns`,
+      ),
+    ),
+    await readFile(path.join(root, 'assets', 'icon.icns')),
+    'Finder must use the provided InkNote icon.',
+  );
+  assert.deepEqual(
+    await readFile(path.join(resources, 'icon.png')),
+    await readFile(path.join(root, 'assets', 'icon.png')),
+    'The runtime icon must match the provided PNG.',
+  );
   run('/usr/bin/lipo', [
     path.join(app, 'Contents', 'MacOS', productName),
     '-verify_arch',

@@ -7,12 +7,14 @@ export interface CreateMainWindowOptionsInput {
   readonly configuration: Configuration;
   readonly isDevelopment: boolean;
   readonly preloadPath: string;
+  readonly iconPath: string;
 }
 
 export function createMainWindowOptions({
   configuration,
   isDevelopment,
   preloadPath,
+  iconPath,
 }: CreateMainWindowOptionsInput): BrowserWindowConstructorOptions {
   const minWidth = configuration.get(coreConfig.window.minimumWidth);
   const minHeight = configuration.get(coreConfig.window.minimumHeight);
@@ -30,6 +32,7 @@ export function createMainWindowOptions({
     minHeight,
     resizable: true,
     show: false,
+    icon: iconPath,
     ...(process.platform === 'darwin'
       ? {
           titleBarStyle: 'hiddenInset' as const,

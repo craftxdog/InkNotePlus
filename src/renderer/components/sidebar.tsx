@@ -81,7 +81,16 @@ export function Sidebar({
   return (
     <nav className="pane pane--sidebar" aria-label="Biblioteca">
       <header className="sidebar-header window-drag-region">
-        <span className="app-wordmark">InkNote</span>
+        <span className="app-wordmark">
+          <img
+            src={
+              new URL('../../../assets/icons/64x64.png', import.meta.url).href
+            }
+            alt=""
+            aria-hidden="true"
+          />
+          InkNote
+        </span>
         {drawer && (
           <IconButton icon={X} label="Cerrar biblioteca" onClick={onClose} />
         )}

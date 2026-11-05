@@ -475,6 +475,15 @@ sincronización remota hasta que existan claves, recuperación y pruebas reales.
 
 ## Distribución
 
+La identidad visual utiliza los PNG, ICO e ICNS suministrados en `assets`.
+Forge incorpora el ICNS en macOS y el ICO en los ejecutables de Windows;
+Squirrel aplica el ICO a Setup y Update. Al arrancar la app instalada, el icono
+de Aplicaciones instaladas se registra con el ejecutable local para funcionar
+sin descargas externas.
+Linux instala el PNG de 512 px y su entrada desktop. El PNG principal se
+distribuye también como recurso local para ventana, Dock y panel Acerca de;
+el renderer usa los tamaños de 32/64 px para favicon y marca de la aplicación.
+
 Electron Forge empaqueta la aplicación. Los makers de Forge generan Windows y
 Linux; macOS empaqueta la app con Forge y crea un DMG UDZO con
 `diskutil image create from`, o `hdiutil` cuando la API nueva no existe.

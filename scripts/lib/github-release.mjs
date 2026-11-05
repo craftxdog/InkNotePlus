@@ -45,6 +45,18 @@ export function createGithubDraft(repository, release, notes, execute) {
     throw new Error('GitHub did not return the expected draft release ID.');
   return response;
 }
+
+export function publicationRequest(build, notes) {
+  return {
+    tag_name: build.tag,
+    target_commitish: build.commit,
+    name: `${build.metadata.productName} ${build.tag}`,
+    body: notes,
+    draft: false,
+    prerelease: build.prerelease,
+    make_latest: build.prerelease ? 'false' : 'true',
+  };
+}
 import { openAsBlob } from 'node:fs';
 
 // Stream the file-backed Blob; installers never need to be loaded into RAM.

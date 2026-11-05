@@ -1,5 +1,6 @@
-interface SourceNode {
+export interface SourceNode {
   type: string;
+  value?: string;
   children?: SourceNode[];
   checked?: boolean | null;
   position?: {

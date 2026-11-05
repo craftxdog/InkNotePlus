@@ -1,0 +1,31 @@
+@layer theme.syntax {
+  .cm-editor {
+    .md-alert-note {
+      --inknote-alert-color: var(--gfm-alert-note);
+    }
+    .md-alert-tip {
+      --inknote-alert-color: var(--gfm-alert-tip);
+    }
+    .md-alert-important {
+      --inknote-alert-color: var(--gfm-alert-important);
+    }
+    .md-alert-warning {
+      --inknote-alert-color: var(--gfm-alert-warning);
+    }
+    .md-alert-caution {
+      --inknote-alert-color: var(--gfm-alert-caution);
+    }
+    .cm-line.md-alert-line {
+      box-shadow: inset var(--4px) 0 0 var(--inknote-alert-color);
+    }
+    .md-alert-line .tok-quote {
+      font-style: normal;
+    }
+    .md-alert-line .md-alert-marker,
+    .md-alert-line .md-alert-marker * {
+      color: var(--inknote-alert-color);
+      font-style: normal;
+      text-decoration: none;
+    }
+  }
+}

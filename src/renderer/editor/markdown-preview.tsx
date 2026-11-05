@@ -25,8 +25,20 @@ import { jsonLanguage } from '@codemirror/lang-json';
 import { tokenHighlighter } from './token-highlighter';
 import { useWorkspace } from '../state/workspace-context';
 import { remarkSourceMap, rehypeSourceText } from './markdown-source-map';
+import {
+  remarkGithubAlerts,
+  alertLabels,
+  type AlertType,
+} from './github-alerts';
+import {
+  Info,
+  Lightbulb,
+  MessageSquareWarning,
+  TriangleAlert,
+  OctagonAlert,
+} from 'lucide-react';
 
-const gfm = [remarkGfm, remarkMath, remarkSourceMap];
+const gfm = [remarkGfm, remarkMath, remarkGithubAlerts, remarkSourceMap];
 const sourceText = [rehypeSourceText];
 const Equation = lazy(() => import('./math-equation'));
 const Diagram = lazy(() => import('./mermaid-diagram'));
@@ -132,6 +144,7 @@ function PreviewLink({ href, children }: ComponentProps<'a'>) {
   );
 }
 const components: Components = {
+  div: PreviewAlert,
   pre: PreviewBlock,
   li: PreviewListItem,
   input: PreviewCheckbox,
@@ -139,6 +152,36 @@ const components: Components = {
   img: PreviewImage,
   code: PreviewCode,
 };
+
+const alertIcons = {
+  note: Info,
+  tip: Lightbulb,
+  important: MessageSquareWarning,
+  warning: TriangleAlert,
+  caution: OctagonAlert,
+};
+function PreviewAlert({
+  node,
+  children,
+  ...props
+}: ComponentProps<'div'> & ExtraProps) {
+  const value = node?.properties['data-alert-type'];
+  if (typeof value !== 'string' || !Object.hasOwn(alertLabels, value))
+    return <div {...props}>{children}</div>;
+  const type = value as AlertType;
+  const Icon = alertIcons[type];
+  return (
+    <div {...props} role="note" aria-label={alertLabels[type]}>
+      <p className="gfm-alert-title">
+        <span className="icon" aria-hidden="true">
+          <Icon size="1em" />
+        </span>
+        {alertLabels[type]}
+      </p>
+      {children}
+    </div>
+  );
+}
 function PreviewImage({
   node: _node,
   src,

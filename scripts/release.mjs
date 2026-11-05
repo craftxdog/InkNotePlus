@@ -6,6 +6,7 @@ import {
   findGithubRelease,
   createGithubDraft,
   uploadGithubAsset,
+  publicationRequest,
 } from './lib/github-release.mjs';
 import { verifiedReleaseBuild } from './lib/release-build.mjs';
 import {
@@ -67,7 +68,7 @@ async function publish() {
     process.env.RELEASE_BUILD_RUN_ID,
     github,
   );
-  const { metadata: releaseMetadata, tag, prerelease } = build;
+  const { metadata: releaseMetadata, tag } = build;
   const assets = await manifest(repository, releaseMetadata);
   const draftId = process.env.RELEASE_DRAFT_ID?.trim();
   if (draftId && !/^\d+$/.test(draftId))
@@ -99,21 +100,6 @@ async function publish() {
       { ...releaseMetadata, ...build },
       await readFile(notesFile, 'utf8'),
       github,
-    );
-  else
-    github(
-      [
-        'api',
-        '--method',
-        'PATCH',
-        `repos/${repository}/releases/${release.id}`,
-        '--input',
-        '-',
-      ],
-      JSON.stringify({
-        name: `${releaseMetadata.productName} ${tag}`,
-        body: await readFile(notesFile, 'utf8'),
-      }),
     );
   assertDraftRelease(release);
   // Replacing partially uploaded files is allowed only while the release remains a draft.
@@ -152,11 +138,9 @@ async function publish() {
         '--input',
         '-',
       ],
-      JSON.stringify({
-        draft: false,
-        prerelease,
-        make_latest: prerelease ? 'false' : 'true',
-      }),
+      JSON.stringify(
+        publicationRequest(build, await readFile(notesFile, 'utf8')),
+      ),
     ),
   );
   if (published.draft || published.tag_name !== tag)

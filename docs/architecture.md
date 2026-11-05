@@ -165,6 +165,12 @@ filtros y la ordenación se aplican antes de paginar. Los eventos vuelven a
 consultar la ventana cargada para evitar omisiones al fijar/desfijar notas.
 La migración 4 añade iconos persistentes a notebooks sin modificar notas.
 
+El selector del editor y la búsqueda lateral comparten la jerarquía de notebooks.
+La búsqueda conserva padres como contexto y no modifica la expansión guardada.
+`NotebookPicker` usa un popover nativo con búsqueda, navegación por teclado y
+posición anclada al botón. Consume las variables `--dropdown-*` de cada tema;
+confirmar la selección invoca el mismo autoguardado de metadata que el editor.
+
 La ventana es redimensionable. Las dimensiones iniciales nunca bajan de sus
 mínimos. El `--page-min-width: 320px` de `@inkdropapp/css` queda como límite
 CSS de la base; el mínimo nativo de InkNote sigue siendo 640 porque la fuente

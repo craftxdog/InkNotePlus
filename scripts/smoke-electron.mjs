@@ -9,6 +9,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { verifyInkdropFeatures } from './smoke-inkdrop-features.mjs';
 import { verifyEditorLayout } from './smoke-editor-layout.mjs';
 import { verifyLineWrapping } from './smoke-line-wrapping.mjs';
+import { verifyNotebookNavigation } from './smoke-notebook-navigation.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const appPath = process.argv
@@ -107,6 +108,11 @@ try {
       target.type() === 'page' && /^(file:|https?:)/.test(target.url()),
   );
   page = await target.page();
+  // Keep native macOS occlusion from suspending frame-based UI assertions.
+  // https://chromedevtools.github.io/devtools-protocol/tot/Emulation/#method-setFocusEmulationEnabled
+  await (
+    await page.createCDPSession()
+  ).send('Emulation.setFocusEmulationEnabled', { enabled: true });
   page.setDefaultTimeout(
     process.env.CI === 'true' || process.argv.includes('--emulated')
       ? 30_000
@@ -267,6 +273,7 @@ try {
     {},
     notebook,
   );
+  await verifyNotebookNavigation({ page, profile, notebookId: notebook });
   const settle = () =>
     page.evaluate(
       () =>

@@ -20,7 +20,7 @@ import type { AppErrorCode, NoteProjection } from '../../shared/ipc';
 import { useWorkspace } from '../state/workspace-context';
 import { IconButton } from './icon-button';
 import { TagBadge } from './tag-badge';
-import { statusLabels, statusIcons } from './sidebar';
+import { statusLabels, statusIcons } from './note-status';
 
 export function NoteList({
   onToggleSidebar,

@@ -97,26 +97,6 @@
     font-size: var(--small);
     color: var(--muted-text-color);
   }
-  .meta-select {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--4px);
-    max-inline-size: 40%;
-  }
-  .meta-select select {
-    appearance: auto;
-    border: 0;
-    background: transparent;
-    min-inline-size: 0;
-    max-inline-size: 160px;
-    outline: none;
-  }
-  .meta-select.status-active select,
-  .meta-select.status-onhold select,
-  .meta-select.status-completed select,
-  .meta-select.status-dropped select {
-    color: var(--muted-text-color);
-  }
   .editor-tags {
     display: flex;
     align-items: center;

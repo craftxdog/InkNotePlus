@@ -156,6 +156,9 @@
   .navigation-item > svg {
     flex: none;
   }
+  .navigation-item--notebook {
+    padding-inline-start: calc(var(--16px) + var(--18px));
+  }
   .navigation-label {
     flex: 1;
     overflow: hidden;
@@ -173,13 +176,13 @@
     align-items: center;
     position: relative;
     min-block-size: 34px;
-    padding-inline: 8px 16px;
+    padding-inline: var(--16px);
   }
   .notebook-row[data-active='true'] {
     background: var(--sidebar-menu-item-active-background);
     color: var(--sidebar-menu-active-item-color);
   }
-  .notebook-row:hover {
+  .notebook-row:hover:not([data-active='true']) {
     background: var(--sidebar-menu-item-inactive-background);
   }
   .notebook-select {
@@ -203,7 +206,7 @@
     background: transparent;
     padding: 0;
     margin-inline-end: 8px;
-    inline-size: 20px;
+    inline-size: 18px;
     block-size: 28px;
     flex: none;
     border-radius: 4px;
@@ -303,7 +306,7 @@
   .sidebar-section {
     margin-block: var(--8px);
   }
-  .sidebar-section > summary {
+  .sidebar-section-header {
     display: flex;
     align-items: center;
     gap: var(--4px);
@@ -324,10 +327,11 @@
     margin-inline-start: auto;
   }
   .section-chevron {
+    transform: rotate(180deg);
     transition: transform 0.1s;
   }
   .sidebar-section:not([open]) .section-chevron {
-    transform: rotate(-90deg);
+    transform: none;
   }
   .sidebar-empty-state {
     margin: var(--6px) var(--16px);
@@ -342,12 +346,35 @@
     border-radius: var(--4px);
     background: var(--input-background);
   }
+  .sidebar-notebook-search {
+    display: flex;
+    align-items: center;
+    gap: var(--6px);
+    margin: var(--4px) var(--12px) var(--8px);
+    padding-inline: var(--8px) var(--2px);
+    border: var(--input-border);
+    border-radius: var(--input-border-radius);
+    background: var(--input-background);
+    color: var(--input-color);
+  }
+  .sidebar-notebook-search input {
+    inline-size: 100%;
+    min-inline-size: 0;
+    padding: var(--6px) 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+  }
+  .sidebar-notebook-search:focus-within {
+    border-color: var(--focused-form-border-color);
+  }
+  .sidebar-notebook-search .icon-button {
+    inline-size: var(--24px);
+    block-size: var(--24px);
+  }
   .inknote-shell[data-platform='darwin'][data-sidebar-visible='false'][data-list-visible='false']
     .editor-topbar {
     padding-inline-start: 80px;
-  }
-  .notebook-children {
-    padding-inline-start: var(--16px);
   }
   .sidebar-footer {
     display: flex;
@@ -381,17 +408,21 @@
   }
   .navigation-item[class*='status-'] {
     color: var(--sidebar-menu-item-color);
+    padding-inline-start: calc(var(--16px) + var(--18px));
   }
   :is(.status-active, .status-completed, .status-dropped) > svg circle,
   svg:is(.status-active, .status-completed, .status-dropped) circle {
     fill: currentColor;
   }
-  :is(.status-active, .status-completed, .status-dropped) > svg path,
-  svg:is(.status-active, .status-completed, .status-dropped) path {
+  :is(.status-active, .status-completed, .status-dropped)
+    > svg
+    :is(path, polygon),
+  svg:is(.status-active, .status-completed, .status-dropped)
+    :is(path, polygon) {
     stroke: var(--page-background);
   }
-  .status-active > svg path,
-  svg.status-active path {
+  .status-active > svg :is(path, polygon),
+  svg.status-active :is(path, polygon) {
     fill: var(--page-background);
   }
   .note-list-header {

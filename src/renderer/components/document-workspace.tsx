@@ -43,14 +43,13 @@ import { useWorkspace } from '../state/workspace-context';
 import { MarkdownEditor } from '../editor/markdown-editor';
 import { MarkdownPreview } from '../editor/markdown-preview';
 import { formatSelection, type FormatCommand } from '../editor/formatting';
-import type { NoteStatus } from '../../shared/note-metadata';
 import { IconButton } from './icon-button';
 import { TagBadge } from './tag-badge';
-import { statusIcons, statusLabels } from './sidebar';
+import { StatusPicker } from './status-picker';
 import { Modal } from './modal';
 import { CommitRange } from './commit-range';
 import { createScrollSync } from '../editor/scroll-sync';
-import { NotebookIcon } from './notebook-icon';
+import { NotebookPicker } from './notebook-picker';
 import { UiSlot } from '../extensions/ui-slots';
 
 export function DocumentWorkspace({
@@ -493,11 +492,11 @@ export function DocumentWorkspace({
 }
 
 function EditorMetadata({ disabled }: { disabled: boolean }) {
+  const noteId = useWorkspace((state) => state.document.noteId);
   const metadata = useWorkspace((state) => state.document.metadata);
   const update = useWorkspace((state) => state.updateDraft);
   const books = useWorkspace((state) => state.library.notebooks);
   const [tag, setTag] = useState('');
-  const StatusIcon = statusIcons[metadata.status];
   const commitTag = () => {
     const value = tag.trim();
     if (value && !metadata.tags.includes(value) && metadata.tags.length < 32)
@@ -506,53 +505,21 @@ function EditorMetadata({ disabled }: { disabled: boolean }) {
   };
   return (
     <div className="editor-meta">
-      <label className="meta-select">
-        <NotebookIcon
-          name={books.find((book) => book.id === metadata.notebookId)?.icon}
-          size={17}
-        />
-        <span className="visually-hidden">Notebook de la nota</span>
-        <select
-          aria-label="Notebook de la nota"
-          disabled={disabled}
-          value={metadata.notebookId ?? ''}
-          onChange={(event) =>
-            update({
-              metadata: { ...metadata, notebookId: event.target.value || null },
-            })
-          }
-        >
-          <option value="">Sin notebook</option>
-          {books.map((book) => (
-            <option key={book.id} value={book.id}>
-              {book.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className={`meta-select status-${metadata.status}`}>
-        <StatusIcon size={16} />
-        <span className="visually-hidden">Estado de la nota</span>
-        <select
-          aria-label="Estado de la nota"
-          disabled={disabled}
-          value={metadata.status}
-          onChange={(event) =>
-            update({
-              metadata: {
-                ...metadata,
-                status: event.target.value as NoteStatus,
-              },
-            })
-          }
-        >
-          {Object.entries(statusLabels).map(([value, label]) => (
-            <option value={value} key={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <NotebookPicker
+        key={noteId}
+        notebooks={books}
+        value={metadata.notebookId}
+        disabled={disabled}
+        onChange={(notebookId) =>
+          update({ metadata: { ...metadata, notebookId } })
+        }
+      />
+      <StatusPicker
+        key={`status-${noteId}`}
+        value={metadata.status}
+        disabled={disabled}
+        onChange={(status) => update({ metadata: { ...metadata, status } })}
+      />
       <div className="editor-tags">
         {metadata.tags.map((name) => (
           <button

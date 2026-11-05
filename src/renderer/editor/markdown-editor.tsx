@@ -27,6 +27,7 @@ import { jsonLanguage } from '@codemirror/lang-json';
 import { tokenHighlighter } from './token-highlighter';
 import { minimalTextChange } from './markdown-source-map';
 import { lineWrappingExtension } from './line-wrapping';
+import { githubAlertDecorations } from './github-alert-decorations';
 
 const externalChange = Annotation.define<boolean>();
 
@@ -146,6 +147,7 @@ export function MarkdownEditor({
                   : null,
           }),
           syntaxHighlighting(tokenHighlighter),
+          githubAlertDecorations,
           keymap.of([...defaultKeymap, ...historyKeymap]),
           EditorView.updateListener.of((update) => {
             if (

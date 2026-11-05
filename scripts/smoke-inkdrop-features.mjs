@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { chooseNoteStatus } from './smoke-status-alerts.mjs';
 
 export async function verifyInkdropFeatures({
   page,
@@ -339,7 +340,7 @@ export async function verifyInkdropFeatures({
   await clickText('.navigation-item', 'Todas las notas');
   await page.click('button[aria-label="Nueva nota"]');
   await page.waitForSelector('.empty-note-actions button');
-  await page.select('select[aria-label="Estado de la nota"]', 'onhold');
+  await chooseNoteStatus(page, 'onhold');
   await page.type('input[aria-label="Añadir etiqueta"]', 'retained');
   await page.click('.empty-note-actions button');
   await page.waitForSelector('.template-picker-dialog [role="option"]');

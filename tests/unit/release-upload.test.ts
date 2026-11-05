@@ -28,12 +28,14 @@ it('streams an installer to the numeric draft ID without looking up the tag', as
       expect(String(url)).toBe(
         'https://uploads.github.com/repos/craftxdog/InkNotePlus/releases/123/assets?name=InkNote-1.0.1-windows.exe',
       );
-      expect(options?.method).toBe('POST');
-      expect(options?.headers).toMatchObject({
+      if (!options || !(options.body instanceof Blob))
+        throw new Error('Expected a Blob upload body.');
+      expect(options.method).toBe('POST');
+      expect(options.headers).toMatchObject({
         Authorization: 'Bearer test-token',
         'Content-Length': '14',
       });
-      expect(await (options?.body as Blob).text()).toBe('binary fixture');
+      expect(await options.body.text()).toBe('binary fixture');
       return new Response(
         JSON.stringify({ id: 456, name: 'InkNote-1.0.1-windows.exe' }),
         { status: 201 },

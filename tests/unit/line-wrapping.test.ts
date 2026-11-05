@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { EditorState } from '@codemirror/state';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { ensureSyntaxTree } from '@codemirror/language';
@@ -18,7 +18,9 @@ function stateAt(position: number) {
   });
   // This fixed fixture must parse completely, even when CI is CPU constrained.
   ensureSyntaxTree(state, source.length, Number.POSITIVE_INFINITY);
-  return state;
+  // Publish the completed parser context into the immutable state snapshot.
+  // https://github.com/codemirror/language/blob/main/src/language.ts
+  return state.update({}).state;
 }
 it('preserves legacy wrap preferences and defaults new profiles to Inkdrop cursor wrapping', () => {
   expect(defaultPreferences.lineWrapping).toBe('cursor');
@@ -48,6 +50,19 @@ it('unwraps code and tables only in prose mode, never ordinary paragraphs', () =
     '```js\nconst long = "value";\n```',
     '| One | Two |\n| --- | --- |\n| A | B |',
   ]);
+});
+it('publishes the completed tree when the initial parse yields under CPU pressure', () => {
+  let now = 0;
+  const clock = vi.spyOn(Date, 'now').mockImplementation(() => (now += 100));
+  try {
+    const blocks = unwrappedBlocks(stateAt(0), 'prose');
+    expect(blocks.map(({ from, to }) => source.slice(from, to))).toEqual([
+      '```js\nconst long = "value";\n```',
+      '| One | Two |\n| --- | --- |\n| A | B |',
+    ]);
+  } finally {
+    clock.mockRestore();
+  }
 });
 it('unwraps only the block at the cursor, including a fenced block with a code language', () => {
   expect(unwrappedBlocks(stateAt(0), 'cursor')).toEqual([]);

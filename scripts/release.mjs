@@ -2,7 +2,11 @@ import { execFileSync } from 'node:child_process';
 import { readFile, writeFile, appendFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { findGithubRelease, createGithubDraft } from './lib/github-release.mjs';
+import {
+  findGithubRelease,
+  createGithubDraft,
+  uploadGithubAsset,
+} from './lib/github-release.mjs';
 import { verifiedReleaseBuild } from './lib/release-build.mjs';
 import {
   validateReleaseVersion,
@@ -113,15 +117,26 @@ async function publish() {
     );
   assertDraftRelease(release);
   // Replacing partially uploaded files is allowed only while the release remains a draft.
-  run('gh', [
-    'release',
-    'upload',
-    tag,
-    '--repo',
-    repository,
-    '--clobber',
-    ...assets.map((asset) => path.join(output, asset.name)),
-  ]);
+  for (const asset of assets) {
+    const previous = release.assets.find(
+      (uploaded) => uploaded.name === asset.name,
+    );
+    if (previous)
+      github([
+        'api',
+        '--method',
+        'DELETE',
+        `repos/${repository}/releases/assets/${previous.id}`,
+      ]);
+    await uploadGithubAsset(
+      repository,
+      release.id,
+      path.join(output, asset.name),
+      asset,
+      process.env.GH_TOKEN,
+    );
+    console.log(`Uploaded: ${asset.name}`);
+  }
   release = JSON.parse(
     run('gh', ['api', `repos/${repository}/releases/${release.id}`]),
   );

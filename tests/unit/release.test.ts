@@ -3,6 +3,8 @@ import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import {
   validateReleaseVersion,
@@ -174,7 +176,35 @@ it('publishes only tagged builds after all native installer checks, with scoped 
   expect(workflow.jobs.make.needs).toBe('version');
   expect(workflow.jobs.make.strategy.matrix.include).toHaveLength(4);
   expect(workflow.jobs.publish.needs).toBe('make');
-  expect(workflow.jobs.publish.if).toBe("startsWith(github.ref, 'refs/tags/')");
+  expect(workflow.jobs.publish.if).toBe(
+    "github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')",
+  );
   expect(workflow.jobs.publish.permissions.contents).toBe('write');
   expect(workflow.concurrency['cancel-in-progress']).toBe(false);
+});
+
+it('refuses publication from a manual tag build before reading or uploading release assets', async () => {
+  const packageMetadata = JSON.parse(
+    await readFile(new URL('../../package.json', import.meta.url), 'utf8'),
+  );
+  const result = spawnSync(
+    process.execPath,
+    ['scripts/release.mjs', 'publish'],
+    {
+      cwd: fileURLToPath(new URL('../../', import.meta.url)),
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        GITHUB_ACTIONS: 'true',
+        GITHUB_REF: `refs/tags/v${packageMetadata.version}`,
+        GITHUB_REF_NAME: `v${packageMetadata.version}`,
+        GITHUB_REPOSITORY: 'craftxdog/InkNotePlus',
+        GITHUB_EVENT_NAME: 'workflow_dispatch',
+      },
+    },
+  );
+  expect(result.status).not.toBe(0);
+  expect(result.stderr).toContain(
+    'Public releases must run in the tested tag workflow',
+  );
 });

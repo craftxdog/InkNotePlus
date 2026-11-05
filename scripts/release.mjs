@@ -42,7 +42,12 @@ async function manifest(repository) {
 // https://cli.github.com/manual/gh_release_create
 async function publish() {
   const repository = process.env.GITHUB_REPOSITORY;
-  if (process.env.GITHUB_ACTIONS !== 'true' || !pushedTag || !repository)
+  if (
+    process.env.GITHUB_ACTIONS !== 'true' ||
+    process.env.GITHUB_EVENT_NAME !== 'push' ||
+    !pushedTag ||
+    !repository
+  )
     throw new Error(
       'Public releases must run in the tested tag workflow on GitHub Actions.',
     );

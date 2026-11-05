@@ -2,7 +2,8 @@ import { execFileSync } from 'node:child_process';
 import { readFile, writeFile, appendFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { findGithubRelease } from './lib/github-release.mjs';
+import { findGithubRelease, createGithubDraft } from './lib/github-release.mjs';
+import { verifiedReleaseBuild } from './lib/release-build.mjs';
 import {
   validateReleaseVersion,
   stageInstallers,
@@ -20,22 +21,24 @@ const metadata = JSON.parse(
 const pushedTag = process.env.GITHUB_REF?.startsWith('refs/tags/')
   ? process.env.GITHUB_REF_NAME
   : '';
-const { tag, prerelease } = validateReleaseVersion(metadata.version, pushedTag);
-const output = path.join(root, 'out', 'release');
-const notesFile = path.join(root, 'out', 'release-notes.md');
+const { tag } = validateReleaseVersion(metadata.version, pushedTag);
+const output =
+  process.env.RELEASE_ASSET_DIR ?? path.join(root, 'out', 'release');
+const notesFile = path.join(path.dirname(output), 'inknote-release-notes.md');
 const command = process.argv[2];
 
-function run(executable, args) {
+function run(executable, args, input = undefined) {
   return execFileSync(executable, args, {
     cwd: root,
     encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'inherit'],
+    input,
+    stdio: ['pipe', 'pipe', 'inherit'],
   }).trim();
 }
 
-async function manifest(repository) {
-  const assets = await writeChecksums(output, metadata);
-  await writeFile(notesFile, renderReleaseNotes(metadata, repository));
+async function manifest(repository, releaseMetadata = metadata) {
+  const assets = await writeChecksums(output, releaseMetadata);
+  await writeFile(notesFile, renderReleaseNotes(releaseMetadata, repository));
   return [...assets, await describeAsset(path.join(output, 'SHA256SUMS'))];
 }
 
@@ -45,16 +48,31 @@ async function publish() {
   const repository = process.env.GITHUB_REPOSITORY;
   if (
     process.env.GITHUB_ACTIONS !== 'true' ||
-    process.env.GITHUB_EVENT_NAME !== 'push' ||
-    !pushedTag ||
+    !['workflow_run', 'workflow_dispatch'].includes(
+      process.env.GITHUB_EVENT_NAME,
+    ) ||
+    !process.env.RELEASE_BUILD_RUN_ID ||
     !repository
   )
     throw new Error(
       'Public releases must run in the tested tag workflow on GitHub Actions.',
     );
-  const assets = await manifest(repository);
-  const github = (args) => run('gh', args);
-  let release = findGithubRelease(repository, tag, github);
+  const github = (args, input = undefined) => run('gh', args, input);
+  const build = verifiedReleaseBuild(
+    repository,
+    process.env.RELEASE_BUILD_RUN_ID,
+    github,
+  );
+  const { metadata: releaseMetadata, tag, prerelease } = build;
+  const assets = await manifest(repository, releaseMetadata);
+  const draftId = process.env.RELEASE_DRAFT_ID?.trim();
+  if (draftId && !/^\d+$/.test(draftId))
+    throw new Error('Invalid recovery draft ID.');
+  let release = draftId
+    ? JSON.parse(github(['api', `repos/${repository}/releases/${draftId}`]))
+    : findGithubRelease(repository, tag, github);
+  if (release && release.tag_name !== tag)
+    throw new Error('The recovery draft belongs to another tag.');
   assertDraftRelease(release);
 
   // A tag moved while the builders were running must not publish their old bytes.
@@ -66,44 +84,33 @@ async function publish() {
     object = JSON.parse(
       run('gh', ['api', `repos/${repository}/git/tags/${object.sha}`]),
     ).object;
-  if (
-    object.type !== 'commit' ||
-    object.sha !== run('git', ['rev-parse', 'HEAD'])
-  )
+  if (object.type !== 'commit' || object.sha !== build.commit)
     throw new Error(
       'The remote tag changed after the tested commit was checked out.',
     );
 
   if (!release)
-    run('gh', [
-      'release',
-      'create',
-      tag,
-      '--repo',
+    release = createGithubDraft(
       repository,
-      '--verify-tag',
-      '--draft',
-      '--title',
-      `${metadata.productName} ${tag}`,
-      '--notes-file',
-      notesFile,
-      ...(prerelease ? ['--prerelease'] : []),
-    ]);
+      { ...releaseMetadata, ...build },
+      await readFile(notesFile, 'utf8'),
+      github,
+    );
   else
-    run('gh', [
-      'release',
-      'edit',
-      tag,
-      '--repo',
-      repository,
-      '--title',
-      `${metadata.productName} ${tag}`,
-      '--notes-file',
-      notesFile,
-    ]);
-  release = findGithubRelease(repository, tag, github);
-  if (!release)
-    throw new Error('The created draft release could not be resolved.');
+    github(
+      [
+        'api',
+        '--method',
+        'PATCH',
+        `repos/${repository}/releases/${release.id}`,
+        '--input',
+        '-',
+      ],
+      JSON.stringify({
+        name: `${releaseMetadata.productName} ${tag}`,
+        body: await readFile(notesFile, 'utf8'),
+      }),
+    );
   assertDraftRelease(release);
   // Replacing partially uploaded files is allowed only while the release remains a draft.
   run('gh', [
@@ -120,16 +127,25 @@ async function publish() {
   );
   assertDraftRelease(release);
   validateUploadedAssets(assets, release.assets);
-  run('gh', [
-    'release',
-    'edit',
-    tag,
-    '--repo',
-    repository,
-    '--draft=false',
-    `--prerelease=${prerelease}`,
-    `--latest=${!prerelease}`,
-  ]);
+  const published = JSON.parse(
+    github(
+      [
+        'api',
+        '--method',
+        'PATCH',
+        `repos/${repository}/releases/${release.id}`,
+        '--input',
+        '-',
+      ],
+      JSON.stringify({
+        draft: false,
+        prerelease,
+        make_latest: prerelease ? 'false' : 'true',
+      }),
+    ),
+  );
+  if (published.draft || published.tag_name !== tag)
+    throw new Error('GitHub did not publish the expected release.');
   const url = `https://github.com/${repository}/releases/tag/${tag}`;
   if (process.env.GITHUB_STEP_SUMMARY)
     await appendFile(
@@ -160,6 +176,21 @@ switch (command) {
   case 'publish':
     await publish();
     break;
+  case 'verify-build': {
+    const build = verifiedReleaseBuild(
+      process.env.GITHUB_REPOSITORY,
+      process.env.RELEASE_BUILD_RUN_ID,
+      (args) => run('gh', args),
+    );
+    console.log(
+      JSON.stringify({
+        tag: build.tag,
+        commit: build.commit,
+        checked: 'version and all four native installers',
+      }),
+    );
+    break;
+  }
   case 'tag': {
     if (run('git', ['status', '--porcelain']))
       throw new Error('Commit all changes before creating a release tag.');
@@ -185,5 +216,7 @@ switch (command) {
     break;
   }
   default:
-    throw new Error('Expected check, stage, manifest, publish or tag.');
+    throw new Error(
+      'Expected check, stage, manifest, verify-build, publish or tag.',
+    );
 }

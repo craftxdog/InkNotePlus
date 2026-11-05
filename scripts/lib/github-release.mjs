@@ -45,3 +45,48 @@ export function createGithubDraft(repository, release, notes, execute) {
     throw new Error('GitHub did not return the expected draft release ID.');
   return response;
 }
+import { openAsBlob } from 'node:fs';
+
+// Stream the file-backed Blob; installers never need to be loaded into RAM.
+// https://nodejs.org/api/fs.html#fsopenasblobpath-options
+// https://docs.github.com/en/rest/releases/assets#upload-a-release-asset
+export async function uploadGithubAsset(
+  repository,
+  releaseId,
+  filename,
+  asset,
+  token,
+  request = fetch,
+) {
+  if (
+    !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository) ||
+    !Number.isSafeInteger(releaseId) ||
+    releaseId <= 0 ||
+    !token
+  )
+    throw new Error('Invalid release upload identity.');
+  const type =
+    asset.name === 'SHA256SUMS' ? 'text/plain' : 'application/octet-stream';
+  const body = await openAsBlob(filename, { type });
+  if (body.size !== asset.size)
+    throw new Error(`Release file changed before upload: ${asset.name}`);
+  const url = new URL(
+    `https://uploads.github.com/repos/${repository}/releases/${releaseId}/assets`,
+  );
+  url.searchParams.set('name', asset.name);
+  const response = await request(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2026-03-10',
+      'Content-Type': type,
+      'Content-Length': String(asset.size),
+    },
+    body,
+    signal: AbortSignal.timeout(300_000),
+  });
+  if (!response.ok)
+    throw new Error(`GitHub upload failed (${response.status}): ${asset.name}`);
+  return response.json();
+}

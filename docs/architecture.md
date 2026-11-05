@@ -535,13 +535,28 @@ Ubuntu y RPM mediante dnf en Fedora 44. Cada instalación inicia la aplicación
 con un perfil temporal y ejecuta las pruebas reales del editor. No se desactiva
 el sandbox para ejecutar estas pruebas.
 
+Los tags `vX.Y.Z` deben coincidir con `package.json`. El job de versión rechaza
+desajustes antes de construir. Tras pasar los cuatro destinos, el job de
+publicación reúne cinco descargas con nombres que incluyen versión, plataforma
+y arquitectura y genera `SHA256SUMS`. Sólo ese job recibe `contents: write`.
+Usa el `GITHUB_TOKEN` de Actions y GitHub CLI; no necesita un PAT ni certificados
+de pago. Una release permanece como borrador hasta comprobar los archivos
+subidos, sus tamaños y los digests que devuelve GitHub. No reemplaza versiones
+públicas ni publica si el tag cambió durante los builds. Los builds manuales
+guardan artefactos sin publicar. `pnpm release` crea un tag local desde `main`
+limpio y sincronizado; su push activa la distribución automática.
+
 Los DMG locales usan firma ad hoc, sin Team ID ni runtime endurecido. No son
 distribuciones notarizadas. `INKNOTE_MAC_SIGN_IDENTITY` permite usar Developer
 ID Application con runtime endurecido; `INKNOTE_MAC_NOTARY_PROFILE` selecciona
 credenciales ya guardadas en el llavero. `INKNOTE_REQUIRE_SIGNING=1` impide
 generar una distribución sin identidad real. La validación local de firma no
-equivale a aprobación de Gatekeeper. Windows requiere su certificado para
-firmar una distribución pública y establecer reputación de SmartScreen.
+equivale a aprobación de Gatekeeper. Las releases públicas actuales son gratuitas:
+macOS usa firma ad hoc sin notarización y Windows no usa Authenticode. Pueden
+requerir autorización local ante Gatekeeper o SmartScreen; no se promete omitir
+esos controles sin certificados. La licencia MIT declarada en `package.json` se
+incluye como `LICENSE` en los recursos de la app. Android queda para una entrega
+posterior con una implementación móvil; Electron no genera paquetes Android.
 
 Fuentes: [firma macOS de Forge](https://www.electronforge.io/guides/code-signing/code-signing-macos),
 [notarización de Apple](https://developer.apple.com/documentation/security/resolving-common-notarization-issues),

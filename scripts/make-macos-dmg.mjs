@@ -129,7 +129,7 @@ try {
     process.env.INKNOTE_MAC_SIGN_IDENTITY === '-'
   )
     console.log(
-      'Firma local ad hoc. La distribución pública requiere Developer ID y notarización.',
+      'Firma ad hoc, sin Developer ID ni notarización. macOS puede pedir autorización al abrir la descarga.',
     );
 } finally {
   rmSync(temporary, { recursive: true, force: true });

@@ -9,6 +9,7 @@ import {
 import { Check, ChevronDown, Search } from 'lucide-react';
 import type { Notebook } from '../../shared/library';
 import { NotebookIcon } from './notebook-icon';
+import { useNativePopover } from './use-native-popover';
 import {
   filterNotebookTree,
   matchesNotebook,
@@ -131,13 +132,7 @@ function NotebookMenu({
     choices.find((choice) => choice.id === highlighted) ??
     choices.find((choice) => matchesNotebook(choice.path, query));
   const activeIndex = active ? choices.indexOf(active) : -1;
-  useEffect(() => {
-    // Native top-layer placement avoids clipping by the editor's scroll containers.
-    // https://developer.mozilla.org/en-US/docs/Web/API/Popover_API/Using
-    // The invoker preserves native light dismissal and keyboard focus order.
-    popup.current?.showPopover({ source: invoker.current ?? undefined });
-    search.current?.focus({ preventScroll: true });
-  }, [invoker]);
+  const events = useNativePopover(popup, invoker, search, onClose);
   useEffect(() => {
     popup.current
       ?.querySelector('[data-highlighted=true]')
@@ -145,6 +140,7 @@ function NotebookMenu({
   }, [active?.id]);
   return (
     <div
+      {...events}
       ref={popup}
       id={id}
       popover="auto"
@@ -153,16 +149,6 @@ function NotebookMenu({
       className="notebook-picker-menu"
       data-shortcut-input
       style={{ positionAnchor: anchor }}
-      onToggle={(event) => {
-        if (event.newState === 'closed') onClose(false);
-      }}
-      onBlur={(event) => {
-        if (
-          !event.currentTarget.contains(event.relatedTarget) &&
-          event.relatedTarget !== invoker.current
-        )
-          onClose(false);
-      }}
     >
       <label className="notebook-picker-search">
         <Search size={18} aria-hidden="true" />

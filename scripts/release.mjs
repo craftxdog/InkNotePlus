@@ -1,7 +1,8 @@
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { readFile, writeFile, appendFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { findGithubRelease } from './lib/github-release.mjs';
 import {
   validateReleaseVersion,
   stageInstallers,
@@ -52,16 +53,8 @@ async function publish() {
       'Public releases must run in the tested tag workflow on GitHub Actions.',
     );
   const assets = await manifest(repository);
-  const endpoint = `repos/${repository}/releases/tags/${tag}`;
-  const probe = spawnSync('gh', ['api', endpoint], {
-    cwd: root,
-    encoding: 'utf8',
-  });
-  let release;
-  if (probe.error) throw probe.error;
-  if (probe.status === 0) release = JSON.parse(probe.stdout);
-  else if (!/\(HTTP 404\)/.test(probe.stderr))
-    throw new Error(`Cannot inspect release: ${probe.stderr}`);
+  const github = (args) => run('gh', args);
+  let release = findGithubRelease(repository, tag, github);
   assertDraftRelease(release);
 
   // A tag moved while the builders were running must not publish their old bytes.
@@ -108,6 +101,10 @@ async function publish() {
       '--notes-file',
       notesFile,
     ]);
+  release = findGithubRelease(repository, tag, github);
+  if (!release)
+    throw new Error('The created draft release could not be resolved.');
+  assertDraftRelease(release);
   // Replacing partially uploaded files is allowed only while the release remains a draft.
   run('gh', [
     'release',
@@ -118,7 +115,9 @@ async function publish() {
     '--clobber',
     ...assets.map((asset) => path.join(output, asset.name)),
   ]);
-  release = JSON.parse(run('gh', ['api', endpoint]));
+  release = JSON.parse(
+    run('gh', ['api', `repos/${repository}/releases/${release.id}`]),
+  );
   assertDraftRelease(release);
   validateUploadedAssets(assets, release.assets);
   run('gh', [

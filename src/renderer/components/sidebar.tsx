@@ -6,11 +6,6 @@ import {
   Search,
   CirclePlus,
   Inbox,
-  CirclePlay,
-  CirclePause,
-  CircleCheck,
-  CircleX,
-  CircleDashed,
   Trash2,
   X,
   type LucideIcon,
@@ -23,21 +18,7 @@ import { tagColor } from './tag-badge';
 import { NotebookTree, NotebookBreadcrumbs } from './notebook-tree';
 import { UiSlot } from '../extensions/ui-slots';
 import { matchesNotebook } from '../notebooks/notebook-hierarchy';
-
-export const statusLabels = {
-  none: 'Sin estado',
-  active: 'Activo',
-  onhold: 'En espera',
-  completed: 'Completado',
-  dropped: 'Descartado',
-} as const;
-export const statusIcons = {
-  none: CircleDashed,
-  active: CirclePlay,
-  onhold: CirclePause,
-  completed: CircleCheck,
-  dropped: CircleX,
-};
+import { statusLabels, statusIcons } from './note-status';
 
 export function Sidebar({
   onNavigate,

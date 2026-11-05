@@ -1,7 +1,7 @@
 # Arquitectura de InkNote
 
 **Estado:** fundación local-first  
-**Última revisión:** 2026-11-03
+**Última revisión:** 2026-11-05
 
 Este es el único documento vivo de arquitectura. No se crean planes ni
 especificaciones Markdown en la raíz.
@@ -171,6 +171,12 @@ La búsqueda conserva padres como contexto y no modifica la expansión guardada.
 posición anclada al botón. Consume las variables `--dropdown-*` de cada tema;
 confirmar la selección invoca el mismo autoguardado de metadata que el editor.
 
+`StatusPicker` comparte ese lifecycle de popover y los tokens de dropdown. Sus
+cinco opciones usan los mismos iconos y colores de estado que la biblioteca y
+la lista de notas; la selección guardada aparece en negrita. Las flechas mueven
+el foco, Enter confirma y Escape cancela. Los iconos laterales de estado se
+alinean con los de notebooks sin desplazar sus contadores.
+
 La ventana es redimensionable. Las dimensiones iniciales nunca bajan de sus
 mínimos. El `--page-min-width: 320px` de `@inkdropapp/css` queda como límite
 CSS de la base; el mínimo nativo de InkNote sigue siendo 640 porque la fuente
@@ -255,6 +261,17 @@ autoguardado. Se conserva el cursor con cambios mínimos y el cambio admite desh
 Los callbacks de un preview desactualizado no sobreescriben texto nuevo. Las notas
 de la papelera permanecen de sólo lectura; el código con apariencia de tarea no
 se interpreta como una casilla editable.
+
+Las cinco alertas GFM (`NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`) usan las
+clases `.gfm-alert` y los tokens `--gfm-alert-*` oficiales de Inkdrop, con título
+e icono en el preview y marcadores/barras del mismo color en CodeMirror. Un
+transformador del AST elimina sólo la línea de control del render; conserva
+el Markdown almacenado y las posiciones originales del contenido, también con
+CRLF. Las tareas dentro de alertas siguen siendo editables y se autoguardan.
+El editor decora sólo bloques visibles; no altera medidas, cursor ni historial.
+Siguiendo [la sintaxis de GitHub](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts),
+las alertas requieren un marcador completo en su propia línea de una cita
+principal. Código, marcadores escapados y citas anidadas permanecen literales.
 
 Vite transpila TSX con el runtime JSX automático configurado en TypeScript.
 El renderer usa el soporte nativo de Vite, sin el plugin de React Fast Refresh

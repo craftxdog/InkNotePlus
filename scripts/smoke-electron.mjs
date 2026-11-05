@@ -10,6 +10,10 @@ import { verifyInkdropFeatures } from './smoke-inkdrop-features.mjs';
 import { verifyEditorLayout } from './smoke-editor-layout.mjs';
 import { verifyLineWrapping } from './smoke-line-wrapping.mjs';
 import { verifyNotebookNavigation } from './smoke-notebook-navigation.mjs';
+import {
+  chooseNoteStatus,
+  verifyStatusAndAlerts,
+} from './smoke-status-alerts.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const appPath = process.argv
@@ -257,7 +261,7 @@ try {
   });
   await page.click('button[aria-label^="Notebook de la nota:"]');
   await page.click('.notebook-picker-option[aria-label="Native notebook"]');
-  await page.select('select[aria-label="Estado de la nota"]', 'onhold');
+  await chooseNoteStatus(page, 'onhold');
   await page.type('input[aria-label="Añadir etiqueta"]', 'native-tag');
   await page.keyboard.press('Enter');
   await page.waitForFunction(
@@ -274,6 +278,7 @@ try {
     notebook,
   );
   await verifyNotebookNavigation({ page, profile, notebookId: notebook });
+  await verifyStatusAndAlerts({ page, profile });
   const settle = () =>
     page.evaluate(
       () =>

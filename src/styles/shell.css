@@ -408,17 +408,21 @@
   }
   .navigation-item[class*='status-'] {
     color: var(--sidebar-menu-item-color);
+    padding-inline-start: calc(var(--16px) + var(--18px));
   }
   :is(.status-active, .status-completed, .status-dropped) > svg circle,
   svg:is(.status-active, .status-completed, .status-dropped) circle {
     fill: currentColor;
   }
-  :is(.status-active, .status-completed, .status-dropped) > svg path,
-  svg:is(.status-active, .status-completed, .status-dropped) path {
+  :is(.status-active, .status-completed, .status-dropped)
+    > svg
+    :is(path, polygon),
+  svg:is(.status-active, .status-completed, .status-dropped)
+    :is(path, polygon) {
     stroke: var(--page-background);
   }
-  .status-active > svg path,
-  svg.status-active path {
+  .status-active > svg :is(path, polygon),
+  svg.status-active :is(path, polygon) {
     fill: var(--page-background);
   }
   .note-list-header {

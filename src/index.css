@@ -12,5 +12,6 @@
 @import './styles/shell.css';
 @import './styles/editor.css';
 @import './styles/notebook-picker.css';
+@import './styles/status-picker.css';
 @import './styles/github-alerts.css';
 @import './styles/dialogs.css';

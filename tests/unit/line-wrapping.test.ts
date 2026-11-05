@@ -16,7 +16,8 @@ function stateAt(position: number) {
     selection: { anchor: position },
     extensions: [markdown({ base: markdownLanguage })],
   });
-  ensureSyntaxTree(state, source.length, 100);
+  // This fixed fixture must parse completely, even when CI is CPU constrained.
+  ensureSyntaxTree(state, source.length, Number.POSITIVE_INFINITY);
   return state;
 }
 it('preserves legacy wrap preferences and defaults new profiles to Inkdrop cursor wrapping', () => {

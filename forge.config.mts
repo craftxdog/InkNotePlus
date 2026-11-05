@@ -39,8 +39,10 @@ const config: ForgeConfig = {
   makers: [
     new MakerSquirrel({
       setupIcon: path.join(assets, 'icon.ico'),
-      // Squirrel's default URL downloads Electron's icon. Installed branding is local.
-      iconUrl: '',
+      // Omit optional remote icon metadata; installed branding is entirely local.
+      nuspecTemplate: fileURLToPath(
+        new URL('./config/windows-installer.nuspec', import.meta.url),
+      ),
     }),
     new MakerRpm({ options: rpmOptions }),
     new MakerDeb({ options: { bin: metadata.productName, icon: linuxIcon } }),

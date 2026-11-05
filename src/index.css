@@ -11,4 +11,5 @@
 @import './styles/base.css';
 @import './styles/shell.css';
 @import './styles/editor.css';
+@import './styles/notebook-picker.css';
 @import './styles/dialogs.css';

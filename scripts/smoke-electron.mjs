@@ -249,7 +249,8 @@ try {
     const result = await window.inkNote.library.get();
     return result.data.notebooks[0].id;
   });
-  await page.select('select[aria-label="Notebook de la nota"]', notebook);
+  await page.click('button[aria-label^="Notebook de la nota:"]');
+  await page.click('.notebook-picker-option[aria-label="Native notebook"]');
   await page.select('select[aria-label="Estado de la nota"]', 'onhold');
   await page.type('input[aria-label="Añadir etiqueta"]', 'native-tag');
   await page.keyboard.press('Enter');

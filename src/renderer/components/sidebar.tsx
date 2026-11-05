@@ -4,7 +4,7 @@ import {
   Files,
   Settings,
   Search,
-  Plus,
+  CirclePlus,
   Inbox,
   CirclePlay,
   CirclePause,
@@ -15,13 +15,14 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { useWorkspace } from '../state/workspace-context';
 import type { Navigation } from '../state/workspace-types';
 import { IconButton } from './icon-button';
 import { tagColor } from './tag-badge';
 import { NotebookTree, NotebookBreadcrumbs } from './notebook-tree';
 import { UiSlot } from '../extensions/ui-slots';
+import { matchesNotebook } from '../notebooks/notebook-hierarchy';
 
 export const statusLabels = {
   none: 'Sin estado',
@@ -51,6 +52,12 @@ export function Sidebar({
   const scope = useWorkspace((state) => state.preferences.notebookScopeId);
   const counts = useWorkspace((state) => state.preferences.showNoteCounts);
   const [tagSearch, setTagSearch] = useState<string | null>(null);
+  const [notebookSearch, setNotebookSearch] = useState<string | null>(null);
+  const notebookSearchId = useId();
+  const closeNotebookSearch = () => {
+    setNotebookSearch(null);
+    document.getElementById(`${notebookSearchId}-toggle`)?.focus();
+  };
   const navigation = useWorkspace((state) => state.navigation);
   const navigate = useWorkspace((state) => state.navigate);
   const openSettings = useWorkspace((state) => state.setSettingsOpen);
@@ -112,22 +119,69 @@ export function Sidebar({
         )}
         <SidebarSection
           title="Notebooks"
+          collapsible={false}
           actions={
-            <IconButton
-              icon={Plus}
-              label="Nuevo notebook"
-              onClick={() => openNotebook(true)}
-            />
+            <>
+              <IconButton
+                id={`${notebookSearchId}-toggle`}
+                icon={Search}
+                label="Filtrar notebooks"
+                active={notebookSearch !== null}
+                aria-controls={
+                  notebookSearch !== null ? notebookSearchId : undefined
+                }
+                aria-expanded={notebookSearch !== null}
+                onClick={() =>
+                  setNotebookSearch(notebookSearch === null ? '' : null)
+                }
+              />
+              <IconButton
+                icon={CirclePlus}
+                label="Nuevo notebook"
+                onClick={() => openNotebook(true)}
+              />
+            </>
           }
         >
+          {notebookSearch !== null && (
+            <div className="sidebar-notebook-search">
+              <Search size={15} aria-hidden="true" />
+              <input
+                id={notebookSearchId}
+                autoFocus
+                aria-label="Buscar notebooks en la biblioteca"
+                placeholder="Buscar notebooks…"
+                value={notebookSearch}
+                onChange={(event) => setNotebookSearch(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    closeNotebookSearch();
+                  }
+                }}
+              />
+              <IconButton
+                icon={X}
+                label="Cerrar búsqueda de notebooks"
+                onClick={closeNotebookSearch}
+              />
+            </div>
+          )}
           {!scope &&
+            matchesNotebook('Sin notebook', notebookSearch ?? '') &&
             row(
               'Sin notebook',
               Inbox,
               { type: 'notebook', id: 'unfiled' },
               library.unfiled,
+              'navigation-item--notebook',
             )}
-          <NotebookTree parentId={scope} onNavigate={onNavigate} />
+          <NotebookTree
+            parentId={scope}
+            onNavigate={onNavigate}
+            query={notebookSearch ?? ''}
+          />
         </SidebarSection>
         <SidebarSection title="Estado">
           {(['active', 'onhold', 'completed', 'dropped'] as const).map(
@@ -232,23 +286,37 @@ function SidebarSection({
   title,
   actions,
   children,
+  collapsible = true,
 }: {
   title: string;
   actions?: ReactNode;
   children: ReactNode;
+  collapsible?: boolean;
 }) {
+  const heading = (
+    <>
+      <span>{title}</span>
+      <span
+        className="section-actions"
+        onClick={collapsible ? (event) => event.preventDefault() : undefined}
+      >
+        {actions}
+      </span>
+      {collapsible && (
+        <ChevronDown className="section-chevron" size={16} aria-hidden="true" />
+      )}
+    </>
+  );
+  if (!collapsible)
+    return (
+      <section className="sidebar-section" aria-label={title}>
+        <div className="sidebar-section-header">{heading}</div>
+        <div>{children}</div>
+      </section>
+    );
   return (
     <details className="sidebar-section" open>
-      <summary>
-        <span>{title}</span>
-        <span
-          className="section-actions"
-          onClick={(event) => event.preventDefault()}
-        >
-          {actions}
-        </span>
-        <ChevronDown className="section-chevron" size={16} aria-hidden="true" />
-      </summary>
+      <summary className="sidebar-section-header">{heading}</summary>
       <div>{children}</div>
     </details>
   );

@@ -1,0 +1,122 @@
+@layer theme.ui.components {
+  .notebook-picker {
+    display: inline-flex;
+    min-inline-size: 0;
+    max-inline-size: 40%;
+  }
+  .notebook-picker-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--6px);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    padding: var(--4px) 0;
+    border: 0;
+    border-radius: var(--4px);
+    background: transparent;
+    color: var(--text-color);
+    font-weight: var(--inline-dropdown-text-font-weight);
+  }
+  .notebook-picker-trigger > span,
+  .notebook-picker-option > span {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .notebook-picker-trigger > svg,
+  .notebook-picker-option > svg {
+    flex: none;
+  }
+  .notebook-picker-trigger:hover:not(:disabled),
+  .notebook-picker-trigger[aria-expanded='true'] {
+    background: var(--dropdown-hovered-item-background);
+    color: var(--dropdown-hovered-item-color);
+  }
+  .notebook-picker-menu {
+    position: fixed;
+    inset: auto;
+    top: anchor(bottom);
+    left: anchor(left);
+    position-try-fallbacks:
+      flip-inline,
+      flip-block,
+      flip-inline flip-block;
+    inline-size: min(22em, calc(100vi - var(--16px)));
+    max-block-size: calc(100vb - var(--16px));
+    margin: var(--4px) 0 0;
+    padding: 0;
+    overflow: hidden;
+    border: var(--dropdown-menu-border);
+    border-radius: var(--dropdown-menu-border-radius);
+    corner-shape: var(--dropdown-menu-corner-shape);
+    box-shadow: var(--dropdown-menu-box-shadow);
+    background: var(--dropdown-menu-background);
+    color: var(--dropdown-menu-item-color);
+    font-family: var(--page-font);
+    font-size: var(--font-size);
+  }
+  .notebook-picker-menu:popover-open {
+    display: flex;
+    flex-direction: column;
+  }
+  .notebook-picker-search {
+    display: flex;
+    align-items: center;
+    gap: var(--10px);
+    flex: none;
+    padding: var(--12px) var(--16px);
+    color: var(--dropdown-menu-item-color);
+  }
+  .notebook-picker-search input {
+    inline-size: 100%;
+    min-inline-size: 0;
+    padding: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: var(--input-color);
+  }
+  .notebook-picker-search input::placeholder {
+    color: var(--input-placeholder-focus-color);
+  }
+  .notebook-picker-options {
+    min-block-size: 0;
+    max-block-size: min(20em, 55vb);
+    padding-block-end: var(--4px);
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  .notebook-picker-option {
+    display: flex;
+    align-items: center;
+    gap: var(--8px);
+    inline-size: 100%;
+    min-block-size: var(--36px);
+    padding: var(--8px) var(--12px);
+    border: var(--dropdown-menu-item-border);
+    background: transparent;
+    color: var(--dropdown-menu-item-color);
+    font-weight: var(--dropdown-menu-item-font-weight);
+    text-align: start;
+    cursor: pointer;
+  }
+  .notebook-picker-option > span {
+    flex: 1;
+  }
+  .notebook-picker-option[aria-selected='true'] {
+    background: var(--dropdown-active-item-background);
+    color: var(--dropdown-active-item-color);
+    font-weight: var(--dropdown-active-item-font-weight);
+  }
+  .notebook-picker-option[data-highlighted='true'] {
+    background: var(--dropdown-selected-background);
+    color: var(--dropdown-selected-color);
+  }
+  .notebook-picker-empty {
+    margin: 0;
+    padding: var(--12px) var(--16px);
+    color: var(--dropdown-menu-message-color);
+    font-size: var(--small);
+  }
+}

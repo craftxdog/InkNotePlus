@@ -50,7 +50,7 @@ import { statusIcons, statusLabels } from './sidebar';
 import { Modal } from './modal';
 import { CommitRange } from './commit-range';
 import { createScrollSync } from '../editor/scroll-sync';
-import { NotebookIcon } from './notebook-icon';
+import { NotebookPicker } from './notebook-picker';
 import { UiSlot } from '../extensions/ui-slots';
 
 export function DocumentWorkspace({
@@ -493,6 +493,7 @@ export function DocumentWorkspace({
 }
 
 function EditorMetadata({ disabled }: { disabled: boolean }) {
+  const noteId = useWorkspace((state) => state.document.noteId);
   const metadata = useWorkspace((state) => state.document.metadata);
   const update = useWorkspace((state) => state.updateDraft);
   const books = useWorkspace((state) => state.library.notebooks);
@@ -506,30 +507,15 @@ function EditorMetadata({ disabled }: { disabled: boolean }) {
   };
   return (
     <div className="editor-meta">
-      <label className="meta-select">
-        <NotebookIcon
-          name={books.find((book) => book.id === metadata.notebookId)?.icon}
-          size={17}
-        />
-        <span className="visually-hidden">Notebook de la nota</span>
-        <select
-          aria-label="Notebook de la nota"
-          disabled={disabled}
-          value={metadata.notebookId ?? ''}
-          onChange={(event) =>
-            update({
-              metadata: { ...metadata, notebookId: event.target.value || null },
-            })
-          }
-        >
-          <option value="">Sin notebook</option>
-          {books.map((book) => (
-            <option key={book.id} value={book.id}>
-              {book.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <NotebookPicker
+        key={noteId}
+        notebooks={books}
+        value={metadata.notebookId}
+        disabled={disabled}
+        onChange={(notebookId) =>
+          update({ metadata: { ...metadata, notebookId } })
+        }
+      />
       <label className={`meta-select status-${metadata.status}`}>
         <StatusIcon size={16} />
         <span className="visually-hidden">Estado de la nota</span>

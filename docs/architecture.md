@@ -546,6 +546,19 @@ públicas ni publica si el tag cambió durante los builds. Los builds manuales
 guardan artefactos sin publicar. `pnpm release` crea un tag local desde `main`
 limpio y sincronizado; su push activa la distribución automática.
 
+`Publish release` corre desde las herramientas de la rama principal tras
+`Build installers`, o mediante recuperación explícita. Comprueba que el run sea
+un push de tag del mismo repositorio, que hayan pasado versión y los cuatro
+destinos, y que el commit probado siga siendo el destino del tag. Lee metadata
+desde ese commit y descarga únicamente sus artefactos a una carpeta temporal
+fuera del checkout; no ejecuta contenido del build. Así se puede corregir el
+publicador sin reconstruir los binarios ni mover tags. El ID del borrador se
+obtiene directamente de la respuesta de creación de GitHub; la recuperación
+admite un ID existente y comprueba que pertenezca al mismo tag. La publicación
+y verificación de archivos usan ese ID, conservando las restricciones contra
+reemplazar versiones públicas. Sólo este workflow tiene escritura de contenidos
+y lectura de artefactos.
+
 Los DMG locales usan firma ad hoc, sin Team ID ni runtime endurecido. No son
 distribuciones notarizadas. `INKNOTE_MAC_SIGN_IDENTITY` permite usar Developer
 ID Application con runtime endurecido; `INKNOTE_MAC_NOTARY_PROFILE` selecciona

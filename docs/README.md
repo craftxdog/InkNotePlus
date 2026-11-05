@@ -43,6 +43,9 @@ integrar y comprobar los cambios en `main`, `pnpm release` crea el tag local.
 se publica cuando los cuatro destinos pasan sus pruebas de instalación y uso.
 Una versión publicada se conserva; las correcciones reciben un tag nuevo.
 
-El workflow manual construye y verifica instaladores sin publicar una release.
+El workflow manual de instaladores construye y verifica sin publicar una release.
+La publicación corre aparte, valida el tag, commit y los cuatro checks nativos y
+reutiliza sus artefactos. En caso de fallo de subida, `Publish release` permite
+recuperar ese build con su ID y el ID numérico del borrador, sin recompilar.
 
 [Arquitectura y configuración](architecture.md) · [Licencia MIT](../LICENSE)

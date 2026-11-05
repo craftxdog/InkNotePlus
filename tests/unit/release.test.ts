@@ -175,11 +175,22 @@ it('publishes only tagged builds after all native installer checks, with scoped 
   expect(workflow.permissions.contents).toBe('read');
   expect(workflow.jobs.make.needs).toBe('version');
   expect(workflow.jobs.make.strategy.matrix.include).toHaveLength(4);
-  expect(workflow.jobs.publish.needs).toBe('make');
-  expect(workflow.jobs.publish.if).toBe(
-    "github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')",
+  expect(workflow.jobs.publish).toBeUndefined();
+  const publisher = parse(
+    await readFile(
+      new URL('../../.github/workflows/release.yml', import.meta.url),
+      'utf8',
+    ),
   );
-  expect(workflow.jobs.publish.permissions.contents).toBe('write');
+  expect(publisher.on.workflow_run.workflows).toEqual(['Build installers']);
+  expect(publisher.jobs.publish.permissions.contents).toBe('write');
+  expect(publisher.jobs.publish.permissions.actions).toBe('read');
+  expect(
+    publisher.jobs.publish.steps.some(
+      (step: { run?: string }) =>
+        step.run === 'node scripts/release.mjs verify-build',
+    ),
+  ).toBe(true);
   expect(workflow.concurrency['cancel-in-progress']).toBe(false);
 });
 
@@ -200,6 +211,7 @@ it('refuses publication from a manual tag build before reading or uploading rele
         GITHUB_REF_NAME: `v${packageMetadata.version}`,
         GITHUB_REPOSITORY: 'craftxdog/InkNotePlus',
         GITHUB_EVENT_NAME: 'workflow_dispatch',
+        RELEASE_BUILD_RUN_ID: '',
       },
     },
   );

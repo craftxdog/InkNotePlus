@@ -30,7 +30,11 @@ const config: ForgeConfig = {
     // https://www.electronforge.io/guides/create-and-add-icons
     icon: path.join(assets, 'icon'),
     asar: true,
-    extraResource: ['resources/licenses', path.join(assets, 'icon.png')],
+    extraResource: [
+      'resources/licenses',
+      'LICENSE',
+      path.join(assets, 'icon.png'),
+    ],
     download: {
       checksums: electronChecksums,
     },

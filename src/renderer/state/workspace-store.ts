@@ -31,6 +31,16 @@ import {
 import { loadNoteWindow } from './note-loading';
 import { createThemeActions } from './theme-actions';
 
+function visibleSelection(
+  ids: readonly string[],
+  notes: readonly NoteProjection[],
+) {
+  if (ids.length < 2) return [];
+  const visible = new Set(notes.map(({ id }) => id));
+  const selected = ids.filter((id) => visible.has(id));
+  return selected.length > 1 ? selected : [];
+}
+
 export function createWorkspaceStore(api: InkNoteApi) {
   let requestId = 0;
   let linkRequest = 0;
@@ -107,9 +117,13 @@ export function createWorkspaceStore(api: InkNoteApi) {
               ]
             : result.data.notes;
           const inList = notes.some(({ id }) => id === state.activeNoteId);
+          const selectedNoteIds = visibleSelection(
+            state.selectedNoteIds,
+            notes,
+          );
           const activeNoteId = inList
             ? state.activeNoteId
-            : (notes[0]?.id ?? null);
+            : (selectedNoteIds[0] ?? notes[0]?.id ?? null);
           const preserveLink =
             linkedDocument?.id === state.document.noteId &&
             linkedDocument?.navigation === state.navigation &&
@@ -125,6 +139,7 @@ export function createWorkspaceStore(api: InkNoteApi) {
               state.library.notebooks,
             );
           return {
+            selectedNoteIds,
             ...(!inList &&
             state.document.noteId &&
             (preserveLink || preserveDraft)
@@ -155,6 +170,7 @@ export function createWorkspaceStore(api: InkNoteApi) {
           : (notes[0]?.id ?? null);
         return {
           ...selectDocument(state, activeNoteId, notes),
+          selectedNoteIds: visibleSelection(state.selectedNoteIds, notes),
           noteList: {
             ...state.noteList,
             notes,
@@ -190,6 +206,31 @@ export function createWorkspaceStore(api: InkNoteApi) {
     };
 
     return {
+      transfer: {
+        ...api.transfer,
+        async enableBackup() {
+          if (!(await get().flushDrafts())) return failure('conflict');
+          return api.transfer.enableBackup();
+        },
+        async runBackup() {
+          if (!(await get().flushDrafts())) return failure('conflict');
+          return api.transfer.runBackup();
+        },
+        async restoreBackup() {
+          if (!(await get().flushDrafts())) return failure('conflict');
+          const result = await api.transfer.restoreBackup();
+          if (result.ok && result.data) await refreshNotes(false, true);
+          return result;
+        },
+        async exportNote(input) {
+          if (!(await get().flushDrafts())) return failure('conflict');
+          return api.transfer.exportNote(input);
+        },
+        async exportLibrary() {
+          if (!(await get().flushDrafts())) return failure('conflict');
+          return api.transfer.exportLibrary();
+        },
+      },
       importImage: (base64) =>
         base64 ? api.images.write(base64) : api.images.importFile(),
       ...createThemeActions(api, set, get),
@@ -234,7 +275,10 @@ export function createWorkspaceStore(api: InkNoteApi) {
           scopeId: current.preferences.notebookScopeId,
           query: current.searchQuery,
         };
-        set((value) => selectDocument(value, id, [note]));
+        set((value) => ({
+          ...selectDocument(value, id, [note]),
+          selectedNoteIds: [],
+        }));
         return success(true);
       },
       searchLinkNotes(query) {
@@ -312,6 +356,24 @@ export function createWorkspaceStore(api: InkNoteApi) {
         return preferenceQueue;
       },
       activeNoteId: null,
+      selectedNoteIds: [],
+      libraryDialog: null,
+      setLibraryDialog(libraryDialog) {
+        set({ libraryDialog });
+      },
+      openNoteAction(kind, ids) {
+        const { selectedNoteIds, activeNoteId } = get();
+        const targets =
+          ids ??
+          (selectedNoteIds.length
+            ? selectedNoteIds
+            : activeNoteId
+              ? [activeNoteId]
+              : []);
+        if (!targets.length) return false;
+        set({ libraryDialog: { kind, ids: targets } });
+        return true;
+      },
       searchQuery: '',
       searchGlobal: false,
       mainLayout: { sidebarVisible: true, distractionFreeEnabled: false },
@@ -494,12 +556,13 @@ export function createWorkspaceStore(api: InkNoteApi) {
           await refreshNotes(true);
       },
       async setSearchQuery(query) {
-        set({ searchQuery: query.trim() });
+        set({ searchQuery: query.trim(), selectedNoteIds: [] });
         await refreshNotes();
       },
       async setSearchGlobal(searchGlobal) {
         set({
           searchGlobal,
+          selectedNoteIds: [],
           ...(searchGlobal ? { navigation: { type: 'all' as const } } : {}),
         });
         await refreshNotes();
@@ -516,7 +579,33 @@ export function createWorkspaceStore(api: InkNoteApi) {
       selectNote(noteId) {
         linkRequest++;
         linkedDocument = null;
-        set((state) => selectDocument(state, noteId));
+        set((state) => ({
+          ...selectDocument(state, noteId),
+          selectedNoteIds: [],
+        }));
+      },
+      toggleNoteSelection(id) {
+        const state = get();
+        if (!state.noteList.notes.some((note) => note.id === id)) return;
+        linkRequest++;
+        linkedDocument = null;
+        const selected = state.selectedNoteIds.length
+          ? state.selectedNoteIds
+          : state.activeNoteId
+            ? [state.activeNoteId]
+            : [];
+        const next = selected.includes(id)
+          ? selected.filter((selectedId) => selectedId !== id)
+          : [...selected, id];
+        set({
+          ...selectDocument(
+            state,
+            next.includes(state.activeNoteId ?? '')
+              ? state.activeNoteId
+              : (next[0] ?? null),
+          ),
+          selectedNoteIds: next.length > 1 ? next : [],
+        });
       },
       setSidebarVisible(visible) {
         set((state) => ({

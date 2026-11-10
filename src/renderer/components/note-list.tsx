@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useState, type MouseEventHandler } from 'react';
 import {
   PanelLeft,
   SquarePen,
@@ -7,6 +7,7 @@ import {
   ListFilter,
   ClipboardCheck,
   Filter,
+  Trash2,
 } from 'lucide-react';
 import {
   parseNoteSearch,
@@ -34,16 +35,27 @@ export function NoteList({
   const error = useWorkspace((state) => state.noteList.errorCode);
   const creating = useWorkspace((state) => state.noteList.isCreating);
   const activeId = useWorkspace((state) => state.activeNoteId);
+  const selectedIds = useWorkspace((state) => state.selectedNoteIds);
+  const toggleSelection = useWorkspace((state) => state.toggleNoteSelection);
+  const platform = useWorkspace((state) => state.platform);
   const select = useWorkspace((state) => state.selectNote);
+  const openNoteAction = useWorkspace((state) => state.openNoteAction);
+  const setLibraryDialog = useWorkspace((state) => state.setLibraryDialog);
+  const trashCount = useWorkspace((state) => state.library.trash);
   const pin = useWorkspace((state) => state.togglePin);
   const query = useWorkspace((state) => state.searchQuery);
   const terms = searchHighlightTerms(query);
   const customize = useWorkspace((state) => state.customizeTemplate);
-  const [menu, setMenu] = useState<{ x: number; y: number; id: string } | null>(
-    null,
-  );
+  const [menu, setMenu] = useState<{
+    x: number;
+    y: number;
+    ids: readonly string[];
+    trashed: boolean;
+    pinned: boolean;
+  } | null>(null);
   const create = useWorkspace((state) => state.createNote);
   const navigation = useWorkspace((state) => state.navigation);
+  const inTrash = navigation.type === 'trash';
   const books = useWorkspace((state) => state.library.notebooks);
   const total = useWorkspace((state) => state.library.matching);
   const hasMore = useWorkspace((state) => state.noteList.hasMore);
@@ -79,14 +91,23 @@ export function NoteList({
         <h1 id="note-list-title" title={title}>
           {title}
         </h1>
-        <IconButton
-          icon={SquarePen}
-          label="Nueva nota"
-          disabled={creating}
-          onClick={() => {
-            void create().then(onOpenNote);
-          }}
-        />
+        {inTrash ? (
+          <IconButton
+            icon={Trash2}
+            label="Vaciar papelera"
+            disabled={!trashCount}
+            onClick={() => setLibraryDialog({ kind: 'empty' })}
+          />
+        ) : (
+          <IconButton
+            icon={SquarePen}
+            label="Nueva nota"
+            disabled={creating}
+            onClick={() => {
+              void create().then(onOpenNote);
+            }}
+          />
+        )}
       </header>
       <div className="note-list-search">
         <NoteSearch />
@@ -152,16 +173,30 @@ export function NoteList({
             key={note.id}
             note={note}
             active={note.id === activeId}
+            selected={selectedIds.includes(note.id)}
             terms={terms}
             onContextMenu={(event) => {
               event.preventDefault();
               event.currentTarget.focus();
-              select(note.id);
-              setMenu({ id: note.id, x: event.clientX, y: event.clientY });
+              const ids = selectedIds.includes(note.id)
+                ? selectedIds
+                : [note.id];
+              if (ids.length === 1) select(note.id);
+              setMenu({
+                ids,
+                x: event.clientX,
+                y: event.clientY,
+                trashed: note.deletedAt !== null,
+                pinned: note.isPinned,
+              });
             }}
-            onSelect={(id) => {
-              select(id);
-              onOpenNote();
+            onSelect={(event) => {
+              if (platform === 'darwin' ? event.metaKey : event.ctrlKey) {
+                toggleSelection(note.id);
+              } else {
+                select(note.id);
+                onOpenNote();
+              }
             }}
           />
         ))}
@@ -182,23 +217,53 @@ export function NoteList({
         )}
       </ul>
       <footer className="note-list-footer">
-        {total} {total === 1 ? 'nota' : 'notas'}
-        {hasMore ? ` · ${notes.length} cargadas` : ''}
+        {selectedIds.length > 1 ? (
+          <button
+            className="note-selection-count"
+            type="button"
+            onClick={onOpenNote}
+          >
+            {selectedIds.length} notas seleccionadas
+          </button>
+        ) : (
+          <>
+            {total} {total === 1 ? 'nota' : 'notas'}
+            {hasMore ? ` · ${notes.length} cargadas` : ''}
+          </>
+        )}
       </footer>
       {menu && (
         <ContextMenu
           x={menu.x}
           y={menu.y}
           onClose={() => setMenu(null)}
-          actions={[
-            {
-              label: notes.find((note) => note.id === menu.id)?.isPinned
-                ? 'Desfijar nota'
-                : 'Fijar nota',
-              disabled: navigation.type === 'trash',
-              run: pin,
-            },
-          ]}
+          actions={
+            menu.trashed
+              ? [
+                  {
+                    label: 'Mover a notebook…',
+                    run: () => openNoteAction('restore', menu.ids),
+                  },
+                  {
+                    label: 'Eliminar definitivamente…',
+                    run: () => openNoteAction('delete', menu.ids),
+                  },
+                ]
+              : [
+                  ...(menu.ids.length === 1
+                    ? [
+                        {
+                          label: menu.pinned ? 'Desfijar nota' : 'Fijar nota',
+                          run: pin,
+                        },
+                      ]
+                    : []),
+                  {
+                    label: 'Mover a papelera',
+                    run: () => openNoteAction('trash', menu.ids),
+                  },
+                ]
+          }
         />
       )}
     </section>
@@ -276,13 +341,15 @@ function relativeDate(value: string) {
 const NoteListItem = memo(function NoteListItem({
   note,
   active,
+  selected,
   onSelect,
   terms,
   onContextMenu,
 }: {
   note: NoteProjection;
   active: boolean;
-  onSelect: (id: string) => void;
+  selected: boolean;
+  onSelect: MouseEventHandler<HTMLButtonElement>;
   terms: string[];
   onContextMenu: React.MouseEventHandler<HTMLButtonElement>;
 }) {
@@ -296,9 +363,10 @@ const NoteListItem = memo(function NoteListItem({
       <button
         className="note-list-item"
         type="button"
-        data-active={active}
+        data-active={active || selected}
+        aria-pressed={selected || undefined}
         aria-current={active ? 'true' : undefined}
-        onClick={() => onSelect(note.id)}
+        onClick={onSelect}
         onContextMenu={onContextMenu}
       >
         <strong className="note-row-title">

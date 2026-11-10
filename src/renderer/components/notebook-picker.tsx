@@ -20,6 +20,7 @@ interface Props {
   notebooks: Notebook[];
   value: string | null;
   disabled?: boolean;
+  label?: string;
   onChange: (id: string | null) => void;
 }
 
@@ -27,6 +28,7 @@ export function NotebookPicker({
   notebooks,
   value,
   disabled,
+  label: fieldLabel = 'Notebook de la nota',
   onChange,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -47,7 +49,7 @@ export function NotebookPicker({
         type="button"
         className="notebook-picker-trigger"
         style={{ anchorName: anchor }}
-        aria-label={`Notebook de la nota: ${label}`}
+        aria-label={`${fieldLabel}: ${label}`}
         aria-haspopup="dialog"
         popoverTarget={id}
         aria-expanded={open}

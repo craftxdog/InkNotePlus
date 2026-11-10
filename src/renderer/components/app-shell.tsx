@@ -16,6 +16,8 @@ import { SettingsDialog } from './settings-dialog';
 import { NotebookDialog } from './notebook-dialog';
 import { CommandPalette } from './command-palette';
 import { UiSlot } from '../extensions/ui-slots';
+import { LibraryActionDialog } from './library-action-dialog';
+import { SelectedNotesPanel } from './note-trash-actions';
 const TemplatePicker = lazy(() => import('./template-picker'));
 
 export function AppShell() {
@@ -27,6 +29,10 @@ export function AppShell() {
   const notebookDialogOpen = useWorkspace((state) => state.notebookDialogOpen);
   const templatePickerOpen = useWorkspace((state) => state.templatePickerOpen);
   const commandPaletteOpen = useWorkspace((state) => state.commandPaletteOpen);
+  const libraryDialog = useWorkspace((state) => state.libraryDialog);
+  const multipleNotes = useWorkspace(
+    (state) => state.selectedNoteIds.length > 1,
+  );
   const platform = useWorkspace((state) => state.platform);
   const root = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(1280);
@@ -148,14 +154,24 @@ export function AppShell() {
           }}
         />
       )}
-      <DocumentWorkspace
-        onShowNotes={() => setCompactPane('notes')}
-        onToggleSidebar={toggleSidebar}
-      />
+      {multipleNotes ? (
+        <SelectedNotesPanel onShowNotes={() => setCompactPane('notes')} />
+      ) : (
+        <DocumentWorkspace
+          onShowNotes={() => setCompactPane('notes')}
+          onToggleSidebar={toggleSidebar}
+        />
+      )}
       <div className="modal-layout">
         {settingsOpen && <SettingsDialog />}
         {notebookDialogOpen && <NotebookDialog />}
         {commandPaletteOpen && <CommandPalette />}
+        {libraryDialog && (
+          <LibraryActionDialog
+            key={libraryDialog.kind}
+            request={libraryDialog}
+          />
+        )}
         <UiSlot name="modal" />
         {templatePickerOpen && (
           <Suspense fallback={null}>

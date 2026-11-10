@@ -73,6 +73,7 @@ export function NotebookTree({
   const focus = useWorkspace((state) => state.focusNotebook);
   const [iconNotebookId, setIconNotebookId] = useState<string | null>(null);
   const create = useWorkspace((state) => state.setNotebookDialogOpen);
+  const openLibraryDialog = useWorkspace((state) => state.setLibraryDialog);
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(
     null,
   );
@@ -208,6 +209,15 @@ export function NotebookTree({
               {
                 label: 'Cambiar icono',
                 run: () => setIconNotebookId(book.id),
+              },
+              {
+                label: 'Eliminar notebook…',
+                run: () =>
+                  openLibraryDialog({
+                    kind: 'delete-notebook',
+                    id: book.id,
+                    name: book.name,
+                  }),
               },
             ]}
           />

@@ -10,15 +10,16 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useState, type MouseEventHandler, type ReactNode } from 'react';
 import { useWorkspace } from '../state/workspace-context';
 import type { Navigation } from '../state/workspace-types';
 import { IconButton } from './icon-button';
-import { tagColor } from './tag-badge';
+import { tagColor, tagColorStyle } from './tag-badge';
 import { NotebookTree, NotebookBreadcrumbs } from './notebook-tree';
 import { UiSlot } from '../extensions/ui-slots';
 import { matchesNotebook } from '../notebooks/notebook-hierarchy';
 import { statusLabels, statusIcons } from './note-status';
+import { ContextMenu } from './context-menu';
 
 export function Sidebar({
   onNavigate,
@@ -34,6 +35,14 @@ export function Sidebar({
   const counts = useWorkspace((state) => state.preferences.showNoteCounts);
   const [tagSearch, setTagSearch] = useState<string | null>(null);
   const [notebookSearch, setNotebookSearch] = useState<string | null>(null);
+  const [menu, setMenu] = useState<
+    | (({ kind: 'tag'; name: string } | { kind: 'trash' }) & {
+        x: number;
+        y: number;
+      })
+    | null
+  >(null);
+  const openLibraryDialog = useWorkspace((state) => state.setLibraryDialog);
   const notebookSearchId = useId();
   const closeNotebookSearch = () => {
     setNotebookSearch(null);
@@ -205,30 +214,89 @@ export function Sidebar({
                   .toLocaleLowerCase()
                   .includes((tagSearch ?? '').toLocaleLowerCase()),
               )
-              .map((tag) => (
-                <button
-                  key={tag.name}
-                  type="button"
-                  className="navigation-item"
-                  data-active={isActive({ type: 'tag', name: tag.name })}
-                  onClick={() => select({ type: 'tag', name: tag.name })}
-                >
-                  <span className={`tag-dot tag-color-${tagColor(tag.name)}`} />
-                  <span className="navigation-label">{tag.name}</span>
-                  {counts && (
-                    <span className="navigation-count">{tag.count}</span>
-                  )}
-                </button>
-              ))
+              .map((tag) => {
+                const color = tag.color ?? tagColor(tag.name);
+                return (
+                  <button
+                    key={tag.name}
+                    type="button"
+                    className="navigation-item"
+                    data-active={isActive({ type: 'tag', name: tag.name })}
+                    onClick={() => select({ type: 'tag', name: tag.name })}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      event.currentTarget.focus();
+                      setMenu({
+                        kind: 'tag',
+                        name: tag.name,
+                        x: event.clientX,
+                        y: event.clientY,
+                      });
+                    }}
+                  >
+                    <span
+                      className={`tag-dot tag-color-${color}`}
+                      style={tagColorStyle(color)}
+                    />
+                    <span className="navigation-label">{tag.name}</span>
+                    {counts && (
+                      <span className="navigation-count">{tag.count}</span>
+                    )}
+                  </button>
+                );
+              })
           )}
         </SidebarSection>
-        {row('Papelera', Trash2, { type: 'trash' }, library.trash)}
+        <SidebarItem
+          label="Papelera"
+          icon={Trash2}
+          active={navigation.type === 'trash'}
+          count={counts ? library.trash : undefined}
+          onClick={() => select({ type: 'trash' })}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            event.currentTarget.focus();
+            setMenu({ kind: 'trash', x: event.clientX, y: event.clientY });
+          }}
+        />
       </div>
       <footer className="sidebar-footer">
         <span className="local-status-dot" />
         Almacenamiento local
       </footer>
       <UiSlot name="sidebar" />
+      {menu && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          onClose={() => setMenu(null)}
+          actions={
+            menu.kind === 'tag'
+              ? [
+                  {
+                    label: 'Editar etiqueta…',
+                    run: () =>
+                      openLibraryDialog({ kind: 'edit-tag', name: menu.name }),
+                  },
+                  {
+                    label: 'Eliminar etiqueta…',
+                    run: () =>
+                      openLibraryDialog({
+                        kind: 'delete-tag',
+                        name: menu.name,
+                      }),
+                  },
+                ]
+              : [
+                  {
+                    label: 'Vaciar papelera…',
+                    disabled: !library.trash,
+                    run: () => openLibraryDialog({ kind: 'empty' }),
+                  },
+                ]
+          }
+        />
+      )}
     </nav>
   );
 }
@@ -239,6 +307,7 @@ function SidebarItem({
   active,
   count,
   onClick,
+  onContextMenu,
   className = '',
 }: {
   label: string;
@@ -246,6 +315,7 @@ function SidebarItem({
   active: boolean;
   count?: number;
   onClick: () => void;
+  onContextMenu?: MouseEventHandler<HTMLButtonElement>;
   className?: string;
 }) {
   return (
@@ -255,6 +325,7 @@ function SidebarItem({
       data-active={active}
       aria-current={active ? 'page' : undefined}
       onClick={onClick}
+      onContextMenu={onContextMenu}
     >
       <Icon size={18} strokeWidth={1.6} aria-hidden="true" />
       <span className="navigation-label">{label}</span>

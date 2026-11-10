@@ -38,6 +38,10 @@ import {
   ImagePlus,
   Highlighter,
   ListChecks,
+  FileCode,
+  FileText,
+  FileDown,
+  Printer,
 } from 'lucide-react';
 import { imageAtCursor, resizeCurrentImage } from '../editor/image-dimensions';
 import {
@@ -56,11 +60,19 @@ import { noteLinkCompletion } from '../editor/note-link-completion';
 import { IconButton } from './icon-button';
 import { TagBadge } from './tag-badge';
 import { StatusPicker } from './status-picker';
-import { Modal } from './modal';
 import { CommitRange } from './commit-range';
 import { createScrollSync } from '../editor/scroll-sync';
 import { NotebookPicker } from './notebook-picker';
 import { UiSlot } from '../extensions/ui-slots';
+import { NoteTrashActions } from './note-trash-actions';
+import type { ExportNoteInput } from '../../shared/transfer';
+
+const exportActions = [
+  { format: 'markdown', label: 'Exportar Markdown…', icon: FileText },
+  { format: 'html', label: 'Exportar HTML…', icon: FileCode },
+  { format: 'pdf', label: 'Exportar PDF…', icon: FileDown },
+  { format: 'print', label: 'Imprimir…', icon: Printer },
+] as const;
 
 export function DocumentWorkspace({
   onShowNotes,
@@ -90,16 +102,15 @@ export function DocumentWorkspace({
     (state) => state.setDistractionFreeEnabled,
   );
   const navigation = useWorkspace((state) => state.navigation);
-  const restore = useWorkspace((state) => state.restoreActiveNote);
-  const trash = useWorkspace((state) => state.trashActiveNote);
+  const openNoteAction = useWorkspace((state) => state.openNoteAction);
   const importImage = useWorkspace((state) => state.importImage);
+  const exportNote = useWorkspace((state) => state.transfer.exportNote);
   const view = useRef<EditorView | null>(null);
   const preview = useRef<HTMLElement>(null);
   const sync = useRef<ReturnType<typeof createScrollSync> | null>(null);
   const currentBody = useRef(draft.body);
   currentBody.current = draft.body;
   const renderedBody = useRef<string | null>(null);
-  const [confirmTrash, setConfirmTrash] = useState(false);
   const [splitRatio, setSplitRatio] = useState(preferences.splitRatio);
   const [imageSelected, setImageSelected] = useState(false);
   const [tableSelected, setTableSelected] = useState(false);
@@ -107,6 +118,41 @@ export function DocumentWorkspace({
     null,
   );
   const [imageError, setImageError] = useState<ImageImportError>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState<{
+    text: string;
+    error: boolean;
+  }>();
+  async function runExport(format: ExportNoteInput['format']) {
+    if (!draft.noteId || exporting) return;
+    setExporting(true);
+    setExportMessage(undefined);
+    try {
+      const result = await exportNote({ id: draft.noteId, format });
+      if (!result.ok)
+        setExportMessage({
+          text:
+            result.error.code === 'conflict'
+              ? 'Guarda los cambios pendientes e inténtalo de nuevo.'
+              : 'No se pudo exportar la nota.',
+          error: true,
+        });
+      else if (result.data) {
+        const { path, missingAttachments } = result.data;
+        const exported = path
+          ? `Nota exportada en ${path}`
+          : 'Nota enviada a impresión';
+        const missing = missingAttachments
+          ? ` · Adjuntos sin recuperar (${missingAttachments})`
+          : '';
+        setExportMessage({ text: exported + missing, error: false });
+      }
+    } catch {
+      setExportMessage({ text: 'No se pudo exportar la nota.', error: true });
+    } finally {
+      setExporting(false);
+    }
+  }
   const insertImage = async (files?: File[]) => {
     const editor = view.current;
     if (!editor) return;
@@ -279,26 +325,50 @@ export function DocumentWorkspace({
                   : 'Usar como plantilla'}
               </button>
               {inTrash ? (
-                <button
-                  type="button"
-                  disabled={!draft.noteId}
-                  onClick={() => {
-                    void restore();
-                  }}
-                >
-                  <RotateCcw size={16} />
-                  Restaurar nota
-                </button>
+                <>
+                  <button
+                    type="button"
+                    disabled={!draft.noteId}
+                    onClick={() => openNoteAction('restore')}
+                  >
+                    <RotateCcw size={16} />
+                    Mover a notebook…
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!draft.noteId}
+                    onClick={() => openNoteAction('delete')}
+                  >
+                    <Trash2 size={16} />
+                    Eliminar definitivamente…
+                  </button>
+                </>
               ) : (
                 <button
                   type="button"
                   disabled={!draft.noteId}
-                  onClick={() => setConfirmTrash(true)}
+                  onClick={() => openNoteAction('trash')}
                 >
                   <Trash2 size={16} />
                   Mover a papelera
                 </button>
               )}
+              {exportActions.map(({ format, label, icon: Icon }) => (
+                <button
+                  key={format}
+                  type="button"
+                  disabled={!draft.noteId || exporting}
+                  onClick={(event) => {
+                    const menu = event.currentTarget.closest('details');
+                    menu?.querySelector('summary')?.focus();
+                    if (menu) menu.open = false;
+                    void runExport(format);
+                  }}
+                >
+                  <Icon size={16} />
+                  {label}
+                </button>
+              ))}
               {current && (
                 <div className="note-info">
                   Creada: {new Date(current.createdAt).toLocaleString()}
@@ -343,6 +413,7 @@ export function DocumentWorkspace({
             }}
           />
           <EditorMetadata disabled={inTrash} />
+          {inTrash && <NoteTrashActions inTrash />}
           <UiSlot name="editor-header" />
           <UiSlot name="editor-meta" />
           <div
@@ -421,6 +492,18 @@ export function DocumentWorkspace({
               {imageError === 'changed'
                 ? 'El texto seleccionado cambió durante la importación. Vuelve a insertar la imagen.'
                 : 'No se pudo importar la imagen. Usa PNG, JPEG, GIF o WebP de hasta 5 MB y 16 megapíxeles.'}
+            </div>
+          )}
+          {(exporting || exportMessage) && (
+            <div
+              className={
+                exportMessage?.error
+                  ? 'image-error'
+                  : 'transfer-message editor-export-status'
+              }
+              role={exportMessage?.error ? 'alert' : 'status'}
+            >
+              {exporting ? 'Preparando nota…' : exportMessage?.text}
             </div>
           )}
           <div className="editor-body">
@@ -539,37 +622,6 @@ export function DocumentWorkspace({
             Abrir biblioteca
           </button>
         </div>
-      )}
-      {confirmTrash && (
-        <Modal title="Mover a papelera" onClose={() => setConfirmTrash(false)}>
-          <div className="dialog-form">
-            <p>
-              La nota se puede restaurar desde la papelera.
-              {draft.isDirty
-                ? ' Los cambios sin guardar permanecen sólo en esta sesión.'
-                : ''}
-            </p>
-            <footer className="dialog-actions">
-              <button
-                className="button"
-                type="button"
-                onClick={() => setConfirmTrash(false)}
-              >
-                Cancelar
-              </button>
-              <button
-                className="button button--primary"
-                type="button"
-                onClick={() => {
-                  setConfirmTrash(false);
-                  void trash();
-                }}
-              >
-                Mover a papelera
-              </button>
-            </footer>
-          </div>
-        </Modal>
       )}
       <UiSlot name="editor" />
       <UiSlot name="editor-floating-actions" />

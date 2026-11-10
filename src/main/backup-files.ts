@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { lstatSync, readFileSync, realpathSync, renameSync } from 'node:fs';
+import { lstatSync, readFileSync, renameSync } from 'node:fs';
 import { mkdir, mkdtemp, readdir, realpath, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { maxBodyLength, maxTitleLength, noteSchema } from '../shared/ipc';
@@ -47,21 +47,17 @@ type Manifest = z.output<typeof manifestSchema>;
 type ManifestFile = { manifest: Manifest; json: string };
 
 export class BackupFiles {
-  private readonly userData: string;
-
   constructor(
     private readonly library: SqliteLibraryTransfer,
-    userData: string,
+    private readonly userData: string,
     private readonly owner: string,
-  ) {
-    this.userData = realpathSync(userData);
-  }
+  ) {}
 
   async create(
     parent: string,
   ): Promise<{ directory: string; completedAt: string }> {
     const location = await realpath(parent);
-    this.requireOutsideProfile(location);
+    await this.requireOutsideProfile(location);
     const directory = await makeUniqueDirectory(location, 'InkNote Backup');
     try {
       const layout = backupLayout(directory);
@@ -86,7 +82,7 @@ export class BackupFiles {
   }
 
   async update(directory: string, verify = false): Promise<string> {
-    this.requireOutsideProfile(await realpath(directory));
+    await this.requireOutsideProfile(await realpath(directory));
     const previous = await readManifest(directory);
     if (previous.manifest.owner !== this.owner)
       throw new Error('Backup belongs to another profile.');
@@ -286,8 +282,10 @@ export class BackupFiles {
     }
   }
 
-  private requireOutsideProfile(directory: string): void {
-    const relative = path.relative(this.userData, directory);
+  private async requireOutsideProfile(directory: string): Promise<void> {
+    // Resolve both paths through the same API to normalize Windows short names.
+    const profile = await realpath(this.userData);
+    const relative = path.relative(profile, directory);
     if (
       !relative ||
       (relative !== '..' &&

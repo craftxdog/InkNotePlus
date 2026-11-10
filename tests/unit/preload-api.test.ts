@@ -76,6 +76,19 @@ describe('InkNote preload API', () => {
     expect(invocations).toEqual([]);
   });
 
+  it('rejects renderer-supplied filesystem paths for editor export', async () => {
+    const { invocations, ipc } = createIpc();
+    const api = createInkNoteApi(ipc);
+    await expect(
+      api.transfer.exportNote({
+        id: note.id,
+        format: 'html',
+        path: '/somewhere/else.html',
+      } as never),
+    ).resolves.toEqual({ ok: false, error: { code: 'invalid_input' } });
+    expect(invocations).toEqual([]);
+  });
+
   it('sends a revision-bound update through its fixed channel', async () => {
     const { invocations, ipc } = createIpc();
     const api = createInkNoteApi(ipc);

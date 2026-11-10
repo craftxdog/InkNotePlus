@@ -18,9 +18,12 @@ import type {
 } from '../../domain/note';
 import type { NoteSyncOutbox } from '../../domain/sync';
 import { SqliteSyncOutbox } from './sqlite-sync-outbox';
+import { withSqliteWrite } from './database';
+import type { ManageTrashInput } from '../../shared/ipc';
 import {
   noteMetadataSchema,
   defaultNoteMetadata,
+  type NoteMetadata,
 } from '../../shared/note-metadata';
 
 interface NoteRow {
@@ -71,27 +74,8 @@ export class SqliteNoteRepository implements NoteRepository {
       metadata: input.metadata ?? defaultNoteMetadata,
     };
 
-    this.inTransaction(() => {
-      this.requireNotebook(note.metadata?.notebookId);
-      this.database
-        .prepare(`
-          INSERT INTO notes (
-            id, title, body, is_pinned, created_at, updated_at, deleted_at, revision, metadata_json
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `)
-        .run(
-          note.id,
-          note.title,
-          note.body,
-          Number(note.isPinned),
-          note.createdAt,
-          note.updatedAt,
-          note.deletedAt,
-          note.revision,
-          JSON.stringify(note.metadata),
-        );
-      this.insertRevision(note);
-      this.syncOutbox.recordNote(note);
+    withSqliteWrite(this.database, () => {
+      this.insertSnapshot(note);
     });
 
     return note;
@@ -119,7 +103,7 @@ export class SqliteNoteRepository implements NoteRepository {
       isPinned: input.isPinned ?? current.isPinned,
     };
 
-    this.inTransaction(() => {
+    withSqliteWrite(this.database, () => {
       this.requireNotebook(next.metadata?.notebookId);
       const result = this.database
         .prepare(`
@@ -193,52 +177,148 @@ export class SqliteNoteRepository implements NoteRepository {
   }
 
   moveToTrash(id: NoteId): Note {
-    return this.changeDeletedAt(id, new Date().toISOString());
+    return withSqliteWrite(this.database, () => {
+      const note = this.requireNote(id);
+      return note.deletedAt === null
+        ? this.writePlacement(
+            note,
+            note.metadata ?? defaultNoteMetadata,
+            new Date().toISOString(),
+          )
+        : note;
+    });
   }
 
   restore(id: NoteId): Note {
-    return this.changeDeletedAt(id, null);
+    return withSqliteWrite(this.database, () => {
+      const note = this.requireNote(id);
+      return note.deletedAt === null
+        ? note
+        : this.writePlacement(note, note.metadata ?? defaultNoteMetadata, null);
+    });
   }
 
-  private changeDeletedAt(id: NoteId, deletedAt: string | null): Note {
-    const current = this.findById(id);
-    if (!current) {
-      throw new NoteNotFoundError(id);
-    }
+  manageTrash(input: ManageTrashInput): number {
+    return withSqliteWrite(this.database, () => {
+      if (input.action === 'restore') this.requireNotebook(input.notebookId);
+      const ids =
+        input.action === 'empty'
+          ? this.database
+              .prepare('SELECT id FROM notes WHERE deleted_at IS NOT NULL')
+              .all()
+              .map((row) => readString(row, 'id'))
+          : new Set(input.ids);
+      const now = new Date().toISOString();
+      let affected = 0;
+      for (const id of ids) {
+        const note = this.findById(id);
+        if (!note) continue;
+        const metadata = note.metadata ?? defaultNoteMetadata;
+        if (input.action === 'trash') {
+          if (note.deletedAt !== null) continue;
+          this.writePlacement(note, metadata, now);
+        } else if (input.action === 'restore') {
+          if (note.deletedAt === null) continue;
+          this.writePlacement(
+            note,
+            { ...metadata, notebookId: input.notebookId },
+            null,
+          );
+        } else {
+          if (note.deletedAt === null) throw new NoteConflictError(id);
+          this.purge(note, now);
+        }
+        affected++;
+      }
+      return affected;
+    });
+  }
 
+  // The caller owns the transaction when changing notes together with notebooks or tags.
+  writePlacement(
+    current: Note,
+    metadata: NoteMetadata,
+    deletedAt: string | null,
+  ): Note {
     const next: Note = {
       ...current,
+      metadata,
       deletedAt,
       updatedAt: new Date().toISOString(),
       revision: current.revision + 1,
     };
-
-    this.inTransaction(() => {
-      const result = this.database
-        .prepare(`
+    this.database
+      .prepare(`
           UPDATE notes
-          SET deleted_at = ?, updated_at = ?, revision = ?
+          SET deleted_at = ?, updated_at = ?, revision = ?, metadata_json = ?
           WHERE id = ?
         `)
-        .run(next.deletedAt, next.updatedAt, next.revision, next.id);
-
-      if (result.changes !== 1) {
-        throw new NoteNotFoundError(id);
-      }
-
-      this.insertRevision(next);
-      this.syncOutbox.recordNote(next);
-    });
-
+      .run(
+        next.deletedAt,
+        next.updatedAt,
+        next.revision,
+        JSON.stringify(metadata),
+        next.id,
+      );
+    this.insertRevision(next);
+    this.syncOutbox.recordNote(next);
     return next;
   }
 
-  private findById(id: NoteId): Note | null {
+  private purge(note: Note, now: string): void {
+    this.database
+      .prepare('DELETE FROM note_revisions WHERE note_id = ?')
+      .run(note.id);
+    this.database.prepare('DELETE FROM notes WHERE id = ?').run(note.id);
+    this.database
+      .prepare(
+        "DELETE FROM sync_outbox WHERE entity_type = 'note' AND entity_id = ?",
+      )
+      .run(note.id);
+    this.syncOutbox.recordNote({
+      ...note,
+      deletedAt: now,
+      updatedAt: now,
+      revision: note.revision + 1,
+    });
+  }
+
+  private requireNote(id: NoteId): Note {
+    const note = this.findById(id);
+    if (!note) throw new NoteNotFoundError(id);
+    return note;
+  }
+
+  findById(id: NoteId): Note | null {
     const row = this.database
       .prepare(`SELECT ${noteColumns} FROM notes WHERE id = ?`)
       .get(id);
 
     return row ? toNote(parseNoteRow(row)) : null;
+  }
+
+  // The caller owns the transaction for the note, revision, and outbox.
+  insertSnapshot(note: Note): void {
+    this.requireNotebook(note.metadata?.notebookId);
+    this.database
+      .prepare(`
+        INSERT INTO notes (
+          id, title, body, is_pinned, created_at, updated_at, deleted_at, revision, metadata_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+      .run(
+        note.id,
+        note.title,
+        note.body,
+        Number(note.isPinned),
+        note.createdAt,
+        note.updatedAt,
+        note.deletedAt,
+        note.revision,
+        JSON.stringify(note.metadata ?? defaultNoteMetadata),
+      );
+    this.insertRevision(note);
+    this.syncOutbox.recordNote(note);
   }
 
   private insertRevision(note: Note): void {
@@ -257,17 +337,6 @@ export class SqliteNoteRepository implements NoteRepository {
         note.updatedAt,
         JSON.stringify(note.metadata ?? defaultNoteMetadata),
       );
-  }
-
-  private inTransaction(action: () => void): void {
-    this.database.exec('BEGIN IMMEDIATE');
-    try {
-      action();
-      this.database.exec('COMMIT');
-    } catch (error) {
-      this.database.exec('ROLLBACK');
-      throw error;
-    }
   }
 }
 

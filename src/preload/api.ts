@@ -33,16 +33,37 @@ import {
   externalLinkResultSchema,
 } from '../shared/external-link';
 import {
+  TRANSFER_CHANNELS,
+  backupDirectoryResultSchema,
+  backupStatusResultSchema,
+  backupStatusSchema,
+  exportNoteSchema,
+  exportResultSchema,
+  restoreResultSchema,
+  type BackupStatus,
+  type ExportNoteInput,
+  type ExportSummary,
+  type RestoreSummary,
+} from '../shared/transfer';
+import {
   LIBRARY_CHANNELS,
   createNotebookSchema,
   libraryResultSchema,
   notebookResultSchema,
   libraryInputSchema,
+  deleteNotebookSchema,
+  deletedNotebooksResultSchema,
+  tagMutationResultSchema,
   type LibraryInput,
   type CreateNotebookInput,
   type LibrarySnapshot,
   type Notebook,
 } from '../shared/library';
+import {
+  deleteTagSchema,
+  updateTagSchema,
+  type UpdateTagInput,
+} from '../shared/tags';
 import {
   bootstrapResultSchema,
   preferencesResultSchema,
@@ -57,8 +78,10 @@ import {
 import {
   IPC_CHANNELS,
   createNoteInputSchema,
+  affectedCountResultSchema,
   failure,
   listNotesInputSchema,
+  manageTrashSchema,
   noteChangedEventSchema,
   noteIdInputSchema,
   noteListResultSchema,
@@ -66,6 +89,7 @@ import {
   searchNotesInputSchema,
   type CreateNoteInput,
   type ListNotesInput,
+  type ManageTrashInput,
   type NoteChangedEvent,
   type NoteIdInput,
   type NoteProjection,
@@ -82,6 +106,17 @@ import {
 } from '../shared/notebook-icons';
 
 export interface InkNoteApi {
+  transfer: {
+    backupStatus(): Promise<Result<BackupStatus>>;
+    chooseBackupDirectory(): Promise<Result<string | null>>;
+    enableBackup(): Promise<Result<BackupStatus>>;
+    disableBackup(): Promise<Result<BackupStatus>>;
+    runBackup(): Promise<Result<BackupStatus>>;
+    restoreBackup(): Promise<Result<RestoreSummary | null>>;
+    exportNote(input: ExportNoteInput): Promise<Result<ExportSummary | null>>;
+    exportLibrary(): Promise<Result<ExportSummary | null>>;
+    onBackupChanged(listener: (status: BackupStatus) => void): () => void;
+  };
   images: {
     importFile(): Promise<Result<ManagedImage | null>>;
     write(base64: string): Promise<Result<ManagedImage | null>>;
@@ -102,6 +137,9 @@ export interface InkNoteApi {
     get(input?: LibraryInput): Promise<Result<LibrarySnapshot>>;
     createNotebook(input: CreateNotebookInput): Promise<Result<Notebook>>;
     setNotebookIcon(input: SetNotebookIconInput): Promise<Result<Notebook>>;
+    deleteNotebook(id: string): Promise<Result<string[]>>;
+    updateTag(input: UpdateTagInput): Promise<Result<boolean>>;
+    deleteTag(name: string): Promise<Result<boolean>>;
   };
   preferences: {
     get(): Promise<Result<AppBootstrap>>;
@@ -114,6 +152,7 @@ export interface InkNoteApi {
     search(input: SearchNotesInput): Promise<Result<NoteProjection[]>>;
     moveToTrash(input: NoteIdInput): Promise<Result<NoteProjection>>;
     restore(input: NoteIdInput): Promise<Result<NoteProjection>>;
+    manageTrash(input: ManageTrashInput): Promise<Result<number>>;
   };
   onNoteChanged(listener: (event: NoteChangedEvent) => void): () => void;
 }
@@ -122,6 +161,42 @@ export function createInkNoteApi(
   ipcRenderer: Pick<IpcRenderer, 'invoke' | 'on' | 'removeListener'>,
 ): InkNoteApi {
   return {
+    transfer: {
+      backupStatus: () =>
+        transferCall(TRANSFER_CHANNELS.backupStatus, backupStatusResultSchema),
+      chooseBackupDirectory: () =>
+        transferCall(
+          TRANSFER_CHANNELS.chooseBackupDirectory,
+          backupDirectoryResultSchema,
+        ),
+      enableBackup: () =>
+        transferCall(TRANSFER_CHANNELS.enableBackup, backupStatusResultSchema),
+      disableBackup: () =>
+        transferCall(TRANSFER_CHANNELS.disableBackup, backupStatusResultSchema),
+      runBackup: () =>
+        transferCall(TRANSFER_CHANNELS.runBackup, backupStatusResultSchema),
+      restoreBackup: () =>
+        transferCall(TRANSFER_CHANNELS.restoreBackup, restoreResultSchema),
+      exportNote: (input) =>
+        invoke(
+          ipcRenderer,
+          TRANSFER_CHANNELS.exportNote,
+          input,
+          exportNoteSchema,
+          exportResultSchema,
+        ),
+      exportLibrary: () =>
+        transferCall(TRANSFER_CHANNELS.exportLibrary, exportResultSchema),
+      onBackupChanged(listener) {
+        const handler = (_event: unknown, value: unknown) => {
+          const parsed = backupStatusSchema.safeParse(value);
+          if (parsed.success) listener(parsed.data);
+        };
+        ipcRenderer.on(TRANSFER_CHANNELS.backupChanged, handler);
+        return () =>
+          ipcRenderer.removeListener(TRANSFER_CHANNELS.backupChanged, handler);
+      },
+    },
     images: {
       importFile: () =>
         invoke(
@@ -271,6 +346,30 @@ export function createInkNoteApi(
           setNotebookIconSchema,
           notebookResultSchema,
         ),
+      deleteNotebook: (id) =>
+        invoke(
+          ipcRenderer,
+          LIBRARY_CHANNELS.deleteNotebook,
+          { id },
+          deleteNotebookSchema,
+          deletedNotebooksResultSchema,
+        ),
+      updateTag: (input) =>
+        invoke(
+          ipcRenderer,
+          LIBRARY_CHANNELS.updateTag,
+          input,
+          updateTagSchema,
+          tagMutationResultSchema,
+        ),
+      deleteTag: (name) =>
+        invoke(
+          ipcRenderer,
+          LIBRARY_CHANNELS.deleteTag,
+          { name },
+          deleteTagSchema,
+          tagMutationResultSchema,
+        ),
     },
     preferences: {
       get: () =>
@@ -339,6 +438,14 @@ export function createInkNoteApi(
           noteIdInputSchema,
           noteResultSchema,
         ),
+      manageTrash: (input) =>
+        invoke(
+          ipcRenderer,
+          IPC_CHANNELS.notes.manageTrash,
+          input,
+          manageTrashSchema,
+          affectedCountResultSchema,
+        ),
     },
     onNoteChanged(listener) {
       const wrappedListener = (_event: unknown, payload: unknown) => {
@@ -357,6 +464,16 @@ export function createInkNoteApi(
       };
     },
   };
+  function transferCall<T>(channel: string, result: InputSchema<Result<T>>) {
+    return invoke(
+      ipcRenderer,
+      channel,
+      {},
+      emptyPreferencesInputSchema,
+      result,
+    );
+  }
+
   async function themeInvoke<I, O>(
     channel: string,
     input: I,

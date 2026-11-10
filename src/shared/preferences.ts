@@ -105,6 +105,21 @@ export const bootstrapSchema = z
 export type ThemeId = z.output<typeof themeIdSchema>;
 export type EditorMode = z.output<typeof editorModeSchema>;
 export type PreferencesPatch = z.output<typeof preferencesPatchSchema>;
+
+export function pruneNotebookPreferences(
+  preferences: Preferences,
+  missing: (id: string) => boolean,
+): PreferencesPatch {
+  const patch: PreferencesPatch = {};
+  if (preferences.defaultNotebookId && missing(preferences.defaultNotebookId))
+    patch.defaultNotebookId = null;
+  if (preferences.notebookScopeId && missing(preferences.notebookScopeId))
+    patch.notebookScopeId = null;
+  const expanded = preferences.expandedNotebookIds.filter((id) => !missing(id));
+  if (expanded.length !== preferences.expandedNotebookIds.length)
+    patch.expandedNotebookIds = expanded;
+  return patch;
+}
 export type AppBootstrap = z.output<typeof bootstrapSchema>;
 export const PREFERENCES_CHANNELS = {
   get: 'preferences:get',

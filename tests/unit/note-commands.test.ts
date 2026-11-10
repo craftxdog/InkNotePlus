@@ -34,6 +34,7 @@ function createRepository(
     search: () => [note],
     moveToTrash: () => ({ ...note, deletedAt: note.updatedAt, revision: 2 }),
     restore: () => note,
+    manageTrash: () => 0,
     ...overrides,
   };
 }

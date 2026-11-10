@@ -11,6 +11,11 @@ export const coreConfig = {
     schema: preferencesSchema,
     defaultValue: defaultPreferences,
   }),
+  backupDirectory: defineConfig({
+    key: 'core.backup.directory',
+    schema: z.string().min(1).nullable(),
+    defaultValue: null,
+  }),
   window: {
     initialHeight: defineConfig({
       key: 'core.window.initialHeight',
@@ -37,6 +42,7 @@ export const coreConfig = {
 
 export const coreConfigDefinitions: readonly ConfigDefinition<unknown>[] = [
   coreConfig.appearance,
+  coreConfig.backupDirectory,
   coreConfig.window.initialHeight,
   coreConfig.window.initialWidth,
   coreConfig.window.minimumHeight,

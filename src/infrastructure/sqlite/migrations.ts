@@ -113,4 +113,26 @@ export const migrations: readonly SqliteMigration[] = [
     version: 4,
     sql: `ALTER TABLE notebooks ADD COLUMN icon TEXT NOT NULL DEFAULT 'book-open';`,
   },
+  {
+    version: 5,
+    sql: `
+      CREATE TABLE tags (name TEXT PRIMARY KEY NOT NULL, color TEXT) STRICT;
+      INSERT INTO tags (name)
+        SELECT DISTINCT tag.value
+        FROM notes, json_each(notes.metadata_json, '$.tags') tag
+        WHERE tag.type = 'text' AND length(tag.value) > 0;
+
+      CREATE TRIGGER notes_register_tags_on_insert
+      AFTER INSERT ON notes BEGIN
+        INSERT OR IGNORE INTO tags (name)
+          SELECT value FROM json_each(new.metadata_json, '$.tags') WHERE type = 'text';
+      END;
+
+      CREATE TRIGGER notes_register_tags_on_update
+      AFTER UPDATE OF metadata_json ON notes BEGIN
+        INSERT OR IGNORE INTO tags (name)
+          SELECT value FROM json_each(new.metadata_json, '$.tags') WHERE type = 'text';
+      END;
+    `,
+  },
 ];

@@ -7,8 +7,10 @@ import { NOTE_COMMAND_IDS } from '../../application/note-commands';
 import {
   IPC_CHANNELS,
   createNoteInputSchema,
+  affectedCountSchema,
   failure,
   listNotesInputSchema,
+  manageTrashSchema,
   noteChangedEventSchema,
   noteIdInputSchema,
   noteListSchema,
@@ -32,11 +34,18 @@ interface NoteIpcHandlerOptions {
   commands: CommandRegistry;
   getMainWebContents: () => WebContents | null;
   publishNoteChanged?: (event: NoteChangedEvent) => void;
+  onTrashChanged?: () => void;
 }
 
 export function registerNoteIpcHandlers(
   options: NoteIpcHandlerOptions,
 ): Disposable {
+  const manageTrash = createInvokeHandler(
+    options,
+    manageTrashSchema,
+    NOTE_COMMAND_IDS.manageTrash,
+    affectedCountSchema,
+  );
   const handlers: readonly [string, InvokeHandler][] = [
     [
       IPC_CHANNELS.notes.create,
@@ -91,6 +100,14 @@ export function registerNoteIpcHandlers(
         NOTE_COMMAND_IDS.restore,
         'restored',
       ),
+    ],
+    [
+      IPC_CHANNELS.notes.manageTrash,
+      async (event, input) => {
+        const result = await manageTrash(event, input);
+        if (result.ok && result.data > 0) options.onTrashChanged?.();
+        return result;
+      },
     ],
   ];
   const registeredChannels: string[] = [];
@@ -164,7 +181,7 @@ function createInvokeHandler<TInput, TOutput>(
   inputSchema: InputSchema<TInput>,
   commandId: string,
   outputSchema: InputSchema<TOutput>,
-): InvokeHandler {
+): (event: IpcMainInvokeEvent, input: unknown) => Promise<Result<TOutput>> {
   return async (event, input) => {
     if (!isTrustedIpcEvent(event, options.getMainWebContents())) {
       return failure('unavailable');

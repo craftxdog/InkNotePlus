@@ -4,7 +4,11 @@ import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { safeFileSegment, verifyMacDmgLayout } from './lib/macos-dmg.mjs';
+import {
+  safeFileSegment,
+  verifyMacDmgImage,
+  verifyMacDmgLayout,
+} from './lib/macos-dmg.mjs';
 
 if (process.platform !== 'darwin')
   throw new Error('DMG installation verification requires macOS.');
@@ -49,7 +53,7 @@ function run(command, args) {
   );
 }
 try {
-  run('/usr/bin/hdiutil', ['verify', image]);
+  await verifyMacDmgImage(image, root);
   if (modern)
     run('/usr/sbin/diskutil', [
       'image',

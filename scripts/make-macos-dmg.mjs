@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import {
   safeFileSegment,
   stageMacDmg,
+  verifyMacDmgImage,
   verifyMacDmgLayout,
 } from './lib/macos-dmg.mjs';
 
@@ -113,7 +114,7 @@ try {
       image,
     ]);
   }
-  run('/usr/bin/hdiutil', ['verify', image]);
+  await verifyMacDmgImage(image, projectRoot);
   renameSync(image, outputPath);
   const digest = createHash('sha256');
   for await (const chunk of createReadStream(outputPath)) digest.update(chunk);

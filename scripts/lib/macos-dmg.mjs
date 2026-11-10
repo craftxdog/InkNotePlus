@@ -1,4 +1,6 @@
+import { spawnSync } from 'node:child_process';
 import { cp, mkdir, readlink, stat, symlink } from 'node:fs/promises';
+import { setTimeout } from 'node:timers/promises';
 import path from 'node:path';
 
 export function safeFileSegment(value, field) {
@@ -31,4 +33,25 @@ export async function verifyMacDmgLayout(directory, productName) {
     (await readlink(path.join(directory, 'Applications'))) !== '/Applications'
   )
     throw new Error('The disk image is missing its Applications shortcut.');
+}
+
+export async function verifyMacDmgImage(image, cwd) {
+  const retryDelays = [1500, 3000];
+  for (let attempt = 0; ; attempt++) {
+    const result = spawnSync('/usr/bin/hdiutil', ['verify', image], {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['inherit', 'inherit', 'pipe'],
+    });
+    if (result.error) throw result.error;
+    if (result.status === 0) return;
+
+    const message = result.stderr.trim();
+    const delay = retryDelays[attempt];
+    if (!delay || !message.includes('Resource temporarily unavailable')) {
+      throw new Error(message || `hdiutil verify failed (${result.status}).`);
+    }
+    console.warn(`${message}\nRetrying DMG verification in ${delay} ms.`);
+    await setTimeout(delay);
+  }
 }

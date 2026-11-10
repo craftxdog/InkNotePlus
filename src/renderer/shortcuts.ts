@@ -4,6 +4,7 @@ import {
   closeSearchPanel,
   findNext,
   findPrevious,
+  searchPanelOpen,
 } from '@codemirror/search';
 import type { WorkspaceStoreApi } from './state/workspace-store';
 import {
@@ -11,7 +12,10 @@ import {
   shortcutFor,
   type ShortcutCommand,
 } from '../shared/keybindings';
-import { formatSelection } from './editor/formatting';
+import { editorCommands } from './editor/editor-commands';
+import { linkAtCursor } from './editor/text-commands';
+import { linkedNoteId, noteMarkdownLink } from '../shared/note-link';
+import { markdownTabKeys } from '../shared/editor-keybindings';
 
 export function keystrokeMatches(
   stroke: string,
@@ -26,7 +30,9 @@ export function keystrokeMatches(
   const modifiers = new Set(parts.split('-').filter(Boolean));
   return (
     (event.key.toLowerCase() === key?.toLowerCase() ||
-      (/^[1-5]$/.test(key) && event.code === `Digit${key}`)) &&
+      (/^[1-5]$/.test(key) && event.code === `Digit${key}`) ||
+      (key === '[' && event.key === '{') ||
+      (key === ']' && event.key === '}')) &&
     event.metaKey ===
       (modifiers.has('Meta') || (mac && modifiers.has('Mod'))) &&
     event.ctrlKey ===
@@ -43,6 +49,9 @@ export function executeShortcut(
 ): boolean {
   const state = store.getState();
   switch (command) {
+    case 'core:toggle-telescope':
+      state.setCommandPaletteOpen(!state.commandPaletteOpen);
+      return true;
     case 'application:open-preferences':
       if (state.settingsOpen && document.activeElement instanceof HTMLElement)
         document.activeElement.blur();
@@ -54,6 +63,16 @@ export function executeShortcut(
     case 'core:choose-template':
       state.setTemplatePickerOpen(true);
       return true;
+    case 'core:open-prev-note':
+    case 'core:open-next-note': {
+      const notes = state.noteList.notes;
+      const current = notes.findIndex(({ id }) => id === state.activeNoteId);
+      const next =
+        notes[current + (command === 'core:open-next-note' ? 1 : -1)];
+      if (!next) return false;
+      state.selectNote(next.id);
+      return true;
+    }
     case 'core:save-note':
       void state.flushDrafts();
       return true;
@@ -68,6 +87,20 @@ export function executeShortcut(
         lineNumbers: !state.preferences.lineNumbers,
       });
       return true;
+    case 'editor:toggle-readable-line-length':
+      void state.updatePreferences({
+        readableLineLength: !state.preferences.readableLineLength,
+      });
+      return true;
+    case 'core:copy-note-link': {
+      const { noteId, title } = state.document;
+      if (!noteId || !navigator.clipboard || state.navigation.type === 'trash')
+        return false;
+      void navigator.clipboard
+        .writeText(noteMarkdownLink({ id: noteId, title }))
+        .catch(() => {});
+      return true;
+    }
     case 'core:focus-search':
       void state.setSearchGlobal(false);
       document.querySelector<HTMLInputElement>('#note-search')?.focus();
@@ -122,23 +155,67 @@ export function executeShortcut(
         editorMode: state.preferences.editorMode === 'split' ? 'edit' : 'split',
       });
       return true;
+    case 'view:show-editor':
+    case 'view:show-side-by-side':
+    case 'view:show-preview':
+      void state.updatePreferences({
+        editorMode:
+          command === 'view:show-editor'
+            ? 'edit'
+            : command === 'view:show-preview'
+              ? 'preview'
+              : 'split',
+      });
+      return true;
+    case 'editor:focus-title':
+      document.querySelector<HTMLElement>('.document-title-input')?.focus();
+      return true;
+    case 'editor:focus':
+    case 'editor:focus-mde':
+    case 'editor:focus-preview':
+    case 'editor:focus-and-go-doc-start': {
+      const preview =
+        command === 'editor:focus-preview' ||
+        (command === 'editor:focus' &&
+          state.preferences.editorMode === 'preview');
+      if (preview && state.preferences.editorMode === 'edit')
+        void state.updatePreferences({ editorMode: 'preview' });
+      if (!preview && state.preferences.editorMode === 'preview')
+        void state.updatePreferences({ editorMode: 'edit' });
+      requestAnimationFrame(() => {
+        if (preview)
+          document.querySelector<HTMLElement>('.pane--preview')?.focus();
+        else {
+          const element = document.querySelector<HTMLElement>('.cm-editor');
+          const view = element && EditorView.findFromDOM(element);
+          if (!view) return;
+          if (command === 'editor:focus-and-go-doc-start')
+            view.dispatch({ selection: { anchor: 0 }, scrollIntoView: true });
+          view.focus();
+        }
+      });
+      return true;
+    }
     default: {
       const element =
         target instanceof Element ? target.closest('.cm-editor') : null;
       const view = element && EditorView.findFromDOM(element as HTMLElement);
       if (!view || state.navigation.type === 'trash') return false;
-      if (command === 'editor:find') return openSearchPanel(view);
+      if (command === 'editor:find')
+        return searchPanelOpen(view.state)
+          ? closeSearchPanel(view)
+          : openSearchPanel(view);
       if (command === 'editor:close-search') return closeSearchPanel(view);
       if (command === 'editor:find-next') return findNext(view);
-      if (command === 'editor:find-previous') return findPrevious(view);
-      const format = {
-        'editor:toggle-bold': 'bold',
-        'editor:toggle-italic': 'italic',
-        'editor:toggle-strikethrough': 'strike',
-        'editor:insert-link': 'link',
-      } as const;
-      formatSelection(view, format[command]);
-      return true;
+      if (command === 'editor:find-prev') return findPrevious(view);
+      if (command === 'editor:open-link') {
+        const url = linkAtCursor(view);
+        if (!url) return false;
+        if (linkedNoteId(url)) void state.openNoteLink(url);
+        else void state.openExternalLink(url);
+        return true;
+      }
+      return editorCommands[command](view);
     }
   }
 }
@@ -152,11 +229,20 @@ export function installShortcuts(
 ) {
   let prefix: string[] = [];
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let bindings:
+    | ReturnType<WorkspaceStoreApi['getState']>['preferences']['keybindings']
+    | undefined;
+  let platform: string | undefined;
+  let shortcuts: {
+    command: (typeof shortcutCommands)[number];
+    keys: string[];
+    custom: boolean;
+  }[] = [];
   const reset = () => {
     prefix = [];
     clearTimeout(timer);
   };
-  const listener = (event: KeyboardEvent) => {
+  const handle = (event: KeyboardEvent, afterEditor = false) => {
     if (
       event.isComposing ||
       event.defaultPrevented ||
@@ -166,40 +252,69 @@ export function installShortcuts(
     const state = store.getState();
     const element = event.target instanceof Element ? event.target : null;
     if (element?.closest('[data-shortcut-input]')) return;
-    const editor = !!element?.closest('.cm-editor');
+    const editor = !!element?.closest('.cm-content');
+    const editorPanel = !!element?.closest('.cm-panel.cm-search');
     const list = !!element?.closest('.note-list-item');
     const search = !!element?.closest('#note-search');
-    const commands = shortcutCommands
-      .filter(
-        (command) =>
-          ((!state.settingsOpen && !state.templatePickerOpen) ||
-            command.id === 'application:open-preferences') &&
-          (command.scope === 'app' ||
-            (command.scope === 'editor' && editor) ||
-            (command.scope === 'note-list' && list) ||
-            (command.scope === 'search' && search)),
-      )
-      .toSorted(
-        (a, b) => Number(b.scope === 'editor') - Number(a.scope === 'editor'),
-      );
-    const matches = commands
-      .map((command) => ({
-        command,
-        keys: shortcutFor(
+    const vimFirst =
+      editor &&
+      state.preferences.keyboardMode === 'vim' &&
+      !event.metaKey &&
+      (event.ctrlKey || event.key === 'Escape');
+    if (vimFirst !== afterEditor) return;
+    if (
+      bindings !== state.preferences.keybindings ||
+      platform !== state.platform
+    ) {
+      bindings = state.preferences.keybindings;
+      platform = state.platform;
+      reset();
+      const overrides = new Set(bindings.map(({ command }) => command));
+      shortcuts = shortcutCommands
+        .map((command) => ({
           command,
-          state.preferences.keybindings,
-          state.platform === 'darwin',
-        ).split(' '),
-      }))
-      .filter(
-        ({ keys }) =>
-          prefix.every((key, index) => keys[index] === key) &&
-          keystrokeMatches(
-            keys[prefix.length] ?? '',
-            event,
+          custom: overrides.has(command.id),
+          keys: shortcutFor(
+            command,
+            state.preferences.keybindings,
             state.platform === 'darwin',
-          ),
-      );
+          ).split(' '),
+        }))
+        .filter(({ keys }) => !!keys[0])
+        .sort(
+          (a, b) =>
+            Number(b.command.scope === 'editor') -
+            Number(a.command.scope === 'editor'),
+        );
+    }
+    let matches = shortcuts.filter(
+      ({ command, keys }) =>
+        ((!state.settingsOpen &&
+          !state.templatePickerOpen &&
+          !state.commandPaletteOpen &&
+          !state.notebookDialogOpen) ||
+          (state.settingsOpen &&
+            command.id === 'application:open-preferences') ||
+          (state.commandPaletteOpen &&
+            command.id === 'core:toggle-telescope')) &&
+        (command.scope === 'app' ||
+          (command.scope === 'editor' &&
+            (editor ||
+              (editorPanel &&
+                /^(editor:(?:find|close-search|replace|clear-find|toggle-regex|toggle-case-sensitive))/.test(
+                  command.id,
+                )))) ||
+          (command.scope === 'note-list' && list) ||
+          (command.scope === 'search' && search)) &&
+        prefix.every((key, index) => keys[index] === key) &&
+        keystrokeMatches(
+          keys[prefix.length] ?? '',
+          event,
+          state.platform === 'darwin',
+        ),
+    );
+    if (matches.some(({ custom }) => custom))
+      matches = matches.filter(({ custom }) => custom);
     if (!matches.length) {
       reset();
       return;
@@ -209,7 +324,24 @@ export function installShortcuts(
     );
     if (complete) {
       reset();
-      if (!executeShortcut(store, complete.command.id, event.target)) return;
+      const id = complete.command.id;
+      if (
+        (id === 'editor:indent-more' || id === 'editor:indent-less') &&
+        complete.keys.length === 1 &&
+        complete.keys[0] === markdownTabKeys[id]
+      )
+        return;
+      const repeatedFormat =
+        event.repeat &&
+        (id.startsWith('core:toggle-') ||
+          id === 'core:strong' ||
+          id === 'core:emphasize' ||
+          id === 'core:strikethrough');
+      if (
+        !repeatedFormat &&
+        !executeShortcut(store, complete.command.id, event.target)
+      )
+        return;
     } else {
       prefix.push(matches[0].keys[prefix.length]);
       clearTimeout(timer);
@@ -218,11 +350,15 @@ export function installShortcuts(
     event.preventDefault();
     event.stopPropagation();
   };
+  const listener = (event: KeyboardEvent) => handle(event);
+  const afterVim = (event: KeyboardEvent) => handle(event, true);
   surface.addEventListener('keydown', listener, true);
+  surface.addEventListener('keydown', afterVim);
   surface.addEventListener('blur', reset);
   return () => {
     reset();
     surface.removeEventListener('keydown', listener, true);
+    surface.removeEventListener('keydown', afterVim);
     surface.removeEventListener('blur', reset);
   };
 }

@@ -46,6 +46,7 @@ export interface WorkspaceState {
   readonly themeError: string | null;
   readonly themeRevision: number;
   readonly templatePickerOpen: boolean;
+  readonly commandPaletteOpen: boolean;
   readonly preferences: Preferences;
   readonly styleNonce: string | null;
   readonly platform: 'darwin' | 'win32' | 'linux';
@@ -75,6 +76,7 @@ export interface WorkspaceActions {
   themeDidLoad(): void;
   themeDidFail(): void;
   setTemplatePickerOpen(open: boolean): void;
+  setCommandPaletteOpen(open: boolean): void;
   getTemplateNotes(
     query?: string,
     offset?: number,
@@ -86,6 +88,9 @@ export interface WorkspaceActions {
     source: Pick<NoteProjection, 'title' | 'body' | 'metadata'>,
   ): Promise<void>;
   openExternalLink(url: string): Promise<Result<boolean>>;
+  openNoteLink(url: string): Promise<Result<boolean>>;
+  searchLinkNotes(query: string): Promise<Result<NoteProjection[]>>;
+  createLinkedNote(title: string): Promise<Result<NoteProjection>>;
   updatePreferences(patch: PreferencesPatch): Promise<void>;
   setSettingsOpen(open: boolean): void;
   setNotebookDialogOpen(open: boolean, parentId?: string | null): void;

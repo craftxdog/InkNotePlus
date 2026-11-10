@@ -34,7 +34,7 @@ it('exposes Inkdrop wrapping and line-number commands without inventing default 
 });
 it('rejects conflicting shortcut prefixes across editor and app contexts, including equivalent platform modifiers', () => {
   expect(shortcutConflict('core:new-note', 'Mod-k Mod-b', [], true)?.id).toBe(
-    'editor:insert-link',
+    'core:toggle-telescope',
   );
   expect(shortcutConflict('core:new-note', 'Ctrl-s', [], false)?.id).toBe(
     'core:save-note',
@@ -43,7 +43,7 @@ it('rejects conflicting shortcut prefixes across editor and app contexts, includ
     shortcutConflict(
       'core:new-note',
       'Mod-k Mod-b',
-      [{ command: 'editor:insert-link', keystroke: '' }],
+      [{ command: 'core:toggle-telescope', keystroke: '' }],
       true,
     ),
   ).toBeUndefined();
@@ -121,4 +121,13 @@ it('fills new preferences for existing installations and never injects defaults 
     preferencesPatchSchema.safeParse({ editorFontFamily: 'url(https://bad)' })
       .success,
   ).toBe(false);
+});
+
+it('keeps stored shortcut overrides when Inkdrop command IDs replace old aliases', () => {
+  const preferences = preferencesSchema.parse({
+    keybindings: [{ command: 'editor:toggle-bold', keystroke: 'Mod-Shift-b' }],
+  });
+  expect(preferences.keybindings).toEqual([
+    { command: 'core:strong', keystroke: 'Mod-Shift-b' },
+  ]);
 });

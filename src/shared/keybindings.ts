@@ -1,4 +1,5 @@
 import { z } from './validation';
+import { editorShortcutCommands } from './editor-keybindings';
 
 // Command IDs and scopes follow Inkdrop's command/keymap model. Only commands
 // implemented by this host are exposed; values never evaluate JavaScript.
@@ -36,7 +37,7 @@ export const shortcutCommands = [
     key: 'Mod-g',
   },
   {
-    id: 'editor:find-previous',
+    id: 'editor:find-prev',
     label: 'Coincidencia anterior',
     scope: 'editor',
     key: 'Mod-Shift-g',
@@ -130,24 +131,62 @@ export const shortcutCommands = [
     scope: 'app',
     key: 'Mod-p',
   },
-  { id: 'editor:toggle-bold', label: 'Negrita', scope: 'editor', key: 'Mod-b' },
+  { id: 'core:strong', label: 'Negrita', scope: 'editor', key: 'Mod-b' },
   {
-    id: 'editor:toggle-italic',
+    id: 'core:emphasize',
     label: 'Cursiva',
     scope: 'editor',
     key: 'Mod-i',
   },
   {
-    id: 'editor:toggle-strikethrough',
+    id: 'core:strikethrough',
     label: 'Tachado',
     scope: 'editor',
     key: 'Mod-Shift-x',
   },
   {
-    id: 'editor:insert-link',
+    id: 'core:insert-link',
     label: 'Insertar enlace',
     scope: 'editor',
+    key: '',
+  },
+  {
+    id: 'core:toggle-telescope',
+    label: 'Buscar comandos',
+    scope: 'app',
     key: 'Mod-k',
+  },
+  { id: 'editor:focus', label: 'Enfocar la nota', scope: 'app', key: '' },
+  { id: 'editor:focus-mde', label: 'Enfocar el editor', scope: 'app', key: '' },
+  {
+    id: 'editor:focus-preview',
+    label: 'Enfocar vista previa',
+    scope: 'app',
+    key: '',
+  },
+  {
+    id: 'editor:focus-title',
+    label: 'Enfocar el título',
+    scope: 'app',
+    key: '',
+  },
+  {
+    id: 'editor:focus-and-go-doc-start',
+    label: 'Ir al inicio de la nota',
+    scope: 'app',
+    key: '',
+  },
+  {
+    id: 'core:open-prev-note',
+    label: 'Nota anterior',
+    scope: 'app',
+    key: 'Mod-Shift-[',
+  },
+  {
+    id: 'core:open-next-note',
+    label: 'Nota siguiente',
+    scope: 'app',
+    key: 'Mod-Shift-]',
   },
   {
     id: 'editor:toggle-line-wrapping',
@@ -161,9 +200,52 @@ export const shortcutCommands = [
     scope: 'app',
     key: '',
   },
+  {
+    id: 'editor:toggle-readable-line-length',
+    label: 'Alternar anchura de lectura',
+    scope: 'app',
+    key: '',
+  },
+  {
+    id: 'core:copy-note-link',
+    label: 'Copiar enlace Markdown de la nota',
+    scope: 'app',
+    key: '',
+  },
+  { id: 'view:show-editor', label: 'Sólo editor', scope: 'app', key: '' },
+  {
+    id: 'view:show-side-by-side',
+    label: 'Editor y vista previa',
+    scope: 'app',
+    key: '',
+  },
+  {
+    id: 'view:show-preview',
+    label: 'Sólo vista previa',
+    scope: 'app',
+    key: '',
+  },
+  ...editorShortcutCommands,
 ] as const;
 export type ShortcutCommand = (typeof shortcutCommands)[number]['id'];
-const commandIdSchema = z.enum(shortcutCommands.map((command) => command.id));
+const legacyCommandIds: Readonly<Record<string, ShortcutCommand>> = {
+  'editor:toggle-bold': 'core:strong',
+  'editor:toggle-italic': 'core:emphasize',
+  'editor:toggle-strikethrough': 'core:strikethrough',
+  'editor:insert-link': 'core:insert-link',
+  'editor:find-previous': 'editor:find-prev',
+};
+const commandIdSchema = z.preprocess(
+  (value) =>
+    typeof value === 'string' && Object.hasOwn(legacyCommandIds, value)
+      ? legacyCommandIds[value]
+      : value,
+  z.enum(shortcutCommands.map((command) => command.id)),
+);
+export function resolveShortcutCommand(value: unknown) {
+  const result = commandIdSchema.safeParse(value);
+  return result.success ? result.data : undefined;
+}
 export const keystrokeSchema = z
   .string()
   .max(80)
@@ -173,7 +255,7 @@ export const keystrokeSchema = z
       value
         .split(' ')
         .every((stroke) =>
-          /^(?:(?:Mod|Ctrl|Alt|Shift|Meta)-)*(?:[a-z0-9,./;=[\]\\`'-]|Enter|Escape|Tab|Backspace|Delete|Arrow(?:Up|Down|Left|Right)|F(?:[1-9]|1[0-2]))$/.test(
+          /^(?:(?:Mod|Ctrl|Alt|Shift|Meta)-)*(?:[a-z0-9,./;=[\]\\`'-]|Enter|Escape|Tab|Backspace|Delete|Home|End|PageUp|PageDown|Arrow(?:Up|Down|Left|Right)|F(?:[1-9]|1[0-2]))$/.test(
             stroke,
           ),
         ),

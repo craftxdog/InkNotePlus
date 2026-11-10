@@ -135,6 +135,31 @@
     inline-size: 28px;
     block-size: 26px;
   }
+  .inknote-floating-format [role='toolbar'] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 4px;
+    max-inline-size: min(100vw - 24px, 420px);
+  }
+  .inknote-floating-format .icon-button {
+    inline-size: 28px;
+    block-size: 28px;
+  }
+  .table-toolbar-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding-inline: 4px;
+  }
+  .table-toolbar-control select {
+    min-inline-size: 0;
+    max-inline-size: 140px;
+    background: var(--input-background);
+    border: 1px solid var(--border-color);
+    border-radius: var(--5px);
+    font-size: var(--small);
+  }
   .editor-toolbar[hidden] {
     display: none;
   }
@@ -178,6 +203,17 @@
   }
   .editor-layout[data-editor-mode='preview'] .pane--preview {
     border: 0;
+  }
+  .editor-layout[data-readable-width='true'] .mde-preview {
+    max-inline-size: var(--inknote-editor-readable-width, 1024px);
+    margin-inline: auto;
+  }
+  .note-link-snippet {
+    max-inline-size: 32ch;
+    margin: 0;
+    padding: 6px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
   .markdown-editor {
     block-size: 100%;

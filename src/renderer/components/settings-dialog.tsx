@@ -245,6 +245,21 @@ export function SettingsDialog() {
                 <SettingGroup title="Comportamiento">
                   {toggle('lineNumbers', 'Mostrar números de línea')}
                   <label>
+                    Modo de teclado
+                    <select
+                      value={preferences.keyboardMode}
+                      onChange={(event) =>
+                        void update({
+                          keyboardMode:
+                            event.target.value === 'vim' ? 'vim' : 'standard',
+                        })
+                      }
+                    >
+                      <option value="standard">Estándar</option>
+                      <option value="vim">Vim</option>
+                    </select>
+                  </label>
+                  <label>
                     Ajuste de líneas (word wrap)
                     <select
                       aria-label="Ajuste de líneas (word wrap)"
@@ -270,8 +285,29 @@ export function SettingsDialog() {
                     horizontalmente.
                   </p>
                   {toggle('activeLine', 'Resaltar línea activa')}
+                  {toggle('readableLineLength', 'Limitar anchura de lectura')}
                   {toggle('spellcheck', 'Revisión ortográfica del sistema')}
                   {toggle('showToolbar', 'Mostrar barra de formato')}
+                  <label>
+                    Posición de la barra de formato
+                    <select
+                      value={preferences.toolbarPlacement}
+                      disabled={!preferences.showToolbar}
+                      onChange={(event) =>
+                        void update({
+                          toolbarPlacement:
+                            event.target.value === 'fixed'
+                              ? 'fixed'
+                              : 'floating',
+                        })
+                      }
+                    >
+                      <option value="floating">
+                        Flotante sobre la selección
+                      </option>
+                      <option value="fixed">Fija sobre el editor</option>
+                    </select>
+                  </label>
                 </SettingGroup>
               </>
             )}

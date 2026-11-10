@@ -26,6 +26,8 @@ export interface UpdateNoteInput extends CreateNoteInput {
 }
 
 export interface ListNotesInput {
+  id?: NoteId;
+  titleContains?: string;
   limit?: number;
   offset?: number;
   scopeId?: string;

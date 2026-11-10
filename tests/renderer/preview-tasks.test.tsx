@@ -11,7 +11,7 @@ import { afterEach, expect, it } from 'vitest';
 import { App } from '../../src/renderer/app';
 import { createWorkspaceStore } from '../../src/renderer/state/workspace-store';
 import { success } from '../../src/shared/ipc';
-import { createApi, firstNote } from '../support/renderer-api';
+import { createApi, firstNote, secondNote } from '../support/renderer-api';
 afterEach(cleanup);
 
 it('toggles the exact duplicate task in Markdown, editor and preview while ignoring fenced text', async () => {
@@ -57,4 +57,25 @@ it('ignores a checkbox callback from an older rendered document', async () => {
   store.getState().updateDraft({ body: '- [ ] newer text' });
   store.getState().toggleTask('- [ ] old', 3, true);
   expect(store.getState().document.body).toBe('- [ ] newer text');
+});
+
+it('renders only safe highlight tags and follows internal note links inside the app', async () => {
+  const body = `A <mark>**highlight**</mark>. <img src="bad" onerror="alert(1)">\n\n[Open second](inknote://note/${secondNote.id})`;
+  const { api } = createApi({
+    list: async (input) =>
+      success(
+        input?.id === secondNote.id ? [secondNote] : [{ ...firstNote, body }],
+      ),
+  });
+  const store = createWorkspaceStore(api);
+  const { container } = render(<App store={store} />);
+  const link = await screen.findByRole('link', { name: 'Open second' });
+  expect(container.querySelector('.mde-preview mark strong')?.textContent).toBe(
+    'highlight',
+  );
+  expect(container.querySelector('.mde-preview img')).toBeNull();
+  fireEvent.click(link);
+  await waitFor(() =>
+    expect(store.getState().document.noteId).toBe(secondNote.id),
+  );
 });

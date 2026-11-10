@@ -1,5 +1,11 @@
-import { useEffect, useRef } from 'react';
-import { Annotation, Compartment, EditorState } from '@codemirror/state';
+import { useEffect, useMemo, useRef } from 'react';
+import {
+  Annotation,
+  Compartment,
+  EditorState,
+  Prec,
+  type Extension,
+} from '@codemirror/state';
 import { search } from '@codemirror/search';
 import type { Preferences } from '../../shared/preferences';
 import {
@@ -9,6 +15,8 @@ import {
   highlightActiveLineGutter,
   keymap,
   lineNumbers,
+  rectangularSelection,
+  crosshairCursor,
 } from '@codemirror/view';
 import {
   defaultKeymap,
@@ -19,15 +27,41 @@ import {
 import {
   bracketMatching,
   foldGutter,
+  syntaxTree,
   syntaxHighlighting,
 } from '@codemirror/language';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
-import { javascriptLanguage } from '@codemirror/lang-javascript';
+import {
+  javascript,
+  javascriptLanguage,
+  jsxLanguage,
+  typescriptLanguage,
+  tsxLanguage,
+} from '@codemirror/lang-javascript';
 import { jsonLanguage } from '@codemirror/lang-json';
 import { tokenHighlighter } from './token-highlighter';
 import { minimalTextChange } from './markdown-source-map';
 import { lineWrappingExtension } from './line-wrapping';
 import { githubAlertDecorations } from './github-alert-decorations';
+import { indentMarkdown, outdentMarkdown } from './list-indentation';
+import { tableCommands, tableEditing } from './table-editor';
+import { markdownCompletion } from './markdown-completion';
+import type { VimAction } from './vim-mode';
+import { selectionToolbar } from './selection-toolbar';
+import type { CompletionSource } from '@codemirror/autocomplete';
+import { markdownTabKeys } from '../../shared/editor-keybindings';
+
+const codeLanguages = {
+  js: javascriptLanguage,
+  javascript: javascriptLanguage,
+  jsx: jsxLanguage,
+  ts: typescriptLanguage,
+  typescript: typescriptLanguage,
+  tsx: tsxLanguage,
+  json: jsonLanguage,
+  md: markdownLanguage,
+  markdown: markdownLanguage,
+};
 
 const externalChange = Annotation.define<boolean>();
 
@@ -39,6 +73,10 @@ export function MarkdownEditor({
   onUpdate,
   preferences,
   onImageFiles,
+  onInsertImage,
+  onVimAction,
+  onFloatingToolbar,
+  noteLinks,
 }: {
   value: string;
   nonce: string;
@@ -47,13 +85,43 @@ export function MarkdownEditor({
   onUpdate?: (selectionChanged: boolean) => void;
   preferences: Preferences;
   onImageFiles?: (files: File[]) => void;
+  onInsertImage?: () => void;
+  onVimAction?: (action: VimAction, argument?: string) => void;
+  onFloatingToolbar?: (element: HTMLElement | null) => void;
+  noteLinks?: CompletionSource;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const callbacks = useRef({ onChange, onView, onUpdate, onImageFiles });
-  callbacks.current = { onChange, onView, onUpdate, onImageFiles };
+  const callbacks = useRef({
+    onChange,
+    onView,
+    onUpdate,
+    onImageFiles,
+    onInsertImage,
+    onVimAction,
+    onFloatingToolbar,
+    noteLinks,
+  });
+  callbacks.current = {
+    onChange,
+    onView,
+    onUpdate,
+    onImageFiles,
+    onInsertImage,
+    onVimAction,
+    onFloatingToolbar,
+    noteLinks,
+  };
   const initialValue = useRef(value);
   const settings = useRef(new Compartment()).current;
+  const keyboard = useRef(new Compartment()).current;
+  const floating = useMemo(
+    () =>
+      selectionToolbar((element) =>
+        callbacks.current.onFloatingToolbar?.(element),
+      ),
+    [],
+  );
   const initialSettings = useRef(preferences);
   useEffect(() => {
     if (!container.current) return;
@@ -63,7 +131,11 @@ export function MarkdownEditor({
         doc: initialValue.current,
         extensions: [
           EditorView.cspNonce.of(nonce),
-          settings.of(editorSettings(initialSettings.current)),
+          EditorState.allowMultipleSelections.of(true),
+          rectangularSelection(),
+          crosshairCursor(),
+          keyboard.of([]),
+          settings.of(editorSettings(initialSettings.current, floating)),
           EditorView.theme({
             '&': {
               height: '100%',
@@ -104,6 +176,20 @@ export function MarkdownEditor({
               backgroundColor: 'var(--editor-focused-selection-background)',
             },
             '.cm-foldGutter': { width: '12px' },
+            '.cm-tooltip': {
+              backgroundColor: 'var(--popup-background)',
+              color: 'var(--text-color)',
+              border: 'var(--popup-border)',
+              boxShadow: 'var(--popup-box-shadow)',
+              borderRadius: 'var(--popup-border-radius)',
+            },
+            '.cm-tooltip-autocomplete > ul': {
+              fontFamily: 'var(--font-family)',
+            },
+            '.cm-tooltip-autocomplete > ul > li[aria-selected="true"]': {
+              backgroundColor: 'var(--note-list-view-item-selected-background)',
+              color: 'var(--text-color)',
+            },
           }),
           history(),
           EditorView.domEventHandlers({
@@ -137,22 +223,46 @@ export function MarkdownEditor({
           search({ top: true }),
           drawSelection(),
           bracketMatching(),
+          tableEditing,
+          Prec.high(
+            keymap.of([
+              {
+                key: 'Tab',
+                run: tableCommands['table-editor:next-cell'],
+                shift: tableCommands['table-editor:previous-cell'],
+              },
+              { key: 'Enter', run: tableCommands['table-editor:next-row'] },
+              { key: 'Escape', run: tableCommands['table-editor:escape'] },
+            ]),
+          ),
           markdown({
             base: markdownLanguage,
             codeLanguages: (info) =>
-              /^(js|javascript|ts|typescript|jsx|tsx)$/.test(info)
-                ? javascriptLanguage
-                : info === 'json'
-                  ? jsonLanguage
-                  : null,
+              Object.hasOwn(codeLanguages, info)
+                ? codeLanguages[info as keyof typeof codeLanguages]
+                : null,
+          }),
+          javascript({ typescript: true }).support,
+          markdownCompletion({
+            insertImage: () => callbacks.current.onInsertImage,
+            noteLinks: (context) =>
+              callbacks.current.noteLinks?.(context) ?? null,
           }),
           syntaxHighlighting(tokenHighlighter),
           githubAlertDecorations,
-          keymap.of([...defaultKeymap, ...historyKeymap]),
+          keymap.of([
+            { key: 'Mod-]', run: indentMarkdown },
+            { key: 'Mod-[', run: outdentMarkdown },
+            ...defaultKeymap,
+            ...historyKeymap,
+          ]),
           EditorView.updateListener.of((update) => {
             if (
               update.docChanged ||
               update.selectionSet ||
+              update.startState.field(tableEditing) !==
+                update.state.field(tableEditing) ||
+              syntaxTree(update.startState) !== syntaxTree(update.state) ||
               update.geometryChanged ||
               update.viewportChanged
             )
@@ -177,17 +287,44 @@ export function MarkdownEditor({
       viewRef.current = null;
       view.destroy();
     };
-  }, [nonce]);
+  }, [nonce, settings, keyboard, floating]);
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    if (preferences.keyboardMode === 'standard') {
+      view.dispatch({ effects: keyboard.reconfigure([]) });
+      return;
+    }
+    let live = true;
+    void import('./vim-mode').then(({ vimMode }) => {
+      if (live)
+        view.dispatch({
+          effects: keyboard.reconfigure(
+            vimMode((action, argument) =>
+              callbacks.current.onVimAction?.(action, argument),
+            ),
+          ),
+        });
+    });
+    return () => {
+      live = false;
+    };
+  }, [keyboard, nonce, preferences.keyboardMode]);
   useEffect(() => {
     viewRef.current?.dispatch({
-      effects: settings.reconfigure(editorSettings(preferences)),
+      effects: settings.reconfigure(editorSettings(preferences, floating)),
     });
   }, [
     settings,
+    floating,
     preferences.lineNumbers,
     preferences.lineWrapping,
+    preferences.readableLineLength,
+    preferences.keybindings,
     preferences.activeLine,
     preferences.spellcheck,
+    preferences.showToolbar,
+    preferences.toolbarPlacement,
   ]);
   useEffect(() => {
     const view = viewRef.current;
@@ -205,14 +342,38 @@ export function MarkdownEditor({
   return <div className="markdown-editor" ref={container} />;
 }
 
-function editorSettings(preferences: Preferences) {
+function editorSettings(preferences: Preferences, floating: Extension) {
+  const keepsTab = (command: keyof typeof markdownTabKeys) =>
+    (preferences.keybindings.find((entry) => entry.command === command)
+      ?.keystroke ?? markdownTabKeys[command]) === markdownTabKeys[command];
   return [
+    keymap.of([
+      ...(keepsTab('editor:indent-more')
+        ? [{ key: 'Tab', run: indentMarkdown }]
+        : []),
+      ...(keepsTab('editor:indent-less')
+        ? [{ key: 'Shift-Tab', run: outdentMarkdown }]
+        : []),
+    ]),
     ...(preferences.lineNumbers
       ? [lineNumbers(), highlightActiveLineGutter()]
       : []),
     foldGutter(),
     ...(preferences.activeLine ? [highlightActiveLine()] : []),
     lineWrappingExtension(preferences.lineWrapping),
+    ...(preferences.readableLineLength
+      ? [
+          EditorView.theme({
+            '.cm-content': {
+              maxInlineSize: 'var(--inknote-editor-readable-width, 1024px)',
+              marginInline: 'auto',
+            },
+          }),
+        ]
+      : []),
+    ...(preferences.showToolbar && preferences.toolbarPlacement === 'floating'
+      ? [floating]
+      : []),
     EditorView.contentAttributes.of({
       'aria-label': 'Contenido Markdown de la nota',
       spellcheck: String(preferences.spellcheck),

@@ -2,7 +2,7 @@ import { z } from './validation';
 import { noteMetadataSchema, noteStatusSchema } from './note-metadata';
 
 const maxTitleLength = 512;
-const maxBodyLength = 1_000_000;
+export const maxBodyLength = 1_000_000;
 const maxSearchQueryLength = 512;
 
 const noteIdSchema = z.uuid();
@@ -33,6 +33,8 @@ export const createNoteInputSchema = z
 
 export const listNotesInputSchema = z
   .object({
+    id: noteIdSchema.optional(),
+    titleContains: z.string().trim().min(1).max(120).optional(),
     limit: limitSchema.optional(),
     offset: z.number().int().min(0).max(1_000_000).optional(),
     scopeId: z.uuid().optional(),

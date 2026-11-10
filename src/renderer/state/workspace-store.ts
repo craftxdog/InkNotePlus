@@ -8,6 +8,8 @@ import type {
   NoteChangedEvent,
   NoteProjection,
 } from '../../shared/ipc';
+import { failure, success } from '../../shared/ipc';
+import { linkedNoteId } from '../../shared/note-link';
 import {
   emptyDocument,
   mergeNote,
@@ -31,6 +33,13 @@ import { createThemeActions } from './theme-actions';
 
 export function createWorkspaceStore(api: InkNoteApi) {
   let requestId = 0;
+  let linkRequest = 0;
+  let linkedDocument: {
+    id: string;
+    navigation: WorkspaceStore['navigation'];
+    scopeId: string | null;
+    query: string;
+  } | null = null;
   let generation = 0;
   let connections = 0;
   let unsubscribe: (() => void) | undefined;
@@ -97,20 +106,28 @@ export function createWorkspaceStore(api: InkNoteApi) {
                 ),
               ]
             : result.data.notes;
-          const activeNoteId = notes.some(({ id }) => id === state.activeNoteId)
+          const inList = notes.some(({ id }) => id === state.activeNoteId);
+          const activeNoteId = inList
             ? state.activeNoteId
             : (notes[0]?.id ?? null);
-          return {
-            ...((preserveLoaded || state.noteList.isCreating) &&
+          const preserveLink =
+            linkedDocument?.id === state.document.noteId &&
+            linkedDocument?.navigation === state.navigation &&
+            linkedDocument.scopeId === state.preferences.notebookScopeId &&
+            linkedDocument.query === state.searchQuery;
+          const preserveDraft =
+            (preserveLoaded || state.noteList.isCreating) &&
             !state.searchQuery &&
             matchesNavigation(
               state.document.metadata,
               state.navigation,
               state.preferences,
               state.library.notebooks,
-            ) &&
+            );
+          return {
+            ...(!inList &&
             state.document.noteId &&
-            !notes.some((note) => note.id === state.document.noteId)
+            (preserveLink || preserveDraft)
               ? {}
               : selectDocument(state, activeNoteId, notes)),
             noteList: {
@@ -179,6 +196,62 @@ export function createWorkspaceStore(api: InkNoteApi) {
       saveDraft: persistence.saveDraft,
       flushDrafts: persistence.flushDrafts,
       openExternalLink: (url) => api.links.openExternal(url),
+      async openNoteLink(url) {
+        const id = linkedNoteId(url);
+        if (!id) return failure('invalid_input');
+        const initial = get();
+        const request = ++linkRequest;
+        const currentGeneration = generation;
+        const cached = initial.noteList.notes.find(
+          (note) => note.id === id && !note.deletedAt,
+        );
+        const result = cached
+          ? success([cached])
+          : await api.notes.list({ id, limit: 1 });
+        const state = get();
+        if (
+          request !== linkRequest ||
+          currentGeneration !== generation ||
+          state.activeNoteId !== initial.activeNoteId ||
+          state.navigation !== initial.navigation ||
+          state.searchQuery !== initial.searchQuery
+        )
+          return success(false);
+        if (!result.ok) return result;
+        const note = result.data.find(
+          (value) => value.id === id && !value.deletedAt,
+        );
+        if (!note) return failure('not_found');
+        if (state.navigation.type === 'trash') {
+          await state.navigate({ type: 'all' });
+          if (request !== linkRequest || currentGeneration !== generation)
+            return success(false);
+        }
+        const current = get();
+        linkedDocument = {
+          id,
+          navigation: current.navigation,
+          scopeId: current.preferences.notebookScopeId,
+          query: current.searchQuery,
+        };
+        set((value) => selectDocument(value, id, [note]));
+        return success(true);
+      },
+      searchLinkNotes(query) {
+        const title = query.trim();
+        return api.notes.list({
+          limit: 10,
+          ...(title ? { titleContains: title } : {}),
+        });
+      },
+      createLinkedNote(title) {
+        const { navigation, preferences } = get();
+        return api.notes.create({
+          title,
+          body: '',
+          metadata: metadataForNewNote(navigation, preferences),
+        });
+      },
       ...createLibraryActions(api, set, get, () => generation),
       navigation: { type: 'all' },
       library: emptyLibrary,
@@ -253,6 +326,10 @@ export function createWorkspaceStore(api: InkNoteApi) {
       document: emptyDocument,
       parkedDrafts: {},
       templatePickerOpen: false,
+      commandPaletteOpen: false,
+      setCommandPaletteOpen(commandPaletteOpen) {
+        set({ commandPaletteOpen });
+      },
       setTemplatePickerOpen(templatePickerOpen) {
         if (
           templatePickerOpen &&
@@ -437,6 +514,8 @@ export function createWorkspaceStore(api: InkNoteApi) {
         get().updateDraft({ metadata: { ...get().document.metadata, status } });
       },
       selectNote(noteId) {
+        linkRequest++;
+        linkedDocument = null;
         set((state) => selectDocument(state, noteId));
       },
       setSidebarVisible(visible) {

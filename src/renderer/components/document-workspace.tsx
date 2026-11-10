@@ -1,10 +1,13 @@
 import {
   useEffect,
+  useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   useCallback,
   type CSSProperties,
 } from 'react';
+import { createPortal } from 'react-dom';
 import type { EditorView } from '@codemirror/view';
 import {
   ArrowLeft,
@@ -33,16 +36,23 @@ import {
   RotateCcw,
   Files,
   ImagePlus,
+  Highlighter,
+  ListChecks,
 } from 'lucide-react';
 import { imageAtCursor, resizeCurrentImage } from '../editor/image-dimensions';
 import {
   insertManagedImages,
   type ImageImportError,
 } from '../editor/image-insertion';
-import { useWorkspace } from '../state/workspace-context';
+import { useWorkspace, useWorkspaceStore } from '../state/workspace-context';
 import { MarkdownEditor } from '../editor/markdown-editor';
 import { MarkdownPreview } from '../editor/markdown-preview';
-import { formatSelection, type FormatCommand } from '../editor/formatting';
+import { editorCommands } from '../editor/editor-commands';
+import { tableAtCursor, tableCommands } from '../editor/table-editor';
+import { TableToolbar } from './table-toolbar';
+import { resolveShortcutCommand } from '../../shared/keybindings';
+import { executeShortcut } from '../shortcuts';
+import { noteLinkCompletion } from '../editor/note-link-completion';
 import { IconButton } from './icon-button';
 import { TagBadge } from './tag-badge';
 import { StatusPicker } from './status-picker';
@@ -59,6 +69,11 @@ export function DocumentWorkspace({
   onShowNotes: () => void;
   onToggleSidebar: () => void;
 }) {
+  const store = useWorkspaceStore();
+  const noteLinks = useMemo(
+    () => noteLinkCompletion(store.getState()),
+    [store],
+  );
   const draft = useWorkspace((state) => state.document);
   const nonce = useWorkspace((state) => state.styleNonce);
   const preferences = useWorkspace((state) => state.preferences);
@@ -87,6 +102,10 @@ export function DocumentWorkspace({
   const [confirmTrash, setConfirmTrash] = useState(false);
   const [splitRatio, setSplitRatio] = useState(preferences.splitRatio);
   const [imageSelected, setImageSelected] = useState(false);
+  const [tableSelected, setTableSelected] = useState(false);
+  const [floatingToolbar, setFloatingToolbar] = useState<HTMLElement | null>(
+    null,
+  );
   const [imageError, setImageError] = useState<ImageImportError>(null);
   const insertImage = async (files?: File[]) => {
     const editor = view.current;
@@ -111,6 +130,23 @@ export function DocumentWorkspace({
   const current = notes[index];
   const inTrash = navigation.type === 'trash';
   const mode = preferences.editorMode;
+  useLayoutEffect(() => {
+    if (floatingToolbar) view.current?.requestMeasure();
+  }, [floatingToolbar]);
+  const renderFormatting = (floating: boolean) =>
+    formatButtons.map(({ command, icon, label }) => (
+      <IconButton
+        key={command}
+        icon={icon}
+        label={label}
+        tabIndex={floating ? -1 : undefined}
+        disabled={inTrash || mode === 'preview' || !nonce}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => {
+          if (view.current) editorCommands[command](view.current);
+        }}
+      />
+    ));
   const previewRendered = useCallback(
     (body: string) => {
       renderedBody.current = body;
@@ -132,6 +168,7 @@ export function DocumentWorkspace({
       className="editor-layout"
       aria-label="Editor"
       data-editor-mode={mode}
+      data-readable-width={preferences.readableLineLength}
       style={{ '--editor-ratio': `${splitRatio}%` } as CSSProperties}
     >
       <header className="editor-topbar window-drag-region">
@@ -285,6 +322,18 @@ export function DocumentWorkspace({
             onChange={(event) => updateDraft({ title: event.target.value })}
             onKeyDown={(event) => {
               if (
+                event.key === 'ArrowDown' &&
+                event.currentTarget.selectionEnd === draft.title.length
+              ) {
+                event.preventDefault();
+                executeShortcut(
+                  store,
+                  'editor:focus-and-go-doc-start',
+                  event.currentTarget,
+                );
+                return;
+              }
+              if (
                 (event.metaKey || event.ctrlKey) &&
                 event.key.toLowerCase() === 's'
               ) {
@@ -302,24 +351,25 @@ export function DocumentWorkspace({
             role="toolbar"
             aria-label="Formato Markdown"
           >
-            {formatButtons.map(({ command, icon, label }) => (
-              <IconButton
-                key={command}
-                icon={icon}
-                label={label}
-                disabled={inTrash || mode === 'preview' || !nonce}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => {
-                  if (view.current) formatSelection(view.current, command);
+            {tableSelected && mode !== 'preview' ? (
+              <TableToolbar
+                run={(command) => {
+                  const editor = view.current;
+                  if (editor && tableCommands[command](editor)) editor.focus();
                 }}
               />
-            ))}
+            ) : preferences.toolbarPlacement === 'fixed' ? (
+              renderFormatting(false)
+            ) : null}
             <IconButton
               icon={ImagePlus}
               label="Insertar imagen"
               disabled={inTrash || mode === 'preview' || !nonce}
               onMouseDown={(event) => event.preventDefault()}
-              onClick={() => void insertImage()}
+              onClick={() => {
+                if (view.current)
+                  editorCommands['core:insert-image'](view.current);
+              }}
             />
             {imageSelected && (
               <label className="image-size-control">
@@ -384,11 +434,36 @@ export function DocumentWorkspace({
                   preferences={preferences}
                   onChange={(body) => updateDraft({ body })}
                   onImageFiles={(files) => void insertImage(files)}
+                  onInsertImage={() => void insertImage()}
+                  onFloatingToolbar={setFloatingToolbar}
+                  noteLinks={noteLinks}
+                  onVimAction={(action, argument) => {
+                    const aliases = {
+                      write: 'core:save-note',
+                      next: 'core:open-next-note',
+                      prev: 'core:open-prev-note',
+                      preview: 'view:toggle-preview',
+                      'side-by-side': 'view:toggle-side-by-side',
+                    } as const;
+                    const command =
+                      action === 'cmd'
+                        ? resolveShortcutCommand(argument)
+                        : aliases[action];
+                    if (command)
+                      executeShortcut(
+                        store,
+                        command,
+                        view.current?.contentDOM ?? null,
+                      );
+                  }}
                   onView={(instance) => {
                     sync.current?.destroy();
                     sync.current = null;
                     view.current = instance;
                     setImageSelected(!!instance && !!imageAtCursor(instance));
+                    setTableSelected(
+                      !!instance && !!tableAtCursor(instance.state),
+                    );
                     // Bind to the actual view lifecycle, including StrictMode's replay.
                     if (instance && preview.current) {
                       sync.current = createScrollSync(
@@ -403,8 +478,10 @@ export function DocumentWorkspace({
                   }}
                   onUpdate={(selectionChanged) => {
                     sync.current?.editorChanged(selectionChanged);
-                    if (view.current)
+                    if (view.current) {
                       setImageSelected(!!imageAtCursor(view.current));
+                      setTableSelected(!!tableAtCursor(view.current.state));
+                    }
                   }}
                 />
               ) : (
@@ -419,6 +496,7 @@ export function DocumentWorkspace({
               ref={preview}
               className="pane pane--preview mde-preview-container"
               aria-label="Vista previa"
+              tabIndex={-1}
             >
               <MarkdownPreview
                 body={draft.body}
@@ -427,6 +505,14 @@ export function DocumentWorkspace({
               />
             </aside>
           </div>
+          {floatingToolbar &&
+            mode !== 'preview' &&
+            createPortal(
+              <div role="toolbar" aria-label="Formato de la selección">
+                {renderFormatting(true)}
+              </div>,
+              floatingToolbar,
+            )}
           <footer className="editor-statusbar">
             <span>{draft.body.length.toLocaleString()} caracteres</span>
             <span>
@@ -561,14 +647,40 @@ function EditorMetadata({ disabled }: { disabled: boolean }) {
 }
 
 const formatButtons = [
-  { command: 'bold', icon: Bold, label: 'Negrita' },
-  { command: 'italic', icon: Italic, label: 'Cursiva' },
-  { command: 'strike', icon: Strikethrough, label: 'Tachado' },
-  { command: 'heading', icon: Heading, label: 'Encabezado' },
-  { command: 'quote', icon: Quote, label: 'Cita' },
-  { command: 'code', icon: Code2, label: 'Código' },
-  { command: 'bullet', icon: List, label: 'Lista con viñetas' },
-  { command: 'ordered', icon: ListOrdered, label: 'Lista numerada' },
-  { command: 'link', icon: Link, label: 'Enlace' },
-  { command: 'rule', icon: Minus, label: 'Separador' },
-] satisfies { command: FormatCommand; icon: typeof Bold; label: string }[];
+  { command: 'core:strong', icon: Bold, label: 'Negrita' },
+  { command: 'core:emphasize', icon: Italic, label: 'Cursiva' },
+  {
+    command: 'core:strikethrough',
+    icon: Strikethrough,
+    label: 'Tachado',
+  },
+  { command: 'core:toggle-heading-2', icon: Heading, label: 'Encabezado' },
+  { command: 'core:toggle-blockquote', icon: Quote, label: 'Cita' },
+  { command: 'core:toggle-inline-code', icon: Code2, label: 'Código' },
+  {
+    command: 'core:toggle-inline-mark-tag',
+    icon: Highlighter,
+    label: 'Resaltar',
+  },
+  {
+    command: 'core:toggle-bulleted-list',
+    icon: List,
+    label: 'Lista con viñetas',
+  },
+  {
+    command: 'core:toggle-numbered-list',
+    icon: ListOrdered,
+    label: 'Lista numerada',
+  },
+  {
+    command: 'core:toggle-task-list',
+    icon: ListChecks,
+    label: 'Lista de tareas',
+  },
+  { command: 'core:insert-link', icon: Link, label: 'Enlace' },
+  { command: 'core:insert-horizontal-rule', icon: Minus, label: 'Separador' },
+] satisfies {
+  command: keyof typeof editorCommands;
+  icon: typeof Bold;
+  label: string;
+}[];

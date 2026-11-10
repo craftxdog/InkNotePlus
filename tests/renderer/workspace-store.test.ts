@@ -98,6 +98,43 @@ describe('workspace Zustand store', () => {
     expect(observed.every(Boolean)).toBe(true);
   });
 
+  it('opens a linked note outside the loaded page and preserves the current draft', async () => {
+    const { api } = createApi({
+      list: async (input) =>
+        success(input?.id === secondNote.id ? [secondNote] : [firstNote]),
+    });
+    const store = createWorkspaceStore(api);
+    await store.getState().refreshNotes();
+    store.getState().updateDraft({ body: 'Draft before following link' });
+    expect(
+      await store.getState().openNoteLink(`inknote://note/${secondNote.id}`),
+    ).toEqual(success(true));
+    await store.getState().refreshNotes();
+    expect(store.getState().document.noteId).toBe(secondNote.id);
+    expect(store.getState().noteList.notes.map(({ id }) => id)).toEqual([
+      firstNote.id,
+    ]);
+    store.getState().selectNote(firstNote.id);
+    expect(store.getState().document.body).toBe('Draft before following link');
+  });
+
+  it('discards a linked-note response after the user selects another note', async () => {
+    const response = deferred<ReturnType<typeof success<NoteProjection[]>>>();
+    const { api } = createApi({
+      list: (input) =>
+        input?.id ? response.promise : Promise.resolve(success([firstNote])),
+    });
+    const store = createWorkspaceStore(api);
+    await store.getState().refreshNotes();
+    const opening = store
+      .getState()
+      .openNoteLink(`inknote://note/${secondNote.id}`);
+    store.getState().selectNote(firstNote.id);
+    response.resolve(success([secondNote]));
+    expect(await opening).toEqual(success(false));
+    expect(store.getState().document.noteId).toBe(firstNote.id);
+  });
+
   it('ignores an older query that resolves after a newer search', async () => {
     const list = deferred<ReturnType<typeof success<NoteProjection[]>>>();
     const search = deferred<ReturnType<typeof success<NoteProjection[]>>>();

@@ -238,6 +238,22 @@ Fuente: [wrap de Inkdrop 6.2](https://forum.inkdrop.app/t/inkdrop-desktop-v6-2-0
 [configuración y comandos del editor](https://developers.inkdrop.app/guides/customize-the-editor)
 y [plugins del renderer](https://developers.inkdrop.app/modules/markdown-renderer).
 
+Tab y Mayús+Tab cambian la jerarquía de un elemento de lista según el ancho
+del marcador padre y mueven también su contenido. En tablas, esas teclas
+recorren las celdas y Enter avanza de fila. Escape seguido de Tab mueve el
+foco fuera del editor. La barra y los atajos aplican el mismo formato al
+Markdown, con historial de deshacer y autoguardado.
+
+En una línea vacía, `/` abre las inserciones Markdown. `[[` busca notas por
+título y crea enlaces `inknote://note/` que se abren dentro de la app.
+Cmd/Ctrl+K abre la paleta de comandos. En Preferencias → Edición se elige la
+barra flotante o fija, el teclado estándar o Vim y la anchura de lectura.
+La variable `--inknote-editor-readable-width` controla el límite de lectura,
+con 1024 px como valor inicial de InkNote.
+
+[Comandos de Inkdrop](https://developers.inkdrop.app/guides/list-of-commands#editor-commands) ·
+[Edición de listas en Inkdrop 6.1](https://forum.inkdrop.app/t/inkdrop-desktop-v6-1-0-better-editing-experience/5579)
+
 Las fórmulas inline, display y fences `math` usan el componente MIT público de
 Inkdrop con KaTeX 0.19.0, estilos aislados y fuentes WOFF2 locales. Mermaid usa
 su componente público y Pele 1.9.0, la versión fijada por ese repositorio.

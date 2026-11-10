@@ -37,12 +37,14 @@ const pendingImages = StateField.define<ReadonlyMap<symbol, Target>>({
     return next;
   },
 });
-export function prepareImageInsertion(view: EditorView) {
+export function prepareMarkdownInsertion(
+  view: EditorView,
+  target: Target = view.state.selection.main,
+) {
   if (!view.state.field(pendingImages, false))
     view.dispatch({ effects: StateEffect.appendConfig.of(pendingImages) });
-  const id = Symbol('image-import');
+  const id = Symbol('markdown-insertion');
   const originalSelection = view.state.selection;
-  const target = view.state.selection.main;
   view.dispatch({
     effects: bookmark.of({ id, target: { from: target.from, to: target.to } }),
   });
@@ -73,7 +75,7 @@ export async function insertManagedImages(
   isCurrent: () => boolean,
   files?: File[],
 ): Promise<ImageImportError> {
-  const insertion = prepareImageInsertion(editor);
+  const insertion = prepareMarkdownInsertion(editor);
   const markdown: string[] = [];
   let error: ImageImportError = null;
   try {

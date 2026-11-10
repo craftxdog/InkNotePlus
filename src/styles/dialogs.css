@@ -1,4 +1,44 @@
 @layer theme.ui.components {
+  .command-palette {
+    inline-size: min(640px, calc(100% - 32px));
+  }
+  .command-palette-body {
+    display: grid;
+    gap: 10px;
+    padding: 12px 16px 16px;
+  }
+  .command-palette-body input {
+    min-inline-size: 0;
+    padding: 8px;
+    background: var(--input-background);
+    border: 1px solid var(--border-color);
+    border-radius: var(--5px);
+  }
+  .command-palette [role='listbox'] {
+    max-block-size: min(50vh, 420px);
+    overflow: auto;
+  }
+  .command-palette [role='option'] {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: start;
+    gap: 8px;
+    inline-size: 100%;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: var(--5px);
+    background: transparent;
+    color: inherit;
+  }
+  .command-palette [role='option'][aria-selected='true'],
+  .command-palette [role='option']:hover {
+    background: var(--note-list-view-item-selected-background);
+  }
+  .command-palette small {
+    display: block;
+    color: var(--muted-text-color);
+  }
   .template-picker-dialog {
     inline-size: min(900px, calc(100vw - 32px));
   }

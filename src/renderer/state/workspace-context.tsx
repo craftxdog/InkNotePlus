@@ -16,8 +16,12 @@ export function WorkspaceProvider({
   return <WorkspaceContext value={store}>{children}</WorkspaceContext>;
 }
 
-export function useWorkspace<T>(selector: (state: WorkspaceStore) => T): T {
+export function useWorkspaceStore() {
   const store = useContext(WorkspaceContext);
   if (!store) throw new Error('WorkspaceProvider is missing.');
-  return useStore(store, selector);
+  return store;
+}
+
+export function useWorkspace<T>(selector: (state: WorkspaceStore) => T): T {
+  return useStore(useWorkspaceStore(), selector);
 }

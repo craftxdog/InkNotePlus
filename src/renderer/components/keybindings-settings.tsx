@@ -91,6 +91,10 @@ function ShortcutRow({
       setError('Formato no válido. Ejemplo: Mod-Shift-n');
       return;
     }
+    if (parsed.data === value) {
+      setError('');
+      return;
+    }
     const other = shortcutConflict(
       command,
       parsed.data,
@@ -136,10 +140,11 @@ function ShortcutRow({
         label={`Restablecer atajo: ${label}`}
         onMouseDown={(event) => event.preventDefault()}
         onClick={() => {
-          const fallback = shortcutCommands.find(
+          const definition = shortcutCommands.find(
             (item) => item.id === command,
-          )!.key;
-          setInput(fallback);
+          );
+          if (definition)
+            setInput(shortcutFor(definition, [], platform === 'darwin'));
           setError('');
           void update({
             keybindings: bindings.filter(

@@ -179,6 +179,47 @@ try {
   await page.click('button[aria-label="Nueva nota"]');
   await page.waitForSelector('.cm-content');
   await page.focus('.cm-content');
+  const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+  const shortcut = async (key) => {
+    await page.keyboard.down(modifier);
+    await page.keyboard.press(key);
+    await page.keyboard.up(modifier);
+  };
+  await page.keyboard.sendCharacter('10. Parent\n- Child');
+  await page.keyboard.press('Tab');
+  await page.waitForSelector('.mde-preview ol li ul li');
+  await page.keyboard.down('Shift');
+  await page.keyboard.press('Tab');
+  await page.keyboard.up('Shift');
+  await page.waitForSelector('.mde-preview > ul > li');
+  await page.keyboard.sendCharacter('\n\nToggle');
+  await page.keyboard.down('Shift');
+  for (const _ of 'Toggle') await page.keyboard.press('ArrowLeft');
+  await page.keyboard.up('Shift');
+  await page.waitForSelector(
+    '.inknote-floating-format button[aria-label="Negrita"]',
+  );
+  await shortcut('b');
+  await page.waitForSelector('.mde-preview strong');
+  await shortcut('b');
+  await page.waitForSelector('.mde-preview strong', { hidden: true });
+  await shortcut('k');
+  await page.waitForSelector('dialog[aria-label="Comandos"] input');
+  await page.type('dialog[aria-label="Comandos"] input', 'cursiva');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('.mde-preview em');
+  await shortcut('i');
+  await page.waitForSelector('.mde-preview em', { hidden: true });
+  await page.waitForFunction(async () => {
+    const result = await window.inkNote.notes.list();
+    return (
+      result.ok && result.data[0]?.body === '10. Parent\n- Child\n\nToggle'
+    );
+  });
+  console.log(
+    'Native list hierarchy, format toggles, command palette, preview and autosave passed.',
+  );
+  await shortcut('a');
   const body =
     '## Comprobacion nativa\n\n- [ ] Tarea interactiva\n\n' +
     Array.from(
@@ -196,7 +237,6 @@ try {
     );
   });
   await page.waitForSelector('.mde-preview h2');
-  const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
   await page.focus('.cm-content');
   await page.keyboard.down(modifier);
   await page.keyboard.press('f');

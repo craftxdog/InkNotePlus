@@ -61,6 +61,7 @@
     "vitest": "^5.0.5"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "6.20.4",
     "@codemirror/commands": "^6.11.1",
     "@codemirror/lang-javascript": "^6.2.5",
     "@codemirror/lang-json": "^6.0.2",
@@ -71,7 +72,9 @@
     "@codemirror/view": "^6.43.15",
     "@inkdropapp/css": "0.10.4",
     "@lezer/highlight": "^1.2.5",
+    "@replit/codemirror-vim": "6.4.0",
     "electron-squirrel-startup": "^1.0.1",
+    "gemoji": "8.1.0",
     "katex": "0.19.0",
     "lucide-react": "^1.66.0",
     "pele": "1.9.0",

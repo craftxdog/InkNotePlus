@@ -12,6 +12,14 @@ export function noteFilter(input: ListNotesInput): {
 } {
   const clauses = ['(notes.deleted_at IS NOT NULL) = ?'];
   const params: (string | number)[] = [Number(input.trashed ?? false)];
+  if (input.id) {
+    clauses.push('notes.id = ?');
+    params.push(input.id);
+  }
+  if (input.titleContains) {
+    clauses.push('instr(lower(notes.title), lower(?)) > 0');
+    params.push(input.titleContains);
+  }
   if (input.scopeId) {
     clauses.push(
       `json_extract(notes.metadata_json,'$.notebookId') IN (${subtreeSql})`,

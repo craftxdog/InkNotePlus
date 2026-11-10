@@ -11,6 +11,9 @@ importers:
 
   .:
     dependencies:
+      '@codemirror/autocomplete':
+        specifier: 6.20.4
+        version: 6.20.4
       '@codemirror/commands':
         specifier: ^6.11.1
         version: 6.11.1
@@ -41,9 +44,15 @@ importers:
       '@lezer/highlight':
         specifier: ^1.2.5
         version: 1.2.5
+      '@replit/codemirror-vim':
+        specifier: 6.4.0
+        version: 6.4.0(@codemirror/commands@6.11.1)(@codemirror/language@6.13.1)(@codemirror/search@6.7.2)(@codemirror/state@6.7.6)(@codemirror/view@6.43.15)
       electron-squirrel-startup:
         specifier: ^1.0.1
         version: 1.0.1
+      gemoji:
+        specifier: 8.1.0
+        version: 8.1.0
       katex:
         specifier: 0.19.0
         version: 0.19.0
@@ -739,6 +748,18 @@ packages:
       yauzl:
         optional: true
 
+  '@replit/codemirror-vim-core@0.1.0':
+    resolution: {integrity: sha512-1i6EBKpcNfDKvTmTh6N6g9lL6udD5t+uFNh4JCqozRnVlvUGOps7h/QzS2ne4zcvPUjvApKpmcP7Grc3fNbZiQ==}
+
+  '@replit/codemirror-vim@6.4.0':
+    resolution: {integrity: sha512-t9UMDNhkmeAkl0uRbiJVotv97bGD6mf4GyJJoEbrjUqa/Pov0s9eL+4AaI0Xto3OGri17i9qwIpT0JbVlVXt8A==}
+    peerDependencies:
+      '@codemirror/commands': 6.x.x
+      '@codemirror/language': 6.x.x
+      '@codemirror/search': 6.x.x
+      '@codemirror/state': 6.x.x
+      '@codemirror/view': 6.x.x
+
   '@rolldown/binding-android-arm-eabi@1.2.15':
     resolution: {integrity: sha512-aLcgK9gIJ3YRvrrtfSBbRa27F5WrpiTaPulnFpsHPxpUHgFlSgnU4854MHwoRGEBhfRJDWCS2WQ7lIjskE9Olw==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -1416,6 +1437,9 @@ packages:
   galactus@2.0.2:
     resolution: {integrity: sha512-HmKyTFGomdAchz4umx8MwBnrnfFmdpwiTyGA4ZOF7rya2Lmgbc9qate4yweInL+0gUBVImhaz12SBGpW3SY4Yg==}
     engines: {node: '>=22.12.0'}
+
+  gemoji@8.1.0:
+    resolution: {integrity: sha512-HA4Gx59dw2+tn+UAa7XEV4ufUKI4fH1KgcbenVA9YKSj1QJTT0xh5Mwv5HMFNN3l2OtUe3ZIfuRwSyZS5pLIWw==}
 
   get-caller-file@2.0.5:
     resolution: {integrity: sha512-DyFP3BM/3YHTQOCUL/w0OZHR0lpKeGrxotcHWcqNEdnltqFwXVfhEBQ94eIo34AfQpo0rGki4cyIiftY06h2Fg==}
@@ -3156,6 +3180,17 @@ snapshots:
       modern-tar: 0.8.6
       yargs: 18.2.0
 
+  '@replit/codemirror-vim-core@0.1.0': {}
+
+  '@replit/codemirror-vim@6.4.0(@codemirror/commands@6.11.1)(@codemirror/language@6.13.1)(@codemirror/search@6.7.2)(@codemirror/state@6.7.6)(@codemirror/view@6.43.15)':
+    dependencies:
+      '@codemirror/commands': 6.11.1
+      '@codemirror/language': 6.13.1
+      '@codemirror/search': 6.7.2
+      '@codemirror/state': 6.7.6
+      '@codemirror/view': 6.43.15
+      '@replit/codemirror-vim-core': 0.1.0
+
   '@rolldown/binding-android-arm-eabi@1.2.15':
     optional: true
 
@@ -3685,6 +3720,8 @@ snapshots:
       flora-colossus: 3.0.2
     transitivePeerDependencies:
       - supports-color
+
+  gemoji@8.1.0: {}
 
   get-caller-file@2.0.5: {}
 

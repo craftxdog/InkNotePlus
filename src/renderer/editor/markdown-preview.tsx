@@ -25,6 +25,8 @@ import { jsonLanguage } from '@codemirror/lang-json';
 import { tokenHighlighter } from './token-highlighter';
 import { useWorkspace } from '../state/workspace-context';
 import { remarkSourceMap, rehypeSourceText } from './markdown-source-map';
+import { remarkHighlights } from './highlights';
+import { linkedNoteId } from '../../shared/note-link';
 import {
   remarkGithubAlerts,
   alertLabels,
@@ -38,7 +40,13 @@ import {
   OctagonAlert,
 } from 'lucide-react';
 
-const gfm = [remarkGfm, remarkMath, remarkGithubAlerts, remarkSourceMap];
+const gfm = [
+  remarkGfm,
+  remarkMath,
+  remarkGithubAlerts,
+  remarkHighlights,
+  remarkSourceMap,
+];
 const sourceText = [rehypeSourceText];
 const Equation = lazy(() => import('./math-equation'));
 const Diagram = lazy(() => import('./mermaid-diagram'));
@@ -47,6 +55,7 @@ const PreviewContext = createContext<{
   disabled: boolean;
   toggle: (body: string, offset: number, checked: boolean) => void;
   openLink: (url: string) => unknown;
+  openNoteLink: (url: string) => unknown;
 } | null>(null);
 const TaskOffsetContext = createContext<number | null>(null);
 
@@ -64,6 +73,7 @@ export const MarkdownPreview = memo(function MarkdownPreview({
   rendered.current = onRendered;
   useEffect(() => rendered.current?.(deferredBody), [deferredBody]);
   const openLink = useWorkspace((state) => state.openExternalLink);
+  const openNoteLink = useWorkspace((state) => state.openNoteLink);
   const toggle = useWorkspace((state) => state.toggleTask);
   return (
     <PreviewContext
@@ -72,6 +82,7 @@ export const MarkdownPreview = memo(function MarkdownPreview({
         disabled: readOnly || body !== deferredBody,
         toggle,
         openLink,
+        openNoteLink,
       }}
     >
       <div className="mde-preview" aria-label="Vista previa Markdown">
@@ -81,7 +92,8 @@ export const MarkdownPreview = memo(function MarkdownPreview({
           skipHtml
           components={components}
           urlTransform={(url, key) =>
-            key === 'src' && managedImageUrlPattern.test(url)
+            (key === 'src' && managedImageUrlPattern.test(url)) ||
+            (key === 'href' && linkedNoteId(url))
               ? url
               : defaultUrlTransform(url)
           }
@@ -136,7 +148,8 @@ function PreviewLink({ href, children }: ComponentProps<'a'>) {
       title={href}
       onClick={(event) => {
         event.preventDefault();
-        if (href) void context.openLink(href);
+        if (href && linkedNoteId(href)) void context.openNoteLink(href);
+        else if (href) void context.openLink(href);
       }}
     >
       {children}

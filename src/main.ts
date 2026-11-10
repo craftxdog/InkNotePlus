@@ -42,6 +42,12 @@ import { downloadThemeResource } from './main/themes/download';
 import { registerThemeHandlers } from './main/ipc/theme-handlers';
 import { readAsset } from './main/asset-protocol';
 import { registerImageHandlers } from './main/ipc/image-handlers';
+import { registerTransferHandlers } from './main/ipc/transfer-handlers';
+import { BackupFiles } from './main/backup-files';
+import { BackupService } from './main/backup-service';
+import { SqliteLibraryTransfer } from './infrastructure/sqlite/sqlite-library-transfer';
+import { TRANSFER_CHANNELS } from './shared/transfer';
+import { pruneNotebookPreferences } from './shared/preferences';
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -72,9 +78,12 @@ let themeHandlers: Disposable | null = null;
 let imageHandlers: Disposable | null = null;
 let externalLinkHandler: Disposable | null = null;
 let libraryHandlers: Disposable | null = null;
+let transferHandlers: Disposable | null = null;
+let backup: BackupService | null = null;
 let coreModules: ModuleRegistry | null = null;
 let configuration: Configuration | null = null;
 let quitting = false;
+let drainingBackup = false;
 
 function installSessionSecurity() {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
@@ -251,6 +260,8 @@ function initializeCoreModules(): Configuration {
   modules.register({
     id: 'core.notes',
     activate: () => {
+      const activeConfig = configuration;
+      if (!activeConfig) throw new Error('Configuration is not active.');
       const localDatabase = openDatabase(
         getDatabasePath(app.getPath('userData')),
       );
@@ -259,13 +270,47 @@ function initializeCoreModules(): Configuration {
       try {
         const syncOutbox = new SqliteSyncOutbox(localDatabase);
         const repository = new SqliteNoteRepository(localDatabase, syncOutbox);
+        const userData = app.getPath('userData');
+        const library = new SqliteLibraryTransfer(localDatabase, repository);
+        const prunePreferences = (missing: (id: string) => boolean) => {
+          const preferences = activeConfig.get(coreConfig.appearance);
+          const patch = pruneNotebookPreferences(preferences, missing);
+          if (!Object.keys(patch).length) return;
+          try {
+            activeConfig.set(coreConfig.appearance, {
+              ...preferences,
+              ...patch,
+            });
+          } catch {
+            console.warn('InkNote could not save notebook preferences.');
+          }
+        };
+        const notebookIds = new Set(
+          library.listNotebooks().map(({ id }) => id),
+        );
+        prunePreferences((id) => !notebookIds.has(id));
+        backup = new BackupService({
+          files: new BackupFiles(library, userData, syncOutbox.getDeviceId()),
+          directory: activeConfig.get(coreConfig.backupDirectory),
+          saveDirectory: (directory) =>
+            activeConfig.set(coreConfig.backupDirectory, directory),
+          onStatus: (status) => {
+            if (mainWindow && !mainWindow.isDestroyed())
+              mainWindow.webContents.send(
+                TRANSFER_CHANNELS.backupChanged,
+                status,
+              );
+          },
+        });
         const commands = new CommandRegistry();
         commandRegistration = registerNoteCommands(commands, repository);
         ipcRegistration = registerNoteIpcHandlers({
           ipc: ipcMain,
           commands,
           getMainWebContents: () => mainWindow?.webContents ?? null,
+          onTrashChanged: () => backup?.schedule(),
           publishNoteChanged: (event) => {
+            backup?.schedule();
             const webContents = mainWindow?.webContents;
             if (webContents && !webContents.isDestroyed()) {
               webContents.send(IPC_CHANNELS.events.noteChanged, event);
@@ -275,13 +320,32 @@ function initializeCoreModules(): Configuration {
 
         libraryHandlers = registerLibraryHandlers({
           ipc: ipcMain,
-          repository: new SqliteLibraryRepository(localDatabase),
+          repository: new SqliteLibraryRepository(localDatabase, repository),
           getMainWebContents: () => mainWindow?.webContents ?? null,
+          onLibraryChanged: () => backup?.schedule(),
+          onNotebookDeleted: (ids) => {
+            const deleted = new Set(ids);
+            prunePreferences((id) => deleted.has(id));
+          },
+        });
+        transferHandlers = registerTransferHandlers({
+          ipc: ipcMain,
+          getWindow: () => mainWindow,
+          getPreferences: () => activeConfig.get(coreConfig.appearance),
+          backup,
+          library,
+          userData,
         });
         database = localDatabase;
         noteCommands = commandRegistration;
         noteIpcHandlers = ipcRegistration;
       } catch (error) {
+        transferHandlers?.dispose();
+        transferHandlers = null;
+        libraryHandlers?.dispose();
+        libraryHandlers = null;
+        backup?.dispose();
+        backup = null;
         ipcRegistration?.dispose();
         commandRegistration?.dispose();
         localDatabase.close();
@@ -289,6 +353,10 @@ function initializeCoreModules(): Configuration {
       }
     },
     deactivate: () => {
+      transferHandlers?.dispose();
+      transferHandlers = null;
+      backup?.dispose();
+      backup = null;
       libraryHandlers?.dispose();
       libraryHandlers = null;
       noteIpcHandlers?.dispose();
@@ -328,7 +396,13 @@ app.whenReady().then(() => {
 app.on('before-quit', () => {
   quitting = true;
 });
-app.on('will-quit', () => {
+app.on('will-quit', (event) => {
+  if (!drainingBackup && backup?.hasPendingWork) {
+    event.preventDefault();
+    drainingBackup = true;
+    void backup.drain().finally(() => app.quit());
+    return;
+  }
   coreModules?.deactivateAll();
   coreModules = null;
 });

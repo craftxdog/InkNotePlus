@@ -9,6 +9,7 @@ import {
   Check,
   Calculator,
   Workflow,
+  Archive,
 } from 'lucide-react';
 import { useWorkspace } from '../state/workspace-context';
 import { ThemeSettings } from './theme-settings';
@@ -17,6 +18,7 @@ import { Modal } from './modal';
 import { CommitRange } from './commit-range';
 import { SettingGroup, FontField, LineHeight } from './settings-controls';
 import { Keybindings } from './keybindings-settings';
+import { BackupSettings } from './backup-settings';
 
 const sections = [
   { id: 'general', label: 'General', icon: Settings2 },
@@ -24,6 +26,7 @@ const sections = [
   { id: 'preview', label: 'Vista previa', icon: Eye },
   { id: 'themes', label: 'Temas', icon: Palette },
   { id: 'keybindings', label: 'Atajos', icon: Keyboard },
+  { id: 'backup', label: 'Respaldo', icon: Archive },
 ] as const;
 type Section = (typeof sections)[number]['id'];
 
@@ -358,6 +361,7 @@ export function SettingsDialog() {
               </>
             )}
             {section === 'themes' && <ThemeSettings />}
+            {section === 'backup' && <BackupSettings />}
             {section === 'keybindings' && (
               <>
                 <label className="settings-search">

@@ -48,11 +48,72 @@ describe('persistent shell library', () => {
       legacy.close();
     }
   });
+  it('migrates existing tags from active and trashed notes without changing their revisions', () => {
+    const legacy = new DatabaseSync(':memory:');
+    try {
+      legacy.exec(
+        'CREATE TABLE inknote_schema_migrations(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL) STRICT',
+      );
+      const now = '2026-10-30T12:00:00.000Z';
+      for (const migration of migrations.filter(
+        ({ version }) => version <= 4,
+      )) {
+        legacy.exec(migration.sql);
+        legacy
+          .prepare('INSERT INTO inknote_schema_migrations VALUES (?, ?)')
+          .run(migration.version, now);
+      }
+      const insert = legacy.prepare(
+        'INSERT INTO notes(id,title,created_at,updated_at,deleted_at,revision,metadata_json) VALUES (?,?,?,?,?,?,?)',
+      );
+      insert.run(
+        '5a5115f8-747f-416d-82d5-d9c12e34d323',
+        'Active',
+        now,
+        now,
+        null,
+        7,
+        JSON.stringify({ ...defaultNoteMetadata, tags: ['__proto__'] }),
+      );
+      insert.run(
+        '6a5115f8-747f-416d-82d5-d9c12e34d323',
+        'Trash',
+        now,
+        now,
+        now,
+        9,
+        JSON.stringify({ ...defaultNoteMetadata, tags: ['Archived'] }),
+      );
+      applyMigrations(legacy);
+      const library = new SqliteLibraryRepository(legacy);
+      const notes = new SqliteNoteRepository(legacy);
+      expect(library.getSnapshot().tags).toEqual(
+        [
+          { name: 'Archived', count: 0 },
+          { name: '__proto__', count: 1 },
+        ].sort((a, b) =>
+          a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1,
+        ),
+      );
+      expect(notes.list()[0]?.revision).toBe(7);
+      expect(notes.list({ trashed: true })[0]?.revision).toBe(9);
+      library.updateTag({
+        name: '__proto__',
+        nextName: '__proto__',
+        color: 'violet',
+      });
+      expect(library.getSnapshot().tagColors).toEqual([
+        { name: '__proto__', color: 'violet' },
+      ]);
+    } finally {
+      legacy.close();
+    }
+  });
   const database = openDatabase(':memory:');
   afterAll(() => database.close());
   afterEach(() => {
     database.exec(
-      'DELETE FROM note_revisions; DELETE FROM notes; DELETE FROM notebooks; DELETE FROM sync_outbox;',
+      'DELETE FROM note_revisions; DELETE FROM notes; DELETE FROM notebooks; DELETE FROM tags; DELETE FROM sync_outbox;',
     );
   });
   it('stores notebook hierarchy and counts note metadata from SQLite', () => {

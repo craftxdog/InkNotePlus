@@ -541,6 +541,13 @@
     color: var(--unselected-text-color);
     border-block-start: 1px solid var(--border-color);
   }
+  .note-selection-count {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-color);
+    font: inherit;
+  }
   .list-status,
   .empty-list-state {
     padding: var(--14px);
@@ -589,90 +596,6 @@
     border: 1px solid var(--tag-border);
     border-radius: 50%;
     background: var(--tag-text);
-  }
-  .tag-color-blue {
-    --tag-text: light-dark(
-      var(--tag-light-blue-text-color),
-      var(--tag-dark-blue-text-color)
-    );
-    --tag-border: light-dark(
-      var(--tag-light-blue-border-color),
-      var(--tag-dark-blue-border-color)
-    );
-    --tag-background: light-dark(
-      var(--tag-light-blue-background-color),
-      var(--tag-dark-blue-background-color)
-    );
-  }
-  .tag-color-green {
-    --tag-text: light-dark(
-      var(--tag-light-green-text-color),
-      var(--tag-dark-green-text-color)
-    );
-    --tag-border: light-dark(
-      var(--tag-light-green-border-color),
-      var(--tag-dark-green-border-color)
-    );
-    --tag-background: light-dark(
-      var(--tag-light-green-background-color),
-      var(--tag-dark-green-background-color)
-    );
-  }
-  .tag-color-red {
-    --tag-text: light-dark(
-      var(--tag-light-red-text-color),
-      var(--tag-dark-red-text-color)
-    );
-    --tag-border: light-dark(
-      var(--tag-light-red-border-color),
-      var(--tag-dark-red-border-color)
-    );
-    --tag-background: light-dark(
-      var(--tag-light-red-background-color),
-      var(--tag-dark-red-background-color)
-    );
-  }
-  .tag-color-purple {
-    --tag-text: light-dark(
-      var(--tag-light-purple-text-color),
-      var(--tag-dark-purple-text-color)
-    );
-    --tag-border: light-dark(
-      var(--tag-light-purple-border-color),
-      var(--tag-dark-purple-border-color)
-    );
-    --tag-background: light-dark(
-      var(--tag-light-purple-background-color),
-      var(--tag-dark-purple-background-color)
-    );
-  }
-  .tag-color-orange {
-    --tag-text: light-dark(
-      var(--tag-light-orange-text-color),
-      var(--tag-dark-orange-text-color)
-    );
-    --tag-border: light-dark(
-      var(--tag-light-orange-border-color),
-      var(--tag-dark-orange-border-color)
-    );
-    --tag-background: light-dark(
-      var(--tag-light-orange-background-color),
-      var(--tag-dark-orange-background-color)
-    );
-  }
-  .tag-color-teal {
-    --tag-text: light-dark(
-      var(--tag-light-teal-text-color),
-      var(--tag-dark-teal-text-color)
-    );
-    --tag-border: light-dark(
-      var(--tag-light-teal-border-color),
-      var(--tag-dark-teal-border-color)
-    );
-    --tag-background: light-dark(
-      var(--tag-light-teal-background-color),
-      var(--tag-dark-teal-background-color)
-    );
   }
   .drawer-backdrop {
     position: absolute;

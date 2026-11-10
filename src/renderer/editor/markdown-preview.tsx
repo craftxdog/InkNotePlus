@@ -5,7 +5,6 @@ import {
   useContext,
   useEffect,
   useRef,
-  type ReactNode,
   type ComponentProps,
   lazy,
   Suspense,
@@ -19,26 +18,16 @@ import { managedImageUrlPattern } from '../../shared/images';
 import { parseImageDimensions } from './image-dimensions';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
-import { highlightTree } from '@lezer/highlight';
-import { javascriptLanguage } from '@codemirror/lang-javascript';
-import { jsonLanguage } from '@codemirror/lang-json';
-import { tokenHighlighter } from './token-highlighter';
 import { useWorkspace } from '../state/workspace-context';
 import { remarkSourceMap, rehypeSourceText } from './markdown-source-map';
 import { remarkHighlights } from './highlights';
 import { linkedNoteId } from '../../shared/note-link';
+import { remarkGithubAlerts } from './github-alerts';
 import {
-  remarkGithubAlerts,
-  alertLabels,
-  type AlertType,
-} from './github-alerts';
-import {
-  Info,
-  Lightbulb,
-  MessageSquareWarning,
-  TriangleAlert,
-  OctagonAlert,
-} from 'lucide-react';
+  HighlightedCode,
+  MarkdownAlert,
+  readMarkdownFence,
+} from './markdown-presentation';
 
 const gfm = [
   remarkGfm,
@@ -157,7 +146,7 @@ function PreviewLink({ href, children }: ComponentProps<'a'>) {
   );
 }
 const components: Components = {
-  div: PreviewAlert,
+  div: MarkdownAlert,
   pre: PreviewBlock,
   li: PreviewListItem,
   input: PreviewCheckbox,
@@ -166,35 +155,6 @@ const components: Components = {
   code: PreviewCode,
 };
 
-const alertIcons = {
-  note: Info,
-  tip: Lightbulb,
-  important: MessageSquareWarning,
-  warning: TriangleAlert,
-  caution: OctagonAlert,
-};
-function PreviewAlert({
-  node,
-  children,
-  ...props
-}: ComponentProps<'div'> & ExtraProps) {
-  const value = node?.properties['data-alert-type'];
-  if (typeof value !== 'string' || !Object.hasOwn(alertLabels, value))
-    return <div {...props}>{children}</div>;
-  const type = value as AlertType;
-  const Icon = alertIcons[type];
-  return (
-    <div {...props} role="note" aria-label={alertLabels[type]}>
-      <p className="gfm-alert-title">
-        <span className="icon" aria-hidden="true">
-          <Icon size="1em" />
-        </span>
-        {alertLabels[type]}
-      </p>
-      {children}
-    </div>
-  );
-}
 function PreviewImage({
   node: _node,
   src,
@@ -234,32 +194,17 @@ function PreviewCode({ children, className }: ComponentProps<'code'>) {
 }
 
 function PreviewBlock({ node, children }: ComponentProps<'pre'> & ExtraProps) {
-  const code = node?.children[0];
-  const classes =
-    code?.type === 'element' ? code.properties.className : undefined;
-  const language = Array.isArray(classes)
-    ? classes.find(
-        (value) => typeof value === 'string' && value.startsWith('language-'),
-      )
-    : undefined;
-  const text =
-    code?.type === 'element'
-      ? code.children
-          .filter((child) => child.type === 'text')
-          .map((child) => child.value)
-          .join('')
-      : '';
+  const { element, language, text } = readMarkdownFence(node);
   const math = useWorkspace((state) => state.preferences.mathEnabled);
   const mermaid = useWorkspace((state) => state.preferences.mermaidEnabled);
   // Code fences own their source positions; react-markdown puts them on code.
-  const source =
-    code?.type === 'element'
-      ? Object.fromEntries(
-          Object.entries(code.properties).filter(([name]) =>
-            name.startsWith('data-source-'),
-          ),
-        )
-      : {};
+  const source = element
+    ? Object.fromEntries(
+        Object.entries(element.properties).filter(([name]) =>
+          name.startsWith('data-source-'),
+        ),
+      )
+    : {};
   if (language === 'language-math' && math)
     return (
       <div {...source} className="math-block">
@@ -283,37 +228,4 @@ function PreviewBlock({ node, children }: ComponentProps<'pre'> & ExtraProps) {
       </div>
     );
   return <pre {...source}>{children}</pre>;
-}
-
-function HighlightedCode({
-  children,
-  className,
-}: {
-  children: string;
-  className?: string;
-}) {
-  const name = className?.replace('language-', '');
-  const language = /^(js|javascript|ts|typescript|jsx|tsx)$/.test(name ?? '')
-    ? javascriptLanguage
-    : name === 'json'
-      ? jsonLanguage
-      : null;
-  if (!language) return <code className={className}>{children}</code>;
-  const spans: ReactNode[] = [];
-  let offset = 0;
-  highlightTree(
-    language.parser.parse(children),
-    tokenHighlighter,
-    (from, to, classes) => {
-      if (from > offset) spans.push(children.slice(offset, from));
-      spans.push(
-        <span className={classes} key={`${from}:${to}`}>
-          {children.slice(from, to)}
-        </span>,
-      );
-      offset = to;
-    },
-  );
-  spans.push(children.slice(offset));
-  return <code className={`codeblock ${className ?? ''}`}>{spans}</code>;
 }

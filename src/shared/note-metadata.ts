@@ -1,4 +1,5 @@
 import { z } from './validation';
+import { tagNameSchema } from './tags';
 export const noteStatusSchema = z.enum([
   'none',
   'active',
@@ -10,7 +11,7 @@ export const noteMetadataSchema = z
   .object({
     notebookId: z.uuid().nullable(),
     status: noteStatusSchema,
-    tags: z.array(z.string().trim().min(1).max(40)).max(32),
+    tags: z.array(tagNameSchema).max(32),
     isTemplate: z.boolean(),
   })
   .strict();

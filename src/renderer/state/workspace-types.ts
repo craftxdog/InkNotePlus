@@ -1,10 +1,16 @@
-import type { AppErrorCode, NoteProjection, Result } from '../../shared/ipc';
+import type {
+  AppErrorCode,
+  ManageTrashInput,
+  NoteProjection,
+  Result,
+} from '../../shared/ipc';
 import type { MainLayoutState } from '../layout/inkdrop-main-layout';
 import type { Preferences, PreferencesPatch } from '../../shared/preferences';
 import type { NotebookIconName } from '../../shared/notebook-icons';
 import type { InkNoteApi } from '../../preload/api';
 import type { InstalledTheme } from '../../shared/themes';
 import type { ManagedImage } from '../../shared/images';
+import type { UpdateTagInput } from '../../shared/tags';
 import type {
   LibrarySnapshot,
   NoteMetadata,
@@ -18,6 +24,12 @@ export type Navigation =
   | { type: 'notebook'; id: string }
   | { type: 'status'; status: NoteStatus }
   | { type: 'tag'; name: string };
+
+export type LibraryDialogRequest =
+  | { kind: 'trash' | 'restore' | 'delete'; ids: readonly string[] }
+  | { kind: 'empty' }
+  | { kind: 'delete-notebook'; id: string; name: string }
+  | { kind: 'edit-tag' | 'delete-tag'; name: string };
 
 export interface DocumentState {
   readonly noteId: string | null;
@@ -56,6 +68,8 @@ export interface WorkspaceState {
   readonly navigation: Navigation;
   readonly notebookDialogOpen: boolean;
   readonly activeNoteId: string | null;
+  readonly selectedNoteIds: readonly string[];
+  readonly libraryDialog: LibraryDialogRequest | null;
   readonly searchQuery: string;
   readonly searchGlobal: boolean;
   readonly notebookDialogParentId: string | null;
@@ -66,6 +80,7 @@ export interface WorkspaceState {
 }
 
 export interface WorkspaceActions {
+  readonly transfer: InkNoteApi['transfer'];
   importImage(base64?: string): Promise<Result<ManagedImage | null>>;
   browseThemes: InkNoteApi['themes']['browse'];
   installTheme(name?: string): Promise<void>;
@@ -100,8 +115,15 @@ export interface WorkspaceActions {
   refreshLibrary(): Promise<void>;
   createNotebook(name: string, parentId?: string | null): Promise<void>;
   setNotebookIcon(id: string, icon: NotebookIconName): Promise<void>;
-  trashActiveNote(): Promise<void>;
-  restoreActiveNote(): Promise<void>;
+  manageTrash(input: ManageTrashInput): Promise<Result<number>>;
+  deleteNotebook(id: string): Promise<Result<string[]>>;
+  updateTag(input: UpdateTagInput): Promise<Result<boolean>>;
+  deleteTag(name: string): Promise<Result<boolean>>;
+  setLibraryDialog(request: LibraryDialogRequest | null): void;
+  openNoteAction(
+    kind: 'trash' | 'restore' | 'delete',
+    ids?: readonly string[],
+  ): boolean;
   connect(beforeFlush?: () => void): () => void;
   refreshNotes(preserveLoaded?: boolean): Promise<void>;
   loadMoreNotes(): Promise<void>;
@@ -110,6 +132,7 @@ export interface WorkspaceActions {
   togglePin(): void;
   setNoteStatus(status: NoteStatus): void;
   selectNote(id: string | null): void;
+  toggleNoteSelection(id: string): void;
   setSidebarVisible(visible: boolean): void;
   setDistractionFreeEnabled(enabled: boolean): void;
   createNote(): Promise<void>;

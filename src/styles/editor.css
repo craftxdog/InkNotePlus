@@ -17,6 +17,11 @@
     color: var(--negative-color);
     font-size: var(--small);
   }
+  .editor-export-status {
+    padding: 6px 16px;
+    color: var(--muted-text-color);
+    font-size: var(--small);
+  }
   .editor-layout {
     container-type: inline-size;
     container-name: document;
@@ -258,6 +263,15 @@
     color: var(--unselected-text-color);
     padding: var(--24px);
     text-align: center;
+  }
+  .note-trash-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--8px);
+  }
+  .editor-layout > .note-trash-actions {
+    padding: var(--8px) var(--16px);
   }
   .workspace-empty h2 {
     font-size: var(--large);

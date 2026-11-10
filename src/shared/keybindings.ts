@@ -67,6 +67,13 @@ export const shortcutCommands = [
     key: 'p',
   },
   {
+    id: 'core:delete-note',
+    label: 'Eliminar notas seleccionadas',
+    scope: 'note-list',
+    key: 'Delete',
+    macKey: 'Mod-Backspace',
+  },
+  {
     id: 'editor:toggle-drawer',
     label: 'Abrir acciones de la nota',
     scope: 'app',

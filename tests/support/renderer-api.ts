@@ -38,7 +38,23 @@ export function deferred<T>() {
 export function createApi(overrides: Partial<InkNoteApi['notes']> = {}) {
   const listeners = new Set<(event: NoteChangedEvent) => void>();
   let preferences = { ...defaultPreferences };
+  const backupStatus = {
+    directory: null,
+    state: 'idle',
+    lastCompletedAt: null,
+  } as const;
   const api: InkNoteApi = {
+    transfer: {
+      backupStatus: async () => success(backupStatus),
+      chooseBackupDirectory: async () => success(null),
+      enableBackup: async () => success(backupStatus),
+      disableBackup: async () => success(backupStatus),
+      runBackup: async () => success(backupStatus),
+      restoreBackup: async () => success(null),
+      exportNote: async () => success(null),
+      exportLibrary: async () => success(null),
+      onBackupChanged: () => () => {},
+    },
     images: {
       importFile: async () => success(null),
       write: async () => success(null),
@@ -59,6 +75,9 @@ export function createApi(overrides: Partial<InkNoteApi['notes']> = {}) {
       get: async () => success(emptyLibrary),
       createNotebook: async () => failure('unavailable'),
       setNotebookIcon: async () => failure('unavailable'),
+      deleteNotebook: async () => failure('unavailable'),
+      updateTag: async () => failure('unavailable'),
+      deleteTag: async () => failure('unavailable'),
     },
     preferences: {
       get: async () =>
@@ -79,6 +98,7 @@ export function createApi(overrides: Partial<InkNoteApi['notes']> = {}) {
       search: async () => failure('unavailable'),
       moveToTrash: async () => failure('unavailable'),
       restore: async () => failure('unavailable'),
+      manageTrash: async () => failure('unavailable'),
       ...overrides,
     },
     onNoteChanged(listener) {

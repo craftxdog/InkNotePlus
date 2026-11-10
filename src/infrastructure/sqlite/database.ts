@@ -32,32 +32,36 @@ export function applyMigrations(database: DatabaseSync): void {
     ) STRICT;
   `);
 
-  const appliedVersions = new Set(
-    database
-      .prepare('SELECT version FROM inknote_schema_migrations')
-      .all()
-      .map(parseAppliedMigration)
-      .map(({ version }) => version),
-  );
+  withSqliteWrite(database, () => {
+    const appliedVersions = new Set(
+      database
+        .prepare('SELECT version FROM inknote_schema_migrations')
+        .all()
+        .map(parseAppliedMigration)
+        .map(({ version }) => version),
+    );
 
-  for (const migration of migrations) {
-    if (appliedVersions.has(migration.version)) {
-      continue;
-    }
-
-    database.exec('BEGIN IMMEDIATE');
-    try {
+    for (const migration of migrations) {
+      if (appliedVersions.has(migration.version)) continue;
       database.exec(migration.sql);
       database
         .prepare(
           'INSERT INTO inknote_schema_migrations (version, applied_at) VALUES (?, ?)',
         )
         .run(migration.version, new Date().toISOString());
-      database.exec('COMMIT');
-    } catch (error) {
-      database.exec('ROLLBACK');
-      throw error;
     }
+  });
+}
+
+export function withSqliteWrite<T>(database: DatabaseSync, write: () => T): T {
+  database.exec('BEGIN IMMEDIATE');
+  try {
+    const result = write();
+    database.exec('COMMIT');
+    return result;
+  } catch (error) {
+    database.exec('ROLLBACK');
+    throw error;
   }
 }
 

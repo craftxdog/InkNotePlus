@@ -1,7 +1,8 @@
 import { z } from './validation';
 import { noteMetadataSchema, noteStatusSchema } from './note-metadata';
+import { tagNameSchema } from './tags';
 
-const maxTitleLength = 512;
+export const maxTitleLength = 512;
 export const maxBodyLength = 1_000_000;
 const maxSearchQueryLength = 512;
 
@@ -17,6 +18,7 @@ export const IPC_CHANNELS = {
     search: 'notes:search',
     moveToTrash: 'notes:move-to-trash',
     restore: 'notes:restore',
+    manageTrash: 'notes:manage-trash',
   },
   events: {
     noteChanged: 'notes:changed',
@@ -43,7 +45,7 @@ export const listNotesInputSchema = z
     trashed: z.boolean().optional(),
     notebookId: z.uuid().nullable().optional(),
     status: noteStatusSchema.optional(),
-    tag: z.string().trim().min(1).max(40).optional(),
+    tag: tagNameSchema.optional(),
     templates: z.boolean().optional(),
     excludeFinished: z.boolean().optional(),
   })
@@ -71,6 +73,21 @@ export const noteIdInputSchema = z
     id: noteIdSchema,
   })
   .strict();
+
+const selectedNoteIds = z.array(noteIdSchema).min(1).max(10_000);
+export const manageTrashSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('trash'), ids: selectedNoteIds }).strict(),
+  z
+    .object({
+      action: z.literal('restore'),
+      ids: selectedNoteIds,
+      notebookId: z.uuid().nullable(),
+    })
+    .strict(),
+  z.object({ action: z.literal('delete'), ids: selectedNoteIds }).strict(),
+  z.object({ action: z.literal('empty') }).strict(),
+]);
+export const affectedCountSchema = z.number().int().nonnegative();
 
 export const noteSchema = z
   .object({
@@ -101,6 +118,11 @@ export const appErrorSchema = z
   })
   .strict();
 
+export const affectedCountResultSchema = z.discriminatedUnion('ok', [
+  z.object({ ok: z.literal(true), data: affectedCountSchema }).strict(),
+  z.object({ ok: z.literal(false), error: appErrorSchema }).strict(),
+]);
+
 export const noteResultSchema = z.discriminatedUnion('ok', [
   z.object({ ok: z.literal(true), data: noteSchema }).strict(),
   z.object({ ok: z.literal(false), error: appErrorSchema }).strict(),
@@ -116,6 +138,7 @@ export type UpdateNoteInput = z.output<typeof updateNoteInputSchema>;
 export type ListNotesInput = z.output<typeof listNotesInputSchema>;
 export type SearchNotesInput = z.output<typeof searchNotesInputSchema>;
 export type NoteIdInput = z.output<typeof noteIdInputSchema>;
+export type ManageTrashInput = z.output<typeof manageTrashSchema>;
 export type NoteProjection = z.output<typeof noteSchema>;
 export type NoteChangedEvent = z.output<typeof noteChangedEventSchema>;
 export type AppError = z.output<typeof appErrorSchema>;

@@ -115,6 +115,10 @@ export function executeShortcut(
     case 'core:pin-note':
       state.togglePin();
       return true;
+    case 'core:delete-note':
+      return state.openNoteAction(
+        state.navigation.type === 'trash' ? 'delete' : 'trash',
+      );
     case 'editor:toggle-drawer': {
       const drawer = document.querySelector<HTMLDetailsElement>('.editor-more');
       if (!drawer) return false;
@@ -292,6 +296,7 @@ export function installShortcuts(
         ((!state.settingsOpen &&
           !state.templatePickerOpen &&
           !state.commandPaletteOpen &&
+          !state.libraryDialog &&
           !state.notebookDialogOpen) ||
           (state.settingsOpen &&
             command.id === 'application:open-preferences') ||

@@ -4,6 +4,7 @@ import {
   success,
   type CreateNoteInput,
   type ListNotesInput,
+  type ManageTrashInput,
   type NoteIdInput,
   type NoteProjection,
   type Result,
@@ -23,6 +24,7 @@ export const NOTE_COMMAND_IDS = {
   search: 'notes:search',
   moveToTrash: 'notes:move-to-trash',
   restore: 'notes:restore',
+  manageTrash: 'notes:manage-trash',
 } as const;
 
 export function registerNoteCommands(
@@ -53,6 +55,10 @@ export function registerNoteCommands(
     registry.register<NoteIdInput, Result<NoteProjection>>({
       id: NOTE_COMMAND_IDS.restore,
       execute: ({ id }) => runNoteCommand(() => repository.restore(id)),
+    }),
+    registry.register<ManageTrashInput, Result<number>>({
+      id: NOTE_COMMAND_IDS.manageTrash,
+      execute: (input) => runNoteCommand(() => repository.manageTrash(input)),
     }),
   ];
 

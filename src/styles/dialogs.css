@@ -175,6 +175,19 @@
     color: var(--muted-text-color);
     font-size: var(--small);
   }
+  .transfer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--8px);
+  }
+  .transfer-actions .button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--6px);
+  }
+  .transfer-message {
+    overflow-wrap: anywhere;
+  }
   .settings-content input[type='range'] {
     accent-color: var(--primary-color);
   }
@@ -449,5 +462,9 @@
   .button--primary {
     background: var(--primary-button-background-color);
     color: var(--primary-button-text-color);
+  }
+  .button--danger {
+    color: var(--negative-text-color);
+    border-color: var(--negative-color);
   }
 }

@@ -1,10 +1,19 @@
 import type { StoreApi } from 'zustand/vanilla';
 import type { InkNoteApi } from '../../preload/api';
 import type { WorkspaceStore, Navigation } from './workspace-types';
-import type { Preferences } from '../../shared/preferences';
+import {
+  pruneNotebookPreferences,
+  type Preferences,
+} from '../../shared/preferences';
 import type { NotebookIconName } from '../../shared/notebook-icons';
 import { defaultNoteMetadata } from '../../shared/note-metadata';
-import type { ListNotesInput } from '../../shared/ipc';
+import {
+  failure,
+  type ListNotesInput,
+  type ManageTrashInput,
+  type Result,
+} from '../../shared/ipc';
+import type { UpdateTagInput } from '../../shared/tags';
 import type { NoteMetadata, Notebook } from '../../shared/library';
 
 export function matchesNavigation(
@@ -64,7 +73,7 @@ export function navigationFilter(
     case 'templates':
       return { ...common, templates: true };
     case 'trash':
-      return { ...common, trashed: true };
+      return { sort: common.sort, trashed: true };
     case 'notebook':
       return {
         ...common,
@@ -96,6 +105,23 @@ export function createLibraryActions(
         errorCode: 'unavailable',
       },
     }));
+  async function mutate<T>(
+    action: () => Promise<Result<T>>,
+    after?: (data: T) => void | Promise<void>,
+  ): Promise<Result<T>> {
+    const generation = getGeneration();
+    try {
+      if (!(await get().flushDrafts())) return failure('unavailable');
+      if (generation !== getGeneration()) return failure('unavailable');
+      const result = await action();
+      if (!result.ok || generation !== getGeneration()) return result;
+      await after?.(result.data);
+      await get().refreshNotes();
+      return result;
+    } catch {
+      return failure('unavailable');
+    }
+  }
   return {
     setNotebookDialogOpen(
       notebookDialogOpen: boolean,
@@ -141,7 +167,12 @@ export function createLibraryActions(
       }
     },
     async navigate(navigation: Navigation) {
-      set({ navigation, searchQuery: '', searchGlobal: false });
+      set({
+        navigation,
+        searchQuery: '',
+        searchGlobal: false,
+        selectedNoteIds: [],
+      });
       await get().refreshNotes();
     },
     async focusNotebook(id: string | null) {
@@ -150,6 +181,7 @@ export function createLibraryActions(
         navigation: { type: 'all' },
         searchQuery: '',
         searchGlobal: false,
+        selectedNoteIds: [],
       });
       const saving = get().updatePreferences({ notebookScopeId: id });
       await get().refreshNotes();
@@ -194,41 +226,72 @@ export function createLibraryActions(
         if (generation === getGeneration()) fail();
       }
     },
-    async trashActiveNote() {
-      const generation = getGeneration();
-      const id = get().activeNoteId;
-      if (!id) return;
-      try {
-        if (!(await get().flushDrafts()) || generation !== getGeneration())
-          return;
-        const result = await api.notes.moveToTrash({ id });
-        if (generation !== getGeneration()) return;
-        if (!result.ok) {
-          fail();
-          return;
-        }
-        await get().refreshNotes();
-        await get().refreshLibrary();
-      } catch {
-        if (generation === getGeneration()) fail();
-      }
+    manageTrash(input: ManageTrashInput) {
+      return mutate(
+        () => api.notes.manageTrash(input),
+        () => {
+          const state = get();
+          if (
+            state.activeNoteId &&
+            (input.action === 'empty'
+              ? state.navigation.type === 'trash'
+              : input.ids.includes(state.activeNoteId))
+          )
+            state.selectNote(null);
+          else set({ selectedNoteIds: [] });
+        },
+      );
     },
-    async restoreActiveNote() {
-      const generation = getGeneration();
-      const id = get().activeNoteId;
-      if (!id) return;
-      try {
-        const result = await api.notes.restore({ id });
-        if (generation !== getGeneration()) return;
-        if (!result.ok) {
-          fail();
-          return;
-        }
-        await get().refreshNotes();
-        await get().refreshLibrary();
-      } catch {
-        if (generation === getGeneration()) fail();
-      }
+    deleteNotebook(id: string) {
+      return mutate(
+        () => api.library.deleteNotebook(id),
+        async (ids) => {
+          const deleted = new Set(ids);
+          const { navigation, preferences } = get();
+          const activeBook = get().document.metadata.notebookId;
+          if (activeBook && deleted.has(activeBook)) get().selectNote(null);
+          const patch = pruneNotebookPreferences(preferences, (bookId) =>
+            deleted.has(bookId),
+          );
+          if (
+            patch.notebookScopeId === null ||
+            (navigation.type === 'notebook' && deleted.has(navigation.id))
+          ) {
+            set({
+              navigation: { type: 'all' },
+              searchQuery: '',
+              searchGlobal: false,
+              selectedNoteIds: [],
+            });
+          }
+          if (Object.keys(patch).length) await get().updatePreferences(patch);
+        },
+      );
+    },
+    updateTag(input: UpdateTagInput) {
+      return mutate(
+        () => api.library.updateTag(input),
+        () => {
+          const { navigation } = get();
+          if (navigation.type === 'tag' && navigation.name === input.name)
+            set({ navigation: { type: 'tag', name: input.nextName } });
+        },
+      );
+    },
+    deleteTag(name: string) {
+      return mutate(
+        () => api.library.deleteTag(name),
+        () => {
+          const { navigation } = get();
+          if (navigation.type === 'tag' && navigation.name === name)
+            set({
+              navigation: { type: 'all' },
+              searchQuery: '',
+              searchGlobal: false,
+              selectedNoteIds: [],
+            });
+        },
+      );
     },
   };
 }

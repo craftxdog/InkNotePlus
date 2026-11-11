@@ -21,19 +21,15 @@ esac
 apt_sources="$RUNNER_TEMP/inknote-ubuntu.sources"
 apt_config="$RUNNER_TEMP/inknote-apt.conf"
 
-# Use signed, direct Ubuntu sources instead of the runner's failing Azure
-# mirror list. The configuration stays in this job's temporary directory.
-# https://github.com/actions/runner-images/blob/main/images/ubuntu/scripts/build/configure-apt-sources.sh
+# The runner failed to resolve both Azure and Canonical archive hosts. Use
+# kernel.org's Ubuntu mirror, retaining Ubuntu signatures for every pocket.
+# https://mirrors.edge.kernel.org/
+# https://documentation.ubuntu.com/security/software-integrity/archive-verification/
+# The configuration stays in this job's temporary directory.
 cat > "$apt_sources" <<'SOURCES'
 Types: deb
-URIs: https://archive.ubuntu.com/ubuntu/
-Suites: noble noble-updates noble-backports
-Components: main restricted universe multiverse
-Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
-
-Types: deb
-URIs: https://security.ubuntu.com/ubuntu/
-Suites: noble-security
+URIs: https://mirrors.edge.kernel.org/ubuntu/
+Suites: noble noble-updates noble-backports noble-security
 Components: main restricted universe multiverse
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 SOURCES

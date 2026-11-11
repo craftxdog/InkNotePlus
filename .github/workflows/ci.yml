@@ -33,21 +33,6 @@ jobs:
           node-version: 24.22.1
           cache: pnpm
 
-      - name: Diagnose Ubuntu network access
-        run: |
-          ls -l /etc/resolv.conf
-          cat /etc/resolv.conf
-          for host in github.com registry.npmjs.org archive.ubuntu.com security.ubuntu.com; do
-            printf '\nDNS %s (runner):\n' "$host"
-            timeout 8 getent ahostsv4 "$host" || true
-            printf 'DNS %s (_apt):\n' "$host"
-            sudo -u _apt timeout 8 getent ahostsv4 "$host" || true
-          done
-          printf '\nHTTPS proxy environment present: %s\n' "${HTTPS_PROXY:+yes}"
-          printf 'https_proxy environment present: %s\n' "${https_proxy:+yes}"
-          curl --head --silent --show-error --connect-timeout 5 --max-time 10 https://archive.ubuntu.com/ubuntu/dists/noble/InRelease || true
-          sudo curl --head --silent --show-error --connect-timeout 5 --max-time 10 https://archive.ubuntu.com/ubuntu/dists/noble/InRelease || true
-
       - name: Verify Ubuntu runtime dependencies
         run: bash scripts/setup-ubuntu-ci.sh runtime
 

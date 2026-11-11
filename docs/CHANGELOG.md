@@ -6,7 +6,7 @@
 
 - Incluye las correcciones de recarga, editor, temas y dependencias descritas en
   1.2.2, cuyo build de Linux no pudo completar la instalación de dependencias.
-- CI utiliza repositorios oficiales HTTPS de Ubuntu con verificación de firmas,
+- CI utiliza la réplica HTTPS de kernel.org con verificación de firmas de Ubuntu,
   comprueba los índices y prepara las bibliotecas del runtime antes de construir.
   La instalación del DEB utiliza la misma configuración verificada.
 - Se conservan las pruebas de instalación y uso en los cuatro destinos. Los

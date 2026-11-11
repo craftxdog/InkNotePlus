@@ -1,15 +1,20 @@
 import type { ThemePackage } from './catalog';
+import { createThemeContrastStyle } from './theme-contrast';
 
 // A complete package replaces the current theme only after every sheet loads.
 export class ThemeManager {
   private request = 0;
-  private active: { theme: ThemePackage; links: HTMLLinkElement[] } | null =
-    null;
+  private active: {
+    theme: ThemePackage;
+    links: HTMLLinkElement[];
+    nonce?: string;
+  } | null = null;
   private pending: HTMLLinkElement[] = [];
   private cancel: (() => void) | undefined;
   private listeners = new Set<(theme: ThemePackage) => void>();
   private loaded = new Map<string, ThemePackage>();
   private enabled: string[] = [];
+  private contrast: HTMLStyleElement | null = null;
   constructor(private readonly document: Document) {}
   getActiveThemes() {
     return this.active ? [this.active.theme] : [];
@@ -34,7 +39,7 @@ export class ThemeManager {
       },
     };
   }
-  async activate(theme: ThemePackage): Promise<boolean> {
+  async activate(theme: ThemePackage, nonce?: string): Promise<boolean> {
     this.enabled = [theme.manifest.name];
     this.cancel?.();
     this.cancel = undefined;
@@ -43,7 +48,8 @@ export class ThemeManager {
     const request = ++this.request;
     if (
       this.active?.theme.manifest.name === theme.manifest.name &&
-      this.active.theme.styles.join() === theme.styles.join()
+      this.active.theme.styles.join() === theme.styles.join() &&
+      this.active.nonce === nonce
     )
       return true;
     const links = theme.styles.map((href, index) => {
@@ -79,11 +85,16 @@ export class ThemeManager {
       if (request !== this.request) return false;
       for (const link of links) link.media = 'all';
       this.active?.links.forEach((link) => link.remove());
-      this.active = { theme, links };
+      this.active = { theme, links, nonce };
       this.loaded.set(theme.manifest.name, theme);
       this.document.documentElement.dataset.theme = theme.manifest.name;
       this.document.documentElement.style.colorScheme =
         theme.manifest.themeAppearance;
+      this.contrast?.remove();
+      this.contrast = nonce
+        ? createThemeContrastStyle(this.document, nonce)
+        : null;
+      if (this.contrast) this.document.head.append(this.contrast);
       for (const listener of this.listeners) listener(theme);
       return true;
     } catch {
@@ -113,5 +124,7 @@ export class ThemeManager {
     this.listeners.clear();
     this.loaded.clear();
     this.enabled = [];
+    this.contrast?.remove();
+    this.contrast = null;
   }
 }

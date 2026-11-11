@@ -24,7 +24,9 @@ export function AppShell() {
   const layout = useWorkspace((state) => state.mainLayout);
   const preferences = useWorkspace((state) => state.preferences);
   const update = useWorkspace((state) => state.updatePreferences);
-  const setSidebarVisible = useWorkspace((state) => state.setSidebarVisible);
+  const toggleWorkspaceSidebar = useWorkspace((state) => state.toggleSidebar);
+  const drawer = useWorkspace((state) => state.sidebarDrawerOpen);
+  const setDrawer = useWorkspace((state) => state.setSidebarDrawerOpen);
   const settingsOpen = useWorkspace((state) => state.settingsOpen);
   const notebookDialogOpen = useWorkspace((state) => state.notebookDialogOpen);
   const templatePickerOpen = useWorkspace((state) => state.templatePickerOpen);
@@ -38,7 +40,6 @@ export function AppShell() {
   const [width, setWidth] = useState(1280);
   const [sidebarWidth, setSidebarWidth] = useState(preferences.sidebarWidth);
   const [noteListWidth, setNoteListWidth] = useState(preferences.noteListWidth);
-  const [drawer, setDrawer] = useState(false);
   const [compactPane, setCompactPane] = useState<'notes' | 'editor'>('notes');
   useEffect(
     () => setSidebarWidth(preferences.sidebarWidth),
@@ -61,6 +62,10 @@ export function AppShell() {
     { ...preferences, sidebarWidth, noteListWidth },
     layout,
   );
+  useEffect(() => {
+    if (resolved.sidebarFits && !layout.distractionFreeEnabled && drawer)
+      setDrawer(false);
+  }, [resolved.sidebarFits, layout.distractionFreeEnabled, drawer, setDrawer]);
   const showSidebar = resolved.sidebar || drawer;
   const showList =
     resolved.list ||
@@ -72,8 +77,7 @@ export function AppShell() {
     layout.distractionFreeEnabled ||
     compactPane === 'editor';
   const toggleSidebar = () => {
-    if (width < sidebarWidth + noteListWidth + 322) setDrawer(!drawer);
-    else setSidebarVisible(!layout.sidebarVisible);
+    toggleWorkspaceSidebar(width);
   };
   return (
     <div

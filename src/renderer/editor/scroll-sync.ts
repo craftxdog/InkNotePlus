@@ -113,32 +113,42 @@ export function createScrollSync(
     const maximum = source.scrollHeight - source.clientHeight;
     let value = mapScroll(anchors, source.scrollTop, owner);
     const editorBounds = editor.getBoundingClientRect();
+    const trackingCursor = owner === 'editor' && followCursor && view.hasFocus;
     if (owner === 'editor') {
-      const position =
-        followCursor && view.hasFocus
-          ? view.state.selection.main.head
-          : view.posAtCoords(
-              {
-                x: Math.max(
-                  editorBounds.left + 1,
-                  view.contentDOM.getBoundingClientRect().left + 13,
-                ),
-                y: editorBounds.top + editor.clientHeight * 0.35,
-              },
-              false,
-            );
+      const referenceY = editorBounds.top + editor.clientHeight * 0.35;
+      const position = trackingCursor
+        ? view.state.selection.main.head
+        : view.posAtCoords(
+            {
+              x: Math.max(
+                editorBounds.left + 1,
+                view.contentDOM.getBoundingClientRect().left + 13,
+              ),
+              y: referenceY,
+            },
+            false,
+          );
       if (position !== null) {
         // coordsAtPos measures a visual row, including soft wrapping.
         // https://codemirror.net/docs/ref/#view.EditorView.coordsAtPos
-        const cursor = view.coordsAtPos(position);
-        const previewY = previewAtSource(view, preview, position);
+        const point = previewAtSource(
+          view,
+          preview,
+          position,
+          trackingCursor ? undefined : referenceY,
+        );
+        // Link URLs and delimiters have no preview glyph. While scrolling,
+        // measure the source glyph that actually produced the preview anchor.
+        const cursor = view.coordsAtPos(
+          point && !trackingCursor ? point.position : position,
+        );
         if (
           cursor &&
-          previewY !== null &&
+          point &&
           cursor.bottom > editorBounds.top &&
           cursor.top < editorBounds.bottom
         )
-          value = previewY - (cursor.top - editorBounds.top);
+          value = point.y - (cursor.top - editorBounds.top);
       }
     } else {
       const point = sourceAtPreview(view, preview);
@@ -157,16 +167,8 @@ export function createScrollSync(
         value = editorY - point.y;
       }
     }
-    if (
-      !(owner === 'editor' && followCursor && view.hasFocus) &&
-      source.scrollTop < 1
-    )
-      value = 0;
-    else if (
-      !(owner === 'editor' && followCursor && view.hasFocus) &&
-      maximum > 0 &&
-      source.scrollTop >= maximum - 1
-    )
+    if (!trackingCursor && source.scrollTop < 1) value = 0;
+    else if (!trackingCursor && maximum > 0 && source.scrollTop >= maximum - 1)
       value = target.scrollHeight - target.clientHeight;
     value = Math.max(
       0,

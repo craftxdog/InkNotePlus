@@ -184,7 +184,7 @@ export function MarkdownEditor({
               borderRadius: 'var(--popup-border-radius)',
             },
             '.cm-tooltip-autocomplete > ul': {
-              fontFamily: 'var(--font-family)',
+              fontFamily: 'var(--page-font)',
             },
             '.cm-tooltip-autocomplete > ul > li[aria-selected="true"]': {
               backgroundColor: 'var(--note-list-view-item-selected-background)',

@@ -4,7 +4,10 @@ export const WINDOW_CHANNELS = {
   readiness: 'window:save-readiness',
   prepare: 'window:prepare-close',
   confirm: 'window:confirm-close',
+  background: 'window:set-background',
+  reload: 'window:reload',
 } as const;
+export const windowBackgroundSchema = z.string().regex(/^#[a-f0-9]{6}$/i);
 export const closeRequestSchema = z.object({ requestId: z.uuid() }).strict();
 export const closeConfirmationSchema = closeRequestSchema
   .extend({ saved: z.boolean() })

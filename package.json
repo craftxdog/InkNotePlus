@@ -1,7 +1,7 @@
 {
   "name": "inknote",
   "productName": "InkNote",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "private": true,
   "description": "Local-first Markdown notes for desktop.",
   "keywords": [],
@@ -29,6 +29,7 @@
     "test:integration": "vitest run tests/integration",
     "test:renderer": "vitest run tests/renderer",
     "test:desktop": "node scripts/smoke-electron.mjs",
+    "test:desktop:audit": "node scripts/smoke-system-audit.mjs",
     "test:desktop:package": "node scripts/smoke-electron.mjs --packaged",
     "build:math-styles": "node scripts/build-math-styles.mjs && oxfmt --write src/renderer/vendor/inkdrop-math/styles/katex.css",
     "verify": "pnpm run lint && pnpm run typecheck && pnpm run test",

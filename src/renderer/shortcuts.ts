@@ -49,6 +49,13 @@ export function executeShortcut(
 ): boolean {
   const state = store.getState();
   switch (command) {
+    case 'window:reload':
+      void state.reloadWindow();
+      return true;
+    case 'core:navigate-back':
+    case 'core:navigate-forward':
+      void state.navigateHistory(command === 'core:navigate-back' ? -1 : 1);
+      return true;
     case 'core:toggle-telescope':
       state.setCommandPaletteOpen(!state.commandPaletteOpen);
       return true;
@@ -143,7 +150,10 @@ export function executeShortcut(
       state.setNoteStatus('dropped');
       return true;
     case 'view:toggle-sidebar':
-      state.setSidebarVisible(!state.mainLayout.sidebarVisible);
+      state.toggleSidebar(
+        document.querySelector<HTMLElement>('.inknote-shell')?.clientWidth ||
+          window.innerWidth,
+      );
       return true;
     case 'view:toggle-distraction-free':
       state.setDistractionFreeEnabled(!state.mainLayout.distractionFreeEnabled);

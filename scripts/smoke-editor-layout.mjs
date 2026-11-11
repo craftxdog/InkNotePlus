@@ -33,9 +33,15 @@ function renderedWords({ words, from, needle }) {
       viewport: document.querySelector('.pane--preview'),
     },
   };
-  function measure(pane, word) {
+  function measure(pane, candidate) {
     const { text, viewport } = panes[pane];
-    const offset = text.textContent.indexOf(word);
+    const word = typeof candidate === 'string' ? candidate : candidate.text;
+    const occurrence = typeof candidate === 'string' ? 0 : candidate.occurrence;
+    let offset = -1;
+    for (let index = 0; index <= occurrence; index++) {
+      offset = text.textContent.indexOf(word, offset + 1);
+      if (offset < 0) return null;
+    }
     if (offset < 0) return null;
     const walker = document.createTreeWalker(text, NodeFilter.SHOW_TEXT);
     const range = document.createRange();
@@ -98,11 +104,16 @@ function assertSameVisualRow(positions, description) {
     positions.editor?.visible && positions.preview?.visible,
     `The corresponding word must remain visible in both panes. ${details}`,
   );
-  const tolerance =
-    Math.max(positions.editor.lineHeight, positions.preview.lineHeight) * 3;
+  const tolerance = Math.max(
+    positions.editor.lineHeight,
+    positions.preview.lineHeight,
+  );
+  console.log(
+    `${description}: visual row difference ${Math.abs(positions.editor.y - positions.preview.y).toFixed(1)} px`,
+  );
   assert.ok(
     Math.abs(positions.editor.y - positions.preview.y) <= tolerance,
-    `Corresponding wrapped text must align within three visual rows. ${details}`,
+    `Corresponding wrapped text must align within one visual row. ${details}`,
   );
 }
 
@@ -129,6 +140,23 @@ export async function verifyEditorLayout(page) {
     { length: 60 },
     (_, index) => `passage${String(index).padStart(3, '0')}`,
   );
+  // Compare the same visible word near the scroll reference. Sparse paragraph
+  // markers can be several visual rows away when the two fonts wrap differently.
+  // These phrases occur equally often in source and preview, never in hidden URLs.
+  const visibleWords = [
+    ...words,
+    ...[
+      'keeps',
+      'observations',
+      'develops',
+      'the reference guide',
+      'practical details',
+      'the next result',
+      'continue writing',
+    ].flatMap((text) =>
+      Array.from({ length: 90 }, (_, occurrence) => ({ text, occurrence })),
+    ),
+  ];
   // Deliberately vary the amount of source markup within one logical line.
   // Whole-paragraph percentage mapping cannot identify the visible source word.
   const paragraph = words
@@ -227,7 +255,7 @@ export async function verifyEditorLayout(page) {
       );
       await settle(page);
       assertSameVisualRow(
-        await page.evaluate(renderedWords, { words, from }),
+        await page.evaluate(renderedWords, { words: visibleWords, from }),
         `${from} scrolling within one wrapped paragraph`,
       );
       await assertSettled(page, `${from} scrolling`);
@@ -246,22 +274,31 @@ export async function verifyEditorLayout(page) {
   }
 }
 
-async function runStandalone() {
+export async function runNativeCheck(check) {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const profile = await mkdtemp(path.join(tmpdir(), 'inknote-layout-smoke-'));
+  const binary = process.argv
+    .find((argument) => argument.startsWith('--binary='))
+    ?.slice('--binary='.length);
+  const flags = [
+    `--user-data-dir=${profile}`,
+    '--remote-debugging-port=0',
+    '--enable-logging=stderr',
+    ...(process.env.CI === 'true' ? ['--disable-gpu'] : []),
+  ];
   const child = spawn(
-    process.execPath,
-    [
-      path.join(
-        root,
-        'node_modules/@electron-forge/cli/dist/electron-forge.js',
-      ),
-      'start',
-      '--',
-      `--user-data-dir=${profile}`,
-      '--remote-debugging-port=0',
-      '--enable-logging=stderr',
-    ],
+    binary || process.execPath,
+    binary
+      ? flags
+      : [
+          path.join(
+            root,
+            'node_modules/@electron-forge/cli/dist/electron-forge.js',
+          ),
+          'start',
+          '--',
+          ...flags,
+        ],
     {
       cwd: root,
       detached: process.platform !== 'win32',
@@ -308,8 +345,18 @@ async function runStandalone() {
         target.type() === 'page' && /^(file:|https?:)/.test(target.url()),
     );
     page = await target.page();
+    await (
+      await page.createCDPSession()
+    ).send('Emulation.setFocusEmulationEnabled', { enabled: true });
     page.setDefaultTimeout(10_000);
     page.on('pageerror', (error) => errors.push(error.message));
+    page.on('console', (message) => {
+      if (message.type() === 'error') errors.push(message.text());
+    });
+    page.on('requestfailed', (request) => {
+      if (request.failure()?.errorText !== 'net::ERR_ABORTED')
+        errors.push(`${request.url()}: ${request.failure()?.errorText}`);
+    });
     await page.waitForSelector('.inknote-shell');
     const notes = await page.evaluate(() => window.inkNote.notes.list());
     assert.equal(
@@ -323,10 +370,40 @@ async function runStandalone() {
       'Layout smoke requires a fresh profile.',
     );
     console.log(`Layout smoke temporary profile: ${profile}`);
-    if (!process.argv.includes('--wrap-only')) await verifyEditorLayout(page);
-    await verifyLineWrapping(page);
+    const theme = process.argv
+      .find((argument) => argument.startsWith('--theme='))
+      ?.slice('--theme='.length);
+    if (theme) {
+      const result = await page.evaluate(
+        (theme) => window.inkNote.preferences.update({ theme }),
+        theme,
+      );
+      assert.equal(result.ok, true);
+      await page.reload({ waitUntil: 'networkidle0' });
+      await page.waitForFunction(
+        (theme) => document.documentElement.dataset.theme === theme,
+        {},
+        theme,
+      );
+    }
+    await check({ page, profile });
     assert.deepEqual(errors, [], 'The native renderer must remain error-free.');
   } catch (error) {
+    console.error('Renderer errors:', errors);
+    console.error(
+      'Renderer startup:',
+      await page
+        ?.evaluate(() => ({
+          url: location.href,
+          theme: document.documentElement.dataset.theme,
+          root: document.querySelector('#root')?.innerHTML.slice(0, 500),
+          resources: performance
+            .getEntriesByType('resource')
+            .slice(-6)
+            .map((entry) => entry.name),
+        }))
+        .catch(() => null),
+    );
     await page
       ?.screenshot({ path: path.join(profile, 'layout-failure.png') })
       .catch(() => {});
@@ -356,5 +433,8 @@ if (
   import.meta.url === pathToFileURL(process.argv[1]).href &&
   process.argv.includes('--standalone')
 ) {
-  await runStandalone();
+  await runNativeCheck(async ({ page }) => {
+    if (!process.argv.includes('--wrap-only')) await verifyEditorLayout(page);
+    await verifyLineWrapping(page);
+  });
 }

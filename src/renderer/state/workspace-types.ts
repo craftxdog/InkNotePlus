@@ -74,12 +74,20 @@ export interface WorkspaceState {
   readonly searchGlobal: boolean;
   readonly notebookDialogParentId: string | null;
   readonly mainLayout: MainLayoutState;
+  readonly sidebarDrawerOpen: boolean;
+  readonly noteHistory: {
+    readonly ids: readonly string[];
+    readonly index: number;
+  };
   readonly noteList: NoteListState;
   readonly document: DocumentState;
   readonly parkedDrafts: Readonly<Record<string, DocumentState>>;
 }
 
 export interface WorkspaceActions {
+  navigateHistory(direction: -1 | 1): Promise<boolean>;
+  setWindowBackground: InkNoteApi['setWindowBackground'];
+  reloadWindow: InkNoteApi['reloadWindow'];
   readonly transfer: InkNoteApi['transfer'];
   importImage(base64?: string): Promise<Result<ManagedImage | null>>;
   browseThemes: InkNoteApi['themes']['browse'];
@@ -134,6 +142,8 @@ export interface WorkspaceActions {
   selectNote(id: string | null): void;
   toggleNoteSelection(id: string): void;
   setSidebarVisible(visible: boolean): void;
+  toggleSidebar(width: number): void;
+  setSidebarDrawerOpen(open: boolean): void;
   setDistractionFreeEnabled(enabled: boolean): void;
   createNote(): Promise<void>;
   updateDraft(

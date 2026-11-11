@@ -2,6 +2,7 @@ import { z } from '../shared/validation';
 
 import { defineConfig, type ConfigDefinition } from './config';
 import { defaultPreferences, preferencesSchema } from '../shared/preferences';
+import { windowBackgroundSchema } from '../shared/window-lifecycle';
 
 const dimensionSchema = z.number().int().min(320).max(10_000);
 
@@ -17,6 +18,11 @@ export const coreConfig = {
     defaultValue: null,
   }),
   window: {
+    background: defineConfig({
+      key: 'core.window.background',
+      schema: windowBackgroundSchema,
+      defaultValue: '#ffffff',
+    }),
     initialHeight: defineConfig({
       key: 'core.window.initialHeight',
       schema: dimensionSchema,
@@ -43,6 +49,7 @@ export const coreConfig = {
 export const coreConfigDefinitions: readonly ConfigDefinition<unknown>[] = [
   coreConfig.appearance,
   coreConfig.backupDirectory,
+  coreConfig.window.background,
   coreConfig.window.initialHeight,
   coreConfig.window.initialWidth,
   coreConfig.window.minimumHeight,

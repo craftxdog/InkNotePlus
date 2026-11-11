@@ -80,23 +80,46 @@ export function previewAtSource(
   view: EditorView,
   preview: HTMLElement,
   position: number,
+  referenceY?: number,
 ) {
-  let closest: ReturnType<typeof spanRange> = null,
-    distance = Infinity;
+  let before: ReturnType<typeof spanRange> = null,
+    after: ReturnType<typeof spanRange> = null,
+    containing: ReturnType<typeof spanRange> = null;
   for (const span of preview.querySelectorAll<HTMLElement>(selector)) {
     const range = spanRange(view, span);
     if (!range) continue;
+    if (range.from <= position && range.to >= position) {
+      containing = range;
+      break;
+    }
+    if (range.to < position && (!before || range.to > before.to))
+      before = range;
+    if (range.from > position && (!after || range.from < after.from))
+      after = range;
+  }
+  const caret = view.coordsAtPos(position);
+  const reference =
+    referenceY ?? (caret ? (caret.top + caret.bottom) / 2 : undefined);
+  // Hidden URLs can occupy several wrapped rows. Choose the closest visible
+  // source row, rather than counting Markdown characters that have no glyph.
+  const candidates = containing ? [containing] : [after, before];
+  let closest: ReturnType<typeof spanRange> = null,
+    distance = Infinity;
+  for (const range of candidates) {
+    if (!range) continue;
+    const sourcePosition = Math.max(
+      range.from,
+      Math.min(range.to - 1, position),
+    );
+    const coordinates = view.coordsAtPos(sourcePosition);
     const gap =
-      position < range.from
-        ? range.from - position
-        : position > range.to
-          ? position - range.to
-          : 0;
+      reference !== undefined && coordinates
+        ? Math.abs((coordinates.top + coordinates.bottom) / 2 - reference)
+        : Math.abs(sourcePosition - position);
     if (gap < distance) {
       closest = range;
       distance = gap;
     }
-    if (!gap) break;
   }
   if (!closest) return null;
   const { from, to, text } = closest;
@@ -118,9 +141,13 @@ export function previewAtSource(
     offset = 0;
     while (offset + 1 < offsets.length && offsets[offset + 1] <= raw) offset++;
   }
+  offset = Math.max(0, Math.min(text.length - 1, offset));
   const rect = characterRect(text, offset);
   return rect.height
-    ? rect.top - preview.getBoundingClientRect().top + preview.scrollTop
+    ? {
+        position: from + (offsets?.[offset] ?? offset),
+        y: rect.top - preview.getBoundingClientRect().top + preview.scrollTop,
+      }
     : null;
 }
 

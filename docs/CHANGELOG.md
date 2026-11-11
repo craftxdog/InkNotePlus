@@ -1,0 +1,33 @@
+# Historial de versiones
+
+## 1.2.2 — 2026-11-11
+
+### Corregido
+
+- La recarga guarda los cambios pendientes y recupera la nota seleccionada,
+  su cursor, desplazamiento, búsqueda y contexto de navegación.
+- Los botones anterior y siguiente recorren el historial de notas visitadas.
+- El editor y la vista previa sincronizan el texto visible de líneas con wrap,
+  enlaces largos y fuentes o anchuras diferentes.
+- La interfaz espera al tema antes de mostrarse y conserva el color de fondo
+  durante la recarga. Si falla la lectura inicial de Preferencias, carga un tema
+  básico para mantener visible la aplicación.
+- Los temas, etiquetas y Preferencias mejoran su contraste conservando el estilo
+  de sus paletas. Solarized Dark mantiene sus colores al compilar el instalador.
+- Cmd+/ y Ctrl+/ alternan la biblioteca, incluido el panel de ventanas pequeñas,
+  conforme al atajo documentado de Inkdrop.
+
+### Seguridad
+
+- Corregidos los avisos de `glob` y `minimatch` en las dependencias de empaquetado
+  de ASAR mediante actualizaciones acotadas y verificadas.
+
+### Pruebas
+
+- Añadidas regresiones para recarga, historial, cursor, alineación del editor,
+  recuperación del arranque y conservación de colores en producción.
+- La auditoría visual repetible cubre siete temas, catorce colores de etiquetas,
+  las seis secciones de Preferencias y cuatro tamaños de ventana.
+
+La sincronización entre dispositivos sigue pendiente. Android requiere una
+adaptación móvil y queda fuera de esta publicación de escritorio.

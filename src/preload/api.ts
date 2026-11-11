@@ -26,6 +26,7 @@ import {
   closeReadinessSchema,
   closeConfirmationSchema,
   closeResultSchema,
+  windowBackgroundSchema,
 } from '../shared/window-lifecycle';
 import {
   EXTERNAL_LINK_CHANNEL,
@@ -132,6 +133,8 @@ export interface InkNoteApi {
     onCustomStylesChanged(listener: (css: string) => void): () => void;
   };
   onBeforeClose(listener: () => Promise<boolean>): () => void;
+  setWindowBackground(color: string): Promise<Result<boolean>>;
+  reloadWindow(): Promise<Result<boolean>>;
   links: { openExternal(url: string): Promise<Result<boolean>> };
   library: {
     get(input?: LibraryInput): Promise<Result<LibrarySnapshot>>;
@@ -161,6 +164,22 @@ export function createInkNoteApi(
   ipcRenderer: Pick<IpcRenderer, 'invoke' | 'on' | 'removeListener'>,
 ): InkNoteApi {
   return {
+    reloadWindow: () =>
+      invoke(
+        ipcRenderer,
+        WINDOW_CHANNELS.reload,
+        {},
+        emptyPreferencesInputSchema,
+        closeResultSchema,
+      ),
+    setWindowBackground: (color) =>
+      invoke(
+        ipcRenderer,
+        WINDOW_CHANNELS.background,
+        color,
+        windowBackgroundSchema,
+        closeResultSchema,
+      ),
     transfer: {
       backupStatus: () =>
         transferCall(TRANSFER_CHANNELS.backupStatus, backupStatusResultSchema),

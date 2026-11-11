@@ -14,6 +14,47 @@ import {
 import { shortcutConflict } from '../../src/shared/keybindings';
 
 afterEach(() => vi.useRealTimers());
+it('uses the documented sidebar shortcut for both a narrow drawer and docked desktop panels', () => {
+  const store = createWorkspaceStore(createApi().api);
+  store.setState({ platform: 'darwin' });
+  const shell = document.createElement('div');
+  shell.className = 'inknote-shell';
+  Object.defineProperty(shell, 'clientWidth', {
+    value: 640,
+    configurable: true,
+  });
+  document.body.append(shell);
+  const stop = installShortcuts(store);
+  const press = () => {
+    const event = new KeyboardEvent('keydown', {
+      key: '/',
+      metaKey: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+  };
+  try {
+    press();
+    expect(store.getState().sidebarDrawerOpen).toBe(true);
+    expect(store.getState().mainLayout.sidebarVisible).toBe(true);
+    press();
+    expect(store.getState().sidebarDrawerOpen).toBe(false);
+    Object.defineProperty(shell, 'clientWidth', {
+      value: 1280,
+      configurable: true,
+    });
+    press();
+    expect(store.getState().mainLayout.sidebarVisible).toBe(false);
+    expect(store.getState().sidebarDrawerOpen).toBe(false);
+    press();
+    expect(store.getState().mainLayout.sidebarVisible).toBe(true);
+  } finally {
+    stop();
+    shell.remove();
+  }
+});
+
 it('exposes Inkdrop wrapping and line-number commands without inventing default shortcuts', async () => {
   const { api } = createApi();
   const store = createWorkspaceStore(api);

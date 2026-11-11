@@ -127,7 +127,21 @@ function createWindow(activeConfiguration: Configuration): BrowserWindow {
       },
     ]).popup({ window });
   });
-  installCloseGuard(window, ipcMain);
+  const lifecycle = installCloseGuard(window, ipcMain);
+  window.webContents.on('will-prevent-unload', () => lifecycle.reload());
+  // Electron emits this before page keys and native menu accelerators.
+  // https://www.electronjs.org/docs/latest/api/web-contents#event-before-input-event
+  window.webContents.on('before-input-event', (event, input) => {
+    const modifier = process.platform === 'darwin' ? input.meta : input.control;
+    if (
+      input.type !== 'keyDown' ||
+      input.alt ||
+      !((modifier && input.key.toLowerCase() === 'r') || input.key === 'F5')
+    )
+      return;
+    event.preventDefault();
+    lifecycle.reload(input.shift);
+  });
   window.webContents.on('will-attach-webview', (event) => {
     event.preventDefault();
   });
@@ -179,6 +193,7 @@ function initializeCoreModules(): Configuration {
         getMainWebContents: () => mainWindow?.webContents ?? null,
         styleNonce,
         platform: process.platform,
+        setWindowBackground: (color) => mainWindow?.setBackgroundColor(color),
       });
     },
     deactivate() {

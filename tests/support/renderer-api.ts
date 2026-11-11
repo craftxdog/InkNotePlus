@@ -70,6 +70,8 @@ export function createApi(overrides: Partial<InkNoteApi['notes']> = {}) {
       onCustomStylesChanged: () => () => {},
     },
     onBeforeClose: () => () => {},
+    setWindowBackground: async () => success(true),
+    reloadWindow: async () => success(true),
     links: { openExternal: async () => success(true) },
     library: {
       get: async () => success(emptyLibrary),

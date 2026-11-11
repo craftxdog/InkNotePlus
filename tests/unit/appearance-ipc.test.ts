@@ -7,6 +7,7 @@ import { registerExternalLinkHandler } from '../../src/main/ipc/external-link-ha
 import { EXTERNAL_LINK_CHANNEL } from '../../src/shared/external-link';
 import { PREFERENCES_CHANNELS } from '../../src/shared/preferences';
 import { createContentSecurityPolicy } from '../../src/main/security';
+import { WINDOW_CHANNELS } from '../../src/shared/window-lifecycle';
 
 function setup() {
   const handlers = new Map<
@@ -34,6 +35,8 @@ function setup() {
     },
   });
   configuration.register(coreConfig.appearance);
+  configuration.register(coreConfig.window.background);
+  const setWindowBackground = vi.fn();
   const openExternal = vi.fn(async (_url: string) => {});
   const preferences = registerPreferencesHandlers({
     ipc,
@@ -41,6 +44,7 @@ function setup() {
     getMainWebContents: () => webContents,
     platform: 'darwin',
     styleNonce: 'testNonce012345678901234567890123',
+    setWindowBackground,
   });
   const links = registerExternalLinkHandler({
     ipc,
@@ -58,10 +62,31 @@ function setup() {
     preferences,
     links,
     handlers,
+    setWindowBackground,
   };
 }
 
 describe('appearance and external link IPC', () => {
+  it('persists only validated window colors from the trusted renderer', () => {
+    const test = setup();
+    const subframe = { ...test.event, senderFrame: {} } as IpcMainInvokeEvent;
+    expect(
+      test.invoke(WINDOW_CHANNELS.background, '#002b36', subframe),
+    ).toMatchObject({ ok: false });
+    expect(
+      test.invoke(WINDOW_CHANNELS.background, 'url(https://example.com)'),
+    ).toMatchObject({ ok: false });
+    expect(test.writes).toHaveLength(0);
+    expect(test.invoke(WINDOW_CHANNELS.background, '#002b36')).toMatchObject({
+      ok: true,
+    });
+    expect(test.configuration.get(coreConfig.window.background)).toBe(
+      '#002b36',
+    );
+    expect(test.setWindowBackground).toHaveBeenCalledWith('#002b36');
+    test.invoke(WINDOW_CHANNELS.background, '#002b36');
+    expect(test.writes).toHaveLength(1);
+  });
   it('persists partial preferences without resetting another field', async () => {
     const test = setup();
     await test.invoke(PREFERENCES_CHANNELS.update, { splitRatio: 65 });

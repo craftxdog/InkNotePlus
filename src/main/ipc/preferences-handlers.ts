@@ -7,6 +7,10 @@ import {
   preferencesPatchSchema,
 } from '../../shared/preferences';
 import { isTrustedIpcEvent } from './note-handlers';
+import {
+  WINDOW_CHANNELS,
+  windowBackgroundSchema,
+} from '../../shared/window-lifecycle';
 
 export function registerPreferencesHandlers(options: {
   ipc: Pick<IpcMain, 'handle' | 'removeHandler'>;
@@ -14,8 +18,23 @@ export function registerPreferencesHandlers(options: {
   getMainWebContents: () => WebContents | null;
   styleNonce: string;
   platform: NodeJS.Platform;
+  setWindowBackground?: (color: string) => void;
 }) {
   const { ipc, configuration } = options;
+  ipc.handle(WINDOW_CHANNELS.background, (event, input: unknown) => {
+    if (!isTrustedIpcEvent(event, options.getMainWebContents()))
+      return failure('unavailable');
+    const color = windowBackgroundSchema.safeParse(input);
+    if (!color.success) return failure('invalid_input');
+    try {
+      if (configuration.get(coreConfig.window.background) !== color.data)
+        configuration.set(coreConfig.window.background, color.data);
+      options.setWindowBackground?.(color.data);
+      return success(true);
+    } catch {
+      return failure('unavailable');
+    }
+  });
   ipc.handle(PREFERENCES_CHANNELS.get, (event) => {
     if (!isTrustedIpcEvent(event, options.getMainWebContents()))
       return failure('unavailable');
@@ -45,6 +64,7 @@ export function registerPreferencesHandlers(options: {
     dispose() {
       ipc.removeHandler(PREFERENCES_CHANNELS.get);
       ipc.removeHandler(PREFERENCES_CHANNELS.update);
+      ipc.removeHandler(WINDOW_CHANNELS.background);
     },
   };
 }

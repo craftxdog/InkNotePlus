@@ -42,6 +42,7 @@ describe('main window options', () => {
       minWidth: 640,
       resizable: true,
       show: false,
+      backgroundColor: '#ffffff',
       icon: '/app/icon.png',
       width: 1_280,
       webPreferences: {
@@ -65,6 +66,7 @@ describe('main window options', () => {
     configuration.set(coreConfig.window.minimumHeight, 520);
     configuration.set(coreConfig.window.initialWidth, 640);
     configuration.set(coreConfig.window.initialHeight, 480);
+    configuration.set(coreConfig.window.background, '#002b36');
 
     const options = createMainWindowOptions({
       configuration,
@@ -75,6 +77,7 @@ describe('main window options', () => {
 
     expect(options.width).toBe(700);
     expect(options.height).toBe(520);
+    expect(options.backgroundColor).toBe('#002b36');
     expect(options.webPreferences?.devTools).toBe(true);
   });
 });

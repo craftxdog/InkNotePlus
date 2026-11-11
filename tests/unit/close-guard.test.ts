@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from 'electron';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { installCloseGuard } from '../../src/main/close-guard';
 import { WINDOW_CHANNELS } from '../../src/shared/window-lifecycle';
 
@@ -74,4 +74,52 @@ it('keeps the window open after failed persistence and accepts only a trusted ma
   await new Promise((resolve) => setImmediate(resolve));
   expect(closed).toBe(true);
   expect(handlers.size).toBe(0);
+});
+
+it('reloads only after drafts are saved and keeps the note open on a save failure', async () => {
+  const handlers = new Map<
+    string,
+    (event: IpcMainInvokeEvent, input: unknown) => unknown
+  >();
+  const frame = {};
+  const send = vi.fn();
+  const contents = {
+    mainFrame: frame,
+    send,
+    reload: vi.fn(),
+    reloadIgnoringCache: vi.fn(),
+  };
+  const window = Object.assign(new EventEmitter(), {
+    webContents: contents,
+    isDestroyed: () => false,
+    close: vi.fn(),
+  });
+  const guard = installCloseGuard(
+    window as unknown as BrowserWindow,
+    {
+      handle: (channel, handler) => handlers.set(channel, handler),
+      removeHandler: (channel) => handlers.delete(channel),
+    } as Pick<IpcMain, 'handle' | 'removeHandler'>,
+  );
+  const event = {
+    sender: contents,
+    senderFrame: frame,
+  } as unknown as IpcMainInvokeEvent;
+  handlers.get(WINDOW_CHANNELS.readiness)!(event, { ready: true });
+  guard.reload();
+  guard.reload();
+  expect(send).toHaveBeenCalledTimes(1);
+  expect(contents.reload).not.toHaveBeenCalled();
+  const request = send.mock.calls[0][1];
+  handlers.get(WINDOW_CHANNELS.confirm)!(event, { ...request, saved: false });
+  await new Promise((resolve) => setImmediate(resolve));
+  expect(contents.reload).not.toHaveBeenCalled();
+  guard.reload(true);
+  handlers.get(WINDOW_CHANNELS.confirm)!(event, {
+    ...send.mock.calls[1][1],
+    saved: true,
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  expect(contents.reloadIgnoringCache).toHaveBeenCalledOnce();
+  expect(window.close).not.toHaveBeenCalled();
 });

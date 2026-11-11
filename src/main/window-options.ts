@@ -32,6 +32,7 @@ export function createMainWindowOptions({
     minHeight,
     resizable: true,
     show: false,
+    backgroundColor: configuration.get(coreConfig.window.background),
     icon: iconPath,
     ...(process.platform === 'darwin'
       ? {

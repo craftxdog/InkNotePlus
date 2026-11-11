@@ -48,4 +48,4 @@ La publicación corre aparte, valida el tag, commit y los cuatro checks nativos 
 reutiliza sus artefactos. En caso de fallo de subida, `Publish release` permite
 recuperar ese build con su ID y el ID numérico del borrador, sin recompilar.
 
-[Arquitectura y configuración](architecture.md) · [Licencia MIT](../LICENSE)
+[Historial de versiones](CHANGELOG.md) · [Arquitectura y configuración](architecture.md) · [Licencia MIT](../LICENSE)

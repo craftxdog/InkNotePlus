@@ -600,6 +600,7 @@ pnpm run typecheck
 pnpm test
 pnpm run verify
 pnpm run test:desktop
+pnpm run test:desktop:audit
 pnpm run build
 pnpm run test:desktop:package
 pnpm run make:mac:arm64
@@ -615,11 +616,11 @@ pnpm se fija en 11.25.0. La instalación usa el lockfile y permite únicamente
 los builds revisados de Electron, electron-winstaller y Puppeteer. Puppeteer
 se aprueba sólo para generar palettes en los paquetes de temas.
 
-La auditoría del 2026-11-03 no tiene vulnerabilidades high ni critical. Tiene
-dos moderadas transitivas (`glob` y `minimatch`) dentro de herramientas de
-empaquetado de Electron Forge, no en el runtime distribuido. El gate bloquea
-high/critical; estas dos se revisan antes de cada actualización de Forge o
-release público y no se fuerzan con overrides incompatibles.
+La auditoría del 2026-11-11 no reporta vulnerabilidades conocidas. Los avisos de
+`glob` y `minimatch` se corrigen con overrides acotados a ASAR 4.3.1, conservando
+las versiones de callback que utilizan otras herramientas. La instalación y el
+arranque de los paquetes comprueban la compatibilidad de estas actualizaciones
+antes de publicar. El gate sigue bloqueando vulnerabilidades high/critical.
 
 ## Límites de la siguiente entrega
 

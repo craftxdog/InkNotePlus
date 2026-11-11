@@ -12,12 +12,27 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import { App } from '../../src/renderer/app';
 import { createWorkspaceStore } from '../../src/renderer/state/workspace-store';
-import { success } from '../../src/shared/ipc';
+import { failure, success } from '../../src/shared/ipc';
 import { createApi, firstNote } from '../support/renderer-api';
 
 afterEach(cleanup);
 
 describe('React workspace', () => {
+  it('loads a readable built-in theme when preference bootstrap fails', async () => {
+    const { api } = createApi({ list: async () => success([]) });
+    api.preferences.get = async () => failure('unavailable');
+    const store = createWorkspaceStore(api);
+    render(<App store={store} />);
+    await waitFor(() => expect(store.getState().preferencesError).toBe(true));
+    await waitFor(() =>
+      expect(
+        document.head.querySelectorAll(
+          'link[data-theme-package="inknote-light"]',
+        ),
+      ).toHaveLength(3),
+    );
+  });
+
   it('loads, edits and saves a note through the bridge', async () => {
     const bridge = createApi({
       list: async () => success([firstNote]),

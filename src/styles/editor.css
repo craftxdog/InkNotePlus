@@ -237,7 +237,7 @@
     padding: var(--4px) var(--16px);
     border-block-start: 1px solid var(--internal-border-color);
     font-size: var(--tiny);
-    color: var(--unselected-text-color);
+    color: var(--muted-text-color);
     min-block-size: 24px;
   }
   .editor-save-state {

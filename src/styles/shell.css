@@ -151,7 +151,7 @@
   }
   .navigation-item[data-active='true'] {
     background: var(--sidebar-menu-item-active-background);
-    color: var(--sidebar-menu-active-item-color);
+    color: var(--selected-text-color);
   }
   .navigation-item > svg {
     flex: none;
@@ -167,9 +167,13 @@
   }
   .navigation-count {
     margin-inline-start: auto;
-    color: var(--unselected-text-color);
+    color: var(--muted-text-color);
     font-size: var(--tiny);
     font-variant-numeric: tabular-nums;
+  }
+  .navigation-item[data-active='true'] .navigation-count,
+  .notebook-row[data-active='true'] .navigation-count {
+    color: inherit;
   }
   .notebook-row {
     display: flex;
@@ -180,7 +184,7 @@
   }
   .notebook-row[data-active='true'] {
     background: var(--sidebar-menu-item-active-background);
-    color: var(--sidebar-menu-active-item-color);
+    color: var(--selected-text-color);
   }
   .notebook-row:hover:not([data-active='true']) {
     background: var(--sidebar-menu-item-inactive-background);
@@ -336,7 +340,7 @@
   .sidebar-empty-state {
     margin: var(--6px) var(--16px);
     font-size: var(--small);
-    color: var(--unselected-text-color);
+    color: var(--muted-text-color);
   }
   .sidebar-tag-search {
     inline-size: calc(100% - 32px);
@@ -381,7 +385,7 @@
     align-items: center;
     gap: var(--6px);
     padding: var(--12px) var(--16px);
-    color: var(--sidebar-sync-status-view-detail-color);
+    color: var(--sidebar-sync-status-view-text-color);
     font-size: var(--tiny);
   }
   .local-status-dot {
@@ -494,6 +498,12 @@
   }
   .note-list-item[data-active='true'] {
     background: var(--note-list-view-item-active-background);
+    color: var(--selected-text-color);
+  }
+  .note-list-item[data-active='true'] .note-row-title,
+  .note-list-item[data-active='true'] time,
+  .note-list-item[data-active='true'] .task-summary {
+    color: inherit;
   }
   .note-row-title {
     display: -webkit-box;
@@ -538,7 +548,7 @@
   .note-list-footer {
     padding: var(--6px) var(--16px);
     font-size: var(--tiny);
-    color: var(--unselected-text-color);
+    color: var(--muted-text-color);
     border-block-start: 1px solid var(--border-color);
   }
   .note-selection-count {

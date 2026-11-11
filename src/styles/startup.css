@@ -1,0 +1,7 @@
+html:not([data-theme]) {
+  background: transparent;
+}
+
+html:not([data-theme]) #root {
+  visibility: hidden;
+}

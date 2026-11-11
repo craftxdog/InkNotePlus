@@ -225,7 +225,7 @@
   }
   .preferences-navigation button[aria-selected='true'] {
     background: var(--preferences-sidebar-item-active-background);
-    color: var(--text-color);
+    color: var(--selected-text-color);
   }
   .preferences-panel {
     min-inline-size: 0;

@@ -551,6 +551,13 @@ Ubuntu y RPM mediante dnf en Fedora 44. Cada instalación inicia la aplicación
 con un perfil temporal y ejecuta las pruebas reales del editor. No se desactiva
 el sandbox para ejecutar estas pruebas.
 
+En Ubuntu, `scripts/setup-ubuntu-ci.sh` comprueba los índices e instala las
+bibliotecas del runtime desde la réplica HTTPS del archivo de Ubuntu en
+kernel.org, con la clave de firma de Ubuntu. La configuración temporal se
+comparte con la instalación del DEB y evita los dominios de Azure y Canonical
+que fallaron al resolver DNS en los runners. El workflow de calidad comprueba
+ese acceso antes de crear un tag de publicación.
+
 Los tags `vX.Y.Z` deben coincidir con `package.json`. El job de versión rechaza
 desajustes antes de construir. Tras pasar los cuatro destinos, el job de
 publicación reúne cinco descargas con nombres que incluyen versión, plataforma

@@ -80,7 +80,7 @@ jobs:
 
       - name: Install Linux packaging tools
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install --yes fakeroot rpm xvfb
+        run: bash scripts/setup-ubuntu-ci.sh packaging
 
       - name: Install locked dependencies
         env:
@@ -123,7 +123,7 @@ jobs:
         run: |
           mapfile -t packages < <(find out/make/deb -name '*.deb')
           test "${#packages[@]}" -eq 1
-          sudo apt-get install --yes "./${packages[0]}"
+          sudo apt-get --config-file "$INKNOTE_APT_CONFIG" install --yes "./${packages[0]}"
           dpkg-query --show --showformat='${Status}\n' inknote | grep -Fx 'install ok installed'
           xvfb-run -a node scripts/smoke-electron.mjs --app-path=/usr/bin/inknote
           cmp assets/icons/512x512.png /usr/share/pixmaps/inknote.png

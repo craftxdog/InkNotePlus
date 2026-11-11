@@ -16,6 +16,7 @@ export function resolveShellLayout(
     layout.sidebarVisible && !layout.distractionFreeEnabled && sidebarFits;
   const list = !layout.distractionFreeEnabled && listFits;
   return {
+    sidebarFits,
     sidebar,
     list,
     compact: !listFits,

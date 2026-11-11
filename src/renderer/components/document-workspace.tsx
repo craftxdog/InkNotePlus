@@ -62,6 +62,7 @@ import { TagBadge } from './tag-badge';
 import { StatusPicker } from './status-picker';
 import { CommitRange } from './commit-range';
 import { createScrollSync } from '../editor/scroll-sync';
+import { connectEditorSession } from '../editor/editor-session';
 import { NotebookPicker } from './notebook-picker';
 import { UiSlot } from '../extensions/ui-slots';
 import { NoteTrashActions } from './note-trash-actions';
@@ -94,7 +95,8 @@ export function DocumentWorkspace({
   const isSaving = useWorkspace((state) => state.noteList.isSaving);
   const updateDraft = useWorkspace((state) => state.updateDraft);
   const save = useWorkspace((state) => state.saveDraft);
-  const select = useWorkspace((state) => state.selectNote);
+  const navigateHistory = useWorkspace((state) => state.navigateHistory);
+  const history = useWorkspace((state) => state.noteHistory);
   const distraction = useWorkspace(
     (state) => state.mainLayout.distractionFreeEnabled,
   );
@@ -108,6 +110,7 @@ export function DocumentWorkspace({
   const view = useRef<EditorView | null>(null);
   const preview = useRef<HTMLElement>(null);
   const sync = useRef<ReturnType<typeof createScrollSync> | null>(null);
+  const position = useRef<ReturnType<typeof connectEditorSession> | null>(null);
   const currentBody = useRef(draft.body);
   currentBody.current = draft.body;
   const renderedBody = useRef<string | null>(null);
@@ -238,14 +241,16 @@ export function DocumentWorkspace({
           <IconButton
             icon={ArrowLeft}
             label="Nota anterior"
-            disabled={index <= 0}
-            onClick={() => select(notes[index - 1].id)}
+            disabled={history.index <= 0}
+            onClick={() => void navigateHistory(-1)}
           />
           <IconButton
             icon={ArrowRight}
             label="Nota siguiente"
-            disabled={index < 0 || index >= notes.length - 1}
-            onClick={() => select(notes[index + 1].id)}
+            disabled={
+              history.index < 0 || history.index >= history.ids.length - 1
+            }
+            onClick={() => void navigateHistory(1)}
           />
         </div>
         <div
@@ -542,6 +547,8 @@ export function DocumentWorkspace({
                   onView={(instance) => {
                     sync.current?.destroy();
                     sync.current = null;
+                    position.current?.destroy();
+                    position.current = null;
                     view.current = instance;
                     setImageSelected(!!instance && !!imageAtCursor(instance));
                     setTableSelected(
@@ -549,6 +556,12 @@ export function DocumentWorkspace({
                     );
                     // Bind to the actual view lifecycle, including StrictMode's replay.
                     if (instance && preview.current) {
+                      position.current = connectEditorSession(
+                        instance,
+                        preview.current,
+                        draft.noteId!,
+                        sessionStorage,
+                      );
                       sync.current = createScrollSync(
                         instance,
                         preview.current,
@@ -560,6 +573,7 @@ export function DocumentWorkspace({
                     }
                   }}
                   onUpdate={(selectionChanged) => {
+                    position.current?.schedule();
                     sync.current?.editorChanged(selectionChanged);
                     if (view.current) {
                       setImageSelected(!!imageAtCursor(view.current));

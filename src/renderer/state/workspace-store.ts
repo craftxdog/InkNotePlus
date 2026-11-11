@@ -30,6 +30,8 @@ import {
 } from './library-actions';
 import { loadNoteWindow } from './note-loading';
 import { createThemeActions } from './theme-actions';
+import type { WorkspaceSession } from './workspace-session';
+import { resolveShellLayout } from '../layout/shell-layout';
 
 function visibleSelection(
   ids: readonly string[],
@@ -41,8 +43,12 @@ function visibleSelection(
   return selected.length > 1 ? selected : [];
 }
 
-export function createWorkspaceStore(api: InkNoteApi) {
+export function createWorkspaceStore(
+  api: InkNoteApi,
+  initialSession?: WorkspaceSession,
+) {
   let requestId = 0;
+  let restoringNoteId = initialSession?.activeNoteId ?? null;
   let linkRequest = 0;
   let linkedDocument: {
     id: string;
@@ -59,6 +65,8 @@ export function createWorkspaceStore(api: InkNoteApi) {
   let stopAutosave: (() => void) | undefined;
   let stopClose: (() => void) | undefined;
   let stopStyles: (() => void) | undefined;
+  let historyRequest = 0;
+  let historyTarget: string | null = null;
 
   const store: StoreApi<WorkspaceStore> = createStore<WorkspaceStore>()((
     set,
@@ -104,6 +112,37 @@ export function createWorkspaceStore(api: InkNoteApi) {
           reportFailure(result.error.code);
           return;
         }
+        let restoredNote: NoteProjection | undefined;
+        const restoring = restoringNoteId;
+        if (
+          restoring &&
+          !result.data.notes.some(({ id }) => id === restoring)
+        ) {
+          const input = { ...filter, id: restoring, limit: 1 };
+          const restored = query
+            ? await api.notes.search({ ...input, query })
+            : await api.notes.list(input);
+          if (currentRequest !== requestId) return;
+          if (!restored.ok) {
+            reportFailure(restored.error.code);
+            return;
+          }
+          restoredNote = restored.data.find(({ id }) => id === restoring);
+          if (restoredNote) {
+            const state = get();
+            linkedDocument = {
+              id: restoredNote.id,
+              navigation: state.navigation,
+              scopeId: state.preferences.notebookScopeId,
+              query: state.searchQuery,
+            };
+          }
+        }
+        restoringNoteId = null;
+        if (restoredNote)
+          set((state) =>
+            selectDocument(state, restoredNote.id, [restoredNote]),
+          );
         set((state) => {
           const notes = append
             ? [
@@ -206,6 +245,35 @@ export function createWorkspaceStore(api: InkNoteApi) {
     };
 
     return {
+      noteHistory: initialSession?.noteHistory ?? { ids: [], index: -1 },
+      async navigateHistory(direction) {
+        const request = ++historyRequest;
+        const { ids, index } = get().noteHistory;
+        try {
+          for (
+            let next = index + direction;
+            next >= 0 && next < ids.length;
+            next += direction
+          ) {
+            historyTarget = ids[next];
+            const result = await get().openNoteLink(
+              `inknote://note/${ids[next]}`,
+            );
+            if (request !== historyRequest || (result.ok && !result.data))
+              return false;
+            if (result.ok && result.data) {
+              set({ noteHistory: { ids, index: next } });
+              return true;
+            }
+            if (!result.ok && result.error.code !== 'not_found') return false;
+          }
+          return false;
+        } finally {
+          if (request === historyRequest) historyTarget = null;
+        }
+      },
+      setWindowBackground: api.setWindowBackground,
+      reloadWindow: api.reloadWindow,
       transfer: {
         ...api.transfer,
         async enableBackup() {
@@ -297,7 +365,7 @@ export function createWorkspaceStore(api: InkNoteApi) {
         });
       },
       ...createLibraryActions(api, set, get, () => generation),
-      navigation: { type: 'all' },
+      navigation: initialSession?.navigation ?? { type: 'all' },
       library: emptyLibrary,
       notebookDialogOpen: false,
       notebookDialogParentId: null,
@@ -355,7 +423,7 @@ export function createWorkspaceStore(api: InkNoteApi) {
         });
         return preferenceQueue;
       },
-      activeNoteId: null,
+      activeNoteId: initialSession?.activeNoteId ?? null,
       selectedNoteIds: [],
       libraryDialog: null,
       setLibraryDialog(libraryDialog) {
@@ -374,9 +442,13 @@ export function createWorkspaceStore(api: InkNoteApi) {
         set({ libraryDialog: { kind, ids: targets } });
         return true;
       },
-      searchQuery: '',
-      searchGlobal: false,
-      mainLayout: { sidebarVisible: true, distractionFreeEnabled: false },
+      searchQuery: initialSession?.searchQuery ?? '',
+      searchGlobal: initialSession?.searchGlobal ?? false,
+      sidebarDrawerOpen: false,
+      mainLayout: initialSession?.mainLayout ?? {
+        sidebarVisible: true,
+        distractionFreeEnabled: false,
+      },
       noteList: {
         notes: [],
         status: 'idle',
@@ -480,7 +552,6 @@ export function createWorkspaceStore(api: InkNoteApi) {
             return stylesSaved && notesSaved;
           });
           unsubscribe = api.onNoteChanged(onNoteChanged);
-          void refreshNotes();
           const currentGeneration = generation;
           stopStyles = api.themes.onCustomStylesChanged((customStyles) =>
             set({ customStyles }),
@@ -504,6 +575,7 @@ export function createWorkspaceStore(api: InkNoteApi) {
               if (currentGeneration !== generation) return;
               if (!result.ok) {
                 set({ preferencesError: true });
+                void refreshNotes();
                 return;
               }
               confirmedPreferences = result.data.preferences;
@@ -519,8 +591,10 @@ export function createWorkspaceStore(api: InkNoteApi) {
               void refreshNotes();
             })
             .catch(() => {
-              if (currentGeneration === generation)
+              if (currentGeneration === generation) {
                 set({ preferencesError: true });
+                void refreshNotes();
+              }
             });
         }
         let disconnected = false;
@@ -609,11 +683,27 @@ export function createWorkspaceStore(api: InkNoteApi) {
       },
       setSidebarVisible(visible) {
         set((state) => ({
+          sidebarDrawerOpen: false,
           mainLayout: { ...state.mainLayout, sidebarVisible: visible },
         }));
       },
+      toggleSidebar(width) {
+        const state = get();
+        const resolved = resolveShellLayout(
+          width,
+          state.preferences,
+          state.mainLayout,
+        );
+        if (!resolved.sidebarFits || state.mainLayout.distractionFreeEnabled)
+          set({ sidebarDrawerOpen: !state.sidebarDrawerOpen });
+        else state.setSidebarVisible(!state.mainLayout.sidebarVisible);
+      },
+      setSidebarDrawerOpen(open) {
+        set({ sidebarDrawerOpen: open });
+      },
       setDistractionFreeEnabled(enabled) {
         set((state) => ({
+          sidebarDrawerOpen: false,
           mainLayout: { ...state.mainLayout, distractionFreeEnabled: enabled },
         }));
       },
@@ -696,6 +786,16 @@ export function createWorkspaceStore(api: InkNoteApi) {
         if (body !== null) get().updateDraft({ body });
       },
     };
+  });
+  store.subscribe((state, previous) => {
+    const id = state.document.noteId;
+    if (!id || id === previous.document.noteId || id === historyTarget) return;
+    historyRequest++;
+    historyTarget = null;
+    const { ids, index } = state.noteHistory;
+    if (ids[index] === id) return;
+    const next = [...ids.slice(0, index + 1), id].slice(-100);
+    store.setState({ noteHistory: { ids: next, index: next.length - 1 } });
   });
   return store;
 }

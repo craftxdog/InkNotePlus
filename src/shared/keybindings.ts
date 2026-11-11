@@ -5,6 +5,12 @@ import { editorShortcutCommands } from './editor-keybindings';
 // implemented by this host are exposed; values never evaluate JavaScript.
 export const shortcutCommands = [
   {
+    id: 'window:reload',
+    label: 'Recargar ventana',
+    scope: 'app',
+    key: 'Mod-r',
+  },
+  {
     id: 'application:open-preferences',
     label: 'Abrir Preferencias',
     scope: 'app',
@@ -118,7 +124,7 @@ export const shortcutCommands = [
     id: 'view:toggle-sidebar',
     label: 'Mostrar u ocultar biblioteca',
     scope: 'app',
-    key: 'Mod-Shift-b',
+    key: 'Mod-/',
   },
   {
     id: 'view:toggle-distraction-free',
@@ -182,6 +188,20 @@ export const shortcutCommands = [
     label: 'Ir al inicio de la nota',
     scope: 'app',
     key: '',
+  },
+  {
+    id: 'core:navigate-back',
+    label: 'Volver a la nota visitada',
+    scope: 'app',
+    key: 'Alt-ArrowLeft',
+    macKey: 'Meta-ArrowLeft',
+  },
+  {
+    id: 'core:navigate-forward',
+    label: 'Avanzar en el historial de notas',
+    scope: 'app',
+    key: 'Alt-ArrowRight',
+    macKey: 'Meta-ArrowRight',
   },
   {
     id: 'core:open-prev-note',

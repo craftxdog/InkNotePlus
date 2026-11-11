@@ -33,6 +33,9 @@ jobs:
           node-version: 24.22.1
           cache: pnpm
 
+      - name: Verify Ubuntu runtime dependencies
+        run: bash scripts/setup-ubuntu-ci.sh runtime
+
       - name: Install locked dependencies
         env:
           PUPPETEER_SKIP_DOWNLOAD: 'true'

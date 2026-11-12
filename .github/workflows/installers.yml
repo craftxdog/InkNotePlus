@@ -138,6 +138,24 @@ jobs:
             --volume "$PWD:/workspace:ro" --workdir /workspace \
             fedora:44 bash scripts/verify-rpm-installer.sh
 
+      - name: Extended desktop QA
+        if: runner.os != 'Linux'
+        run: pnpm run test:desktop:qa --extended-only
+
+      - name: Extended desktop QA on Linux
+        if: runner.os == 'Linux'
+        env:
+          CHROME_DEVEL_SANDBOX: /usr/lib/inknote/chrome-sandbox
+        run: xvfb-run -a node scripts/smoke-qa.mjs --extended-only
+
+      - name: Upload QA results
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: qa-${{ matrix.platform }}-${{ matrix.arch }}
+          path: out/qa/*.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Prepare versioned public downloads
         run: node scripts/release.mjs stage ${{ matrix.platform }} ${{ matrix.arch }}
 

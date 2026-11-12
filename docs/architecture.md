@@ -222,8 +222,15 @@ Las coordenadas reales de CodeMirror y DOM Range siguen el cursor dentro de
 una línea partida visualmente, incluso con enlaces cuyo destino no aparece
 en el preview. El punto de referencia al desplazar es el texto visible en la
 zona de lectura; al escribir es la posición del cursor. Un preview diferido
-sólo participa cuando corresponde al borrador actual. Código, fórmulas e
-imágenes mantienen el mapa de bloques como respaldo.
+sólo participa cuando corresponde al borrador actual. Si el cursor no tiene
+un glifo en el preview, por ejemplo tras Enter en una línea vacía, conserva el
+anclaje visual y acompaña únicamente el desplazamiento real del editor. Al
+volver a escribir, retoma las coordenadas del texto renderizado. El mapa de
+bloques sigue siendo el respaldo al desplazar manualmente.
+
+La regresión `scripts/smoke-enter-scroll.mjs` reproduce Enter con un preview
+más alto que el editor, verifica el anclaje antes de escribir y cubre Backspace,
+Enter repetido y párrafos. Forma parte de las pruebas de la app empaquetada.
 
 Preferencias → Edición incluye los cuatro modos de Inkdrop 6.2: desactivado,
 todas las líneas, sólo prosa y sin ajuste en el bloque del cursor. El último
@@ -490,6 +497,38 @@ La sintaxis Marp de alt admite `width:`, `height:`, `w:` y `h:`, números en px
 y las unidades documentadas. Con el cursor dentro de una imagen, la toolbar
 ofrece Automático, 30 %, 50 % y 100 %. El cambio conserva deshacer, actualiza
 el Markdown y el preview y se guarda automáticamente.
+
+## Respaldo, restauración y exportación
+
+Preferencias permite elegir una carpeta local fuera del perfil; no se impone
+una ruta de respaldo predeterminada. La copia continua mantiene `state`, `data`
+y `_deleted`, siguiendo el flujo documentado de
+[respaldo de Inkdrop](https://docs.inkdrop.app/reference/data-backup). El formato
+de InkNote pertenece a esta aplicación: no es una copia compatible de su base
+privada ni de su protocolo remoto.
+
+El formato 2 verifica cada nota con SHA-256, además de notebooks, etiquetas y
+adjuntos. Los JSON de notas se nombran por revisión y contenido y se escriben
+antes de cambiar el manifiesto de forma atómica. Una verificación fallida deja
+legible la última copia confirmada. Los respaldos del formato 1 siguen siendo
+legibles y se actualizan al formato 2 en su próxima copia; los originales no
+contienen checksums de notas. Las versiones antiguas de InkNote no pueden leer
+el formato nuevo.
+
+Restaurar mezcla la biblioteca sin sobrescribir notas locales diferentes.
+Los conflictos generan copias recuperadas; editar una copia no impide recuperar
+el contenido original otra vez. La migración SQLite 6 guarda la procedencia de
+estas copias y la incluye en el respaldo. Así, eliminar una copia anterior no
+duplica otra recuperación que sigue intacta, incluso al restaurar otro perfil.
+La eliminación definitiva limpia también su registro de procedencia.
+
+Markdown exporta adjuntos a rutas portátiles. HTML y PDF usan el renderer con
+matemáticas y Mermaid, sin ejecutar HTML o scripts escritos en las notas.
+`pnpm test:desktop:qa` prueba el paquete compilado con perfiles temporales:
+editor y preview, respaldos y PDF nativos, etiquetas y papelera, 3000 notas,
+contraste de los siete temas, preferencias y tamaños de ventana. El workflow
+de instaladores ejecuta estas comprobaciones después de instalar cada paquete.
+Las ejecuciones manuales prueban artefactos y no publican una nueva versión.
 
 ## Seguridad
 

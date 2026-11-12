@@ -153,11 +153,16 @@ jobs:
           sudo install --owner=root --group=root --mode=4755 /usr/lib/inknote/chrome-sandbox "$sandbox_helper"
           xvfb-run -a node scripts/smoke-qa.mjs --extended-only
 
+      - name: Collect native QA evidence
+        if: always()
+        run: node scripts/collect-qa-evidence.mjs
+
       - name: Upload QA results
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: qa-${{ matrix.platform }}-${{ matrix.arch }}
-          path: out/qa/*.json
+          path: out/qa/**
           if-no-files-found: error
           retention-days: 14
 

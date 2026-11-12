@@ -29,6 +29,7 @@
     "test:integration": "vitest run tests/integration",
     "test:renderer": "vitest run tests/renderer",
     "test:desktop": "node scripts/smoke-electron.mjs",
+    "test:desktop:qa": "node scripts/smoke-qa.mjs",
     "test:desktop:audit": "node scripts/smoke-system-audit.mjs",
     "test:desktop:package": "node scripts/smoke-electron.mjs --packaged",
     "build:math-styles": "node scripts/build-math-styles.mjs && oxfmt --write src/renderer/vendor/inkdrop-math/styles/katex.css",

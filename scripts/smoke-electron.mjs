@@ -9,6 +9,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { verifyInkdropFeatures } from './smoke-inkdrop-features.mjs';
 import { verifyEditorLayout } from './smoke-editor-layout.mjs';
 import { verifyLineWrapping } from './smoke-line-wrapping.mjs';
+import { verifyEnterScroll } from './smoke-enter-scroll.mjs';
+import { verifyScrollReflow } from './smoke-scroll-reflow.mjs';
 import { verifyNotebookNavigation } from './smoke-notebook-navigation.mjs';
 import {
   chooseNoteStatus,
@@ -591,6 +593,8 @@ try {
   });
   await verifyEditorLayout(page);
   await verifyLineWrapping(page);
+  await verifyEnterScroll({ page, profile });
+  await verifyScrollReflow({ page, profile });
   if (reviewDatabase) {
     const source = new DatabaseSync(reviewDatabase, { readOnly: true });
     let notes;

@@ -138,6 +138,34 @@ jobs:
             --volume "$PWD:/workspace:ro" --workdir /workspace \
             fedora:44 bash scripts/verify-rpm-installer.sh
 
+      - name: Extended desktop QA
+        if: runner.os != 'Linux'
+        run: pnpm run test:desktop:qa --extended-only
+
+      - name: Extended desktop QA on Linux
+        if: runner.os == 'Linux'
+        run: |
+          # The test entry uses the same Electron version as the installed app.
+          # Configure its actual helper; recent Chromium ignores the old
+          # CHROME_DEVEL_SANDBOX override. Keep the renderer sandbox enabled.
+          node -e "require('electron')"
+          sandbox_helper=$(node -p "require('node:path').join(require('node:path').dirname(require('electron')), 'chrome-sandbox')")
+          sudo install --owner=root --group=root --mode=4755 /usr/lib/inknote/chrome-sandbox "$sandbox_helper"
+          xvfb-run -a node scripts/smoke-qa.mjs --extended-only
+
+      - name: Collect native QA evidence
+        if: always()
+        run: node scripts/collect-qa-evidence.mjs
+
+      - name: Upload QA results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: qa-${{ matrix.platform }}-${{ matrix.arch }}
+          path: out/qa/**
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Prepare versioned public downloads
         run: node scripts/release.mjs stage ${{ matrix.platform }} ${{ matrix.arch }}
 

@@ -8,6 +8,7 @@ import { z } from '../shared/validation';
 import {
   notebookRecordSchema,
   noteVersionSchema,
+  recoveryRecordSchema,
   orderNotebooks,
   type NoteVersion,
   type SqliteLibraryTransfer,
@@ -28,7 +29,11 @@ const backedUpNoteSchema = noteSchema.extend({
   title: z.string().max(maxTitleLength),
   body: z.string().max(maxBodyLength),
 });
-const manifestSchema = z
+const checkedNoteVersionSchema = noteVersionSchema.extend({
+  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+});
+type CheckedNoteVersion = z.output<typeof checkedNoteVersionSchema>;
+const legacyManifestSchema = z
   .object({
     format: z.literal('inknote-backup'),
     version: z.literal(1),
@@ -43,6 +48,14 @@ const manifestSchema = z
     images: z.array(z.string().regex(imageFileName)),
   })
   .strict();
+const manifestSchema = z.discriminatedUnion('version', [
+  legacyManifestSchema,
+  legacyManifestSchema.extend({
+    version: z.literal(2),
+    notes: z.array(checkedNoteVersionSchema),
+    recoveries: z.array(recoveryRecordSchema).default([]),
+  }),
+]);
 type Manifest = z.output<typeof manifestSchema>;
 type ManifestFile = { manifest: Manifest; json: string };
 
@@ -100,19 +113,31 @@ export class BackupFiles {
       versions: this.library.listVersions(),
       notebooks: JSON.stringify(this.library.listNotebooks()),
       tags: JSON.stringify(this.library.listTags()),
+      recoveries: this.library.listRecoveries(),
     }));
-    const notes: NoteVersion[] = [];
-    const previousNotes = new Set(previous?.notes.map(noteFileName));
+    const notes: CheckedNoteVersion[] = [];
+    const previousNotes = new Map(
+      previous?.notes.map((note) => [note.id, note]),
+    );
     for (const version of snapshot.versions) {
-      if (!verify && previousNotes.has(noteFileName(version))) {
-        notes.push(version);
+      const cached = previousNotes.get(version.id);
+      if (
+        !verify &&
+        cached &&
+        'sha256' in cached &&
+        cached.revision === version.revision &&
+        cached.trashed === version.trashed
+      ) {
+        notes.push(cached);
         continue;
       }
       const note = this.library.readNote(version.id);
       if (!note || note.revision !== version.revision)
         throw new Error('Library changed during backup.');
-      await writeAtomic(noteFile(layout, version), JSON.stringify(note));
-      notes.push(version);
+      const json = JSON.stringify(note);
+      const checked = { ...version, sha256: digest(json) };
+      await writeAtomic(noteFile(layout, checked), json);
+      notes.push(checked);
     }
 
     const notebooks = digest(snapshot.notebooks);
@@ -140,10 +165,16 @@ export class BackupFiles {
     if (
       !verify &&
       previous &&
+      previous.version === 2 &&
       notebooks === previous.notebooks &&
       tags === previous.tags &&
       notes.length === previous.notes.length &&
-      notes.every((note) => previousNotes.has(noteFileName(note))) &&
+      notes.every((note) => {
+        const prior = previousNotes.get(note.id);
+        return prior && noteFileName(note) === noteFileName(prior);
+      }) &&
+      JSON.stringify(snapshot.recoveries) ===
+        JSON.stringify(previous.recoveries) &&
       images.length === previous.images.length &&
       images.every((name) => previousImages.has(name))
     ) {
@@ -152,12 +183,13 @@ export class BackupFiles {
     const completedAt = new Date().toISOString();
     const manifest: Manifest = {
       format: 'inknote-backup',
-      version: 1,
+      version: 2,
       owner: this.owner,
       completedAt,
       notebooks,
       tags,
       notes,
+      recoveries: snapshot.recoveries,
       images,
     };
     await this.commitManifest(
@@ -241,6 +273,8 @@ export class BackupFiles {
         noteFile(layout, version),
         7 * 1024 * 1024,
       );
+      if ('sha256' in version && digest(json) !== version.sha256)
+        throw new Error('Invalid note backup checksum.');
       const note = backedUpNoteSchema.parse(JSON.parse(json.toString()));
       if (
         ids.has(note.id) ||
@@ -276,7 +310,12 @@ export class BackupFiles {
         const bytes = await readManagedImage(staged, name);
         await writeAtomic(path.join(images, name), bytes);
       }
-      return this.library.restore(backup.notebooks, backup.notes, backup.tags);
+      return this.library.restore(
+        backup.notebooks,
+        backup.notes,
+        backup.tags,
+        backup.manifest.version === 2 ? backup.manifest.recoveries : [],
+      );
     } finally {
       await rm(staged, { recursive: true, force: true });
     }
@@ -331,11 +370,16 @@ async function readManifest(directory: string): Promise<ManifestFile> {
   return { manifest: manifestSchema.parse(JSON.parse(json)), json };
 }
 
-function noteFileName(note: NoteVersion): string {
-  return `${note.id}.${note.revision}.${note.trashed ? 'trash.' : ''}json`;
+function noteFileName(note: NoteVersion & { sha256?: string }): string {
+  // Version 2 writes new content before switching the manifest. Never replace
+  // bytes still referenced by the last committed snapshot, even on verification.
+  return `${note.id}.${note.revision}.${note.trashed ? 'trash.' : ''}${note.sha256 ? `${note.sha256}.` : ''}json`;
 }
 
-function noteFile(layout: Layout, note: NoteVersion): string {
+function noteFile(
+  layout: Layout,
+  note: NoteVersion & { sha256?: string },
+): string {
   return path.join(
     note.trashed ? layout.trash : layout.notes,
     noteFileName(note),

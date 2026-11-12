@@ -135,4 +135,14 @@ export const migrations: readonly SqliteMigration[] = [
       END;
     `,
   },
+  {
+    version: 6,
+    sql: `
+      CREATE TABLE backup_recoveries (
+        note_id TEXT PRIMARY KEY NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+        source_key TEXT NOT NULL
+      ) STRICT;
+      CREATE INDEX backup_recoveries_source_idx ON backup_recoveries(source_key);
+    `,
+  },
 ];

@@ -30,6 +30,14 @@ export const noteVersionSchema = z
   .strict();
 export type NoteVersion = z.output<typeof noteVersionSchema>;
 
+export const recoveryRecordSchema = z
+  .object({
+    noteId: z.uuid(),
+    sourceKey: z.string().regex(/^[a-f0-9]{64}$/),
+  })
+  .strict();
+export type RecoveryRecord = z.output<typeof recoveryRecordSchema>;
+
 export class SqliteLibraryTransfer {
   constructor(
     private readonly database: DatabaseSync,
@@ -66,17 +74,30 @@ export class SqliteLibraryTransfer {
     return this.notes.findById(id);
   }
 
+  listRecoveries(): RecoveryRecord[] {
+    return this.database
+      .prepare(
+        'SELECT note_id AS noteId, source_key AS sourceKey FROM backup_recoveries ORDER BY note_id',
+      )
+      .all()
+      .map((row) => recoveryRecordSchema.parse(row));
+  }
+
   restore(
     notebooks: readonly NotebookRecord[],
     notes: readonly Note[],
     tags: readonly TagRecord[] = [],
+    recoveries: readonly RecoveryRecord[] = [],
   ): RestoreSummary {
     const counts: RestoreSummary = { notebooks: 0, notes: 0, copies: 0 };
     const orderedNotebooks = orderNotebooks(notebooks);
     const notebookIds = new Set(notebooks.map(({ id }) => id));
-    const incomingIds = new Set(notes.map(({ id }) => id));
+    const incomingNotes = new Map(notes.map((note) => [note.id, note]));
     if (
-      incomingIds.size !== notes.length ||
+      incomingNotes.size !== notes.length ||
+      new Set(recoveries.map(({ noteId }) => noteId)).size !==
+        recoveries.length ||
+      recoveries.some(({ noteId }) => !incomingNotes.has(noteId)) ||
       notes.some(
         ({ metadata }) =>
           metadata?.notebookId && !notebookIds.has(metadata.notebookId),
@@ -98,19 +119,60 @@ export class SqliteLibraryTransfer {
           insertNotebook.run(id, name, parentId, createdAt, icon).changes,
         );
       }
+      const rememberRecovery = this.database.prepare(
+        'INSERT INTO backup_recoveries (note_id, source_key) VALUES (?, ?) ON CONFLICT(note_id) DO NOTHING',
+      );
+      const findRecoveries = this.database.prepare(
+        'SELECT note_id AS noteId FROM backup_recoveries WHERE source_key = ?',
+      );
       for (const note of notes) {
         const current = this.notes.findById(note.id);
         if (!current) {
           this.notes.insertSnapshot(note);
           counts.notes++;
         } else if (noteContent(current) !== noteContent(note)) {
-          const copy = recoveryCopy(note);
-          if (!incomingIds.has(copy.id) && !this.notes.findById(copy.id)) {
-            this.notes.insertSnapshot(copy);
-            counts.copies++;
+          const sourceKey = createHash('sha256')
+            .update(JSON.stringify([note.id, noteContent(note)]))
+            .digest('hex');
+          const expected = recoveryCopy(note);
+          // Check every known copy before reusing a free slot. Deleting an
+          // earlier copy must not duplicate a later, unchanged recovery.
+          const candidates = new Set([
+            expected.id,
+            ...findRecoveries
+              .all(sourceKey)
+              .map((row) =>
+                recoveryRecordSchema.shape.noteId.parse(row.noteId),
+              ),
+            ...recoveries
+              .filter((record) => record.sourceKey === sourceKey)
+              .map((record) => record.noteId),
+          ]);
+          const recovered = [...candidates].find((id) => {
+            const existing = this.notes.findById(id) ?? incomingNotes.get(id);
+            return existing && noteContent(existing) === noteContent(expected);
+          });
+          if (recovered) {
+            if (this.notes.findById(recovered))
+              rememberRecovery.run(recovered, sourceKey);
+            continue;
+          }
+          for (let attempt = 0; ; attempt++) {
+            const copy = recoveryCopy(note, attempt);
+            const existing =
+              this.notes.findById(copy.id) ?? incomingNotes.get(copy.id);
+            if (!existing) {
+              this.notes.insertSnapshot(copy);
+              rememberRecovery.run(copy.id, sourceKey);
+              counts.copies++;
+              break;
+            }
+            if (noteContent(existing) === noteContent(copy)) break;
           }
         }
       }
+      for (const { noteId, sourceKey } of recoveries)
+        rememberRecovery.run(noteId, sourceKey);
       return counts;
     });
   }
@@ -153,11 +215,16 @@ function noteContent(note: Note): string {
   ]);
 }
 
-function recoveryCopy(note: Note): Note {
-  // Stable IDs make restoring the same backup again safe.
-  const bytes = createHash('sha256')
-    .update(JSON.stringify(['inknote-recovery-v1', note.id, noteContent(note)]))
-    .digest();
+function recoveryCopy(note: Note, attempt = 0): Note {
+  // Preserve existing recovery IDs. If a copy has been edited, find the next
+  // stable slot so the backup can be recovered again without losing that edit.
+  const identity: (string | number)[] = [
+    'inknote-recovery-v1',
+    note.id,
+    noteContent(note),
+  ];
+  if (attempt) identity.push(attempt);
+  const bytes = createHash('sha256').update(JSON.stringify(identity)).digest();
   bytes[6] = (bytes[6] & 0x0f) | 0x80;
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
   const hex = bytes.subarray(0, 16).toString('hex');

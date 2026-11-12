@@ -1,4 +1,5 @@
 import type { EditorView } from '@codemirror/view';
+import { MapMode, type ChangeDesc } from '@codemirror/state';
 import { previewAtSource, sourceAtPreview } from './preview-source-position';
 
 export interface ScrollAnchor {
@@ -45,6 +46,8 @@ export function createScrollSync(
   let followCursor = false;
   const expected: Partial<Record<Pane, number>> = {};
   const editor = view.scrollDOM;
+  let lastEditorTop = editor.scrollTop;
+  let lastSourcePosition: number | null = null;
   function measure() {
     const previewTop = preview.getBoundingClientRect().top;
     const editorPadding =
@@ -111,9 +114,13 @@ export function createScrollSync(
       target = owner === 'editor' ? preview : editor,
       to = owner === 'editor' ? 'preview' : 'editor';
     const maximum = source.scrollHeight - source.clientHeight;
-    let value = mapScroll(anchors, source.scrollTop, owner);
     const editorBounds = editor.getBoundingClientRect();
     const trackingCursor = owner === 'editor' && followCursor && view.hasFocus;
+    // Without a preview glyph (e.g. a new blank line), keep the current visual
+    // anchor, including editor auto-scroll, until text can be mapped again.
+    let value = trackingCursor
+      ? preview.scrollTop + editor.scrollTop - lastEditorTop
+      : mapScroll(anchors, source.scrollTop, owner);
     if (owner === 'editor') {
       const referenceY = editorBounds.top + editor.clientHeight * 0.35;
       const position = trackingCursor
@@ -131,28 +138,38 @@ export function createScrollSync(
       if (position !== null) {
         // coordsAtPos measures a visual row, including soft wrapping.
         // https://codemirror.net/docs/ref/#view.EditorView.coordsAtPos
-        const point = previewAtSource(
+        const caretPoint = previewAtSource(
           view,
           preview,
           position,
           trackingCursor ? undefined : referenceY,
         );
+        // Re-measure the last visible source anchor after an image, formula or
+        // diagram changes height. Pixel deltas alone cannot follow that reflow.
+        const point =
+          caretPoint ??
+          (trackingCursor && lastSourcePosition !== null
+            ? previewAtSource(view, preview, lastSourcePosition)
+            : null);
         // Link URLs and delimiters have no preview glyph. While scrolling,
         // measure the source glyph that actually produced the preview anchor.
         const cursor = view.coordsAtPos(
-          point && !trackingCursor ? point.position : position,
+          point && (!trackingCursor || !caretPoint) ? point.position : position,
         );
         if (
           cursor &&
           point &&
           cursor.bottom > editorBounds.top &&
           cursor.top < editorBounds.bottom
-        )
+        ) {
           value = point.y - (cursor.top - editorBounds.top);
+          lastSourcePosition = point.position;
+        }
       }
     } else {
       const point = sourceAtPreview(view, preview);
       if (point) {
+        lastSourcePosition = point.position;
         const coordinates = view.coordsAtPos(point.position);
         const block = view.lineBlockAt(point.position);
         const padding = view.documentTop - editorBounds.top + editor.scrollTop;
@@ -178,6 +195,7 @@ export function createScrollSync(
       expected[to] = value;
       target.scrollTop = value;
     }
+    lastEditorTop = editor.scrollTop;
   }
   const schedule = () => {
     if (!frame) frame = requestAnimationFrame(sync);
@@ -223,12 +241,19 @@ export function createScrollSync(
   if (preview.firstElementChild) observer?.observe(preview.firstElementChild);
   return {
     refresh(active = true) {
+      if (enabled !== active) lastEditorTop = editor.scrollTop;
       enabled = active;
       dirty = true;
       schedule();
     },
-    editorChanged(selectionChanged = false) {
+    editorChanged(selectionChanged = false, changes?: ChangeDesc) {
       dirty = true;
+      if (lastSourcePosition !== null && changes)
+        lastSourcePosition = changes.mapPos(
+          lastSourcePosition,
+          1,
+          MapMode.TrackDel,
+        );
       if (selectionChanged && view.hasFocus) {
         owner = 'editor';
         followCursor = true;

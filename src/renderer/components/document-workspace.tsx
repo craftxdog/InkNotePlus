@@ -572,9 +572,9 @@ export function DocumentWorkspace({
                       );
                     }
                   }}
-                  onUpdate={(selectionChanged) => {
+                  onUpdate={(selectionChanged, changes) => {
                     position.current?.schedule();
-                    sync.current?.editorChanged(selectionChanged);
+                    sync.current?.editorChanged(selectionChanged, changes);
                     if (view.current) {
                       setImageSelected(!!imageAtCursor(view.current));
                       setTableSelected(!!tableAtCursor(view.current.state));

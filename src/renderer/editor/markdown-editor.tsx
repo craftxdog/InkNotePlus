@@ -4,6 +4,7 @@ import {
   Compartment,
   EditorState,
   Prec,
+  type ChangeDesc,
   type Extension,
 } from '@codemirror/state';
 import { search } from '@codemirror/search';
@@ -82,7 +83,7 @@ export function MarkdownEditor({
   nonce: string;
   onChange: (value: string) => void;
   onView: (view: EditorView | null) => void;
-  onUpdate?: (selectionChanged: boolean) => void;
+  onUpdate?: (selectionChanged: boolean, changes: ChangeDesc) => void;
   preferences: Preferences;
   onImageFiles?: (files: File[]) => void;
   onInsertImage?: () => void;
@@ -268,6 +269,7 @@ export function MarkdownEditor({
             )
               callbacks.current.onUpdate?.(
                 update.docChanged || update.selectionSet,
+                update.changes,
               );
             if (
               update.docChanged &&

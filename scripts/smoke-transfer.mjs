@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import electron from 'electron';
 import { build } from 'vite';
+import { isExternalForNativeQa } from './qa-build.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 await mkdir(path.join(root, 'out'), { recursive: true });
@@ -26,7 +27,7 @@ await build({
       formats: ['es'],
       fileName: () => 'transfer-main.mjs',
     },
-    rolldownOptions: { external: [/^[^./]/] },
+    rolldownOptions: { external: isExternalForNativeQa },
   },
 });
 const child = spawn(electron, [path.join(output, 'transfer-main.mjs')], {

@@ -62,10 +62,39 @@ export async function verifyScrollReflow({ page, profile }) {
   for (let index = 0; index < line; index++)
     await page.keyboard.press('ArrowDown');
   await settle(page);
+  // Confirm a real caret anchor before entering unmapped code. Moving across
+  // many rows can leave a different goal column or an outstanding viewport
+  // update on slower CI machines.
+  const paragraph = await page.waitForFunction(() =>
+    [...document.querySelectorAll('.cm-line')].find(
+      (element) => element.textContent === 'StableResizeParagraph',
+    ),
+  );
+  const bounds = await paragraph.asElement().boundingBox();
+  assert(bounds, 'The source paragraph must be visible.');
+  await page.mouse.click(bounds.x + 35, bounds.y + bounds.height / 2);
+  await page.waitForFunction(
+    () =>
+      document.querySelector('.cm-activeLine')?.textContent ===
+      'StableResizeParagraph',
+  );
+  await settle(page);
+  const aligned = await page.evaluate(positions);
+  console.log('Reflow fixture mapped paragraph:', JSON.stringify(aligned));
+  assert.ok(
+    Math.abs(aligned.editor - aligned.preview) < 5,
+    `The mapped paragraph must start aligned: ${JSON.stringify(aligned)}`,
+  );
   for (let index = 0; index < 3; index++)
     await page.keyboard.press('ArrowDown');
+  await page.waitForFunction(() =>
+    document
+      .querySelector('.cm-activeLine')
+      ?.textContent.includes('UnmappedResizeCursor'),
+  );
   await settle(page);
   const before = await page.evaluate(positions);
+  console.log('Reflow fixture unmapped cursor:', JSON.stringify(before));
   assert.ok(
     Math.abs(before.editor - before.preview) < 5,
     `The fixture must start aligned: ${JSON.stringify(before)}`,

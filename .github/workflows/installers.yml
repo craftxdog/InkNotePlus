@@ -144,9 +144,14 @@ jobs:
 
       - name: Extended desktop QA on Linux
         if: runner.os == 'Linux'
-        env:
-          CHROME_DEVEL_SANDBOX: /usr/lib/inknote/chrome-sandbox
-        run: xvfb-run -a node scripts/smoke-qa.mjs --extended-only
+        run: |
+          # The test entry uses the same Electron version as the installed app.
+          # Configure its actual helper; recent Chromium ignores the old
+          # CHROME_DEVEL_SANDBOX override. Keep the renderer sandbox enabled.
+          node -e "require('electron')"
+          sandbox_helper=$(node -p "require('node:path').join(require('node:path').dirname(require('electron')), 'chrome-sandbox')")
+          sudo install --owner=root --group=root --mode=4755 /usr/lib/inknote/chrome-sandbox "$sandbox_helper"
+          xvfb-run -a node scripts/smoke-qa.mjs --extended-only
 
       - name: Upload QA results
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

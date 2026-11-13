@@ -1,5 +1,14 @@
 # Historial de versiones
 
+## Sin publicar
+
+- El menú `/` agrupa formato básico, alertas e inserción con separadores, iconos
+  SVG y ejemplos de sintaxis. Usa la fuente de la interfaz y los tokens del tema.
+- Las alertas anidadas conservan sus colores en editor y preview. Los snippets
+  continúan los prefijos de cita y las tareas mantienen su edición y deshacer.
+- El corrector de contraste cubre también texto, coincidencias y selección del
+  autocompletado, conservando las paletas de los temas.
+
 ## 1.2.3 — 2026-11-11
 
 ### Publicación

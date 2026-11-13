@@ -12,7 +12,11 @@ for (const name of await readdir(tmpdir())) {
   const source = path.join(tmpdir(), name);
   if (!(await lstat(source)).isDirectory()) continue;
   for (const file of await readdir(source)) {
-    if (!/\.png$|^(?:theme-audit|layout-audit|scale-qa)\.json$/.test(file))
+    if (
+      !/\.png$|^(?:theme-audit|layout-audit|scale-qa|editor-decorations)\.json$/.test(
+        file,
+      )
+    )
       continue;
     if (!(await lstat(path.join(source, file))).isFile()) continue;
     const destination = path.join(output, 'profiles', name);

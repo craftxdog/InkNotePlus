@@ -11,6 +11,7 @@ import { verifyEditorLayout } from './smoke-editor-layout.mjs';
 import { verifyLineWrapping } from './smoke-line-wrapping.mjs';
 import { verifyEnterScroll } from './smoke-enter-scroll.mjs';
 import { verifyScrollReflow } from './smoke-scroll-reflow.mjs';
+import { verifyEditorDecorations } from './smoke-editor-decorations.mjs';
 import { verifyNotebookNavigation } from './smoke-notebook-navigation.mjs';
 import {
   chooseNoteStatus,
@@ -595,6 +596,7 @@ try {
   await verifyLineWrapping(page);
   await verifyEnterScroll({ page, profile });
   await verifyScrollReflow({ page, profile });
+  await verifyEditorDecorations({ page, profile });
   if (reviewDatabase) {
     const source = new DatabaseSync(reviewDatabase, { readOnly: true });
     let notes;

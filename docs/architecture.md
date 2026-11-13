@@ -292,9 +292,30 @@ transformador del AST elimina sólo la línea de control del render; conserva
 el Markdown almacenado y las posiciones originales del contenido, también con
 CRLF. Las tareas dentro de alertas siguen siendo editables y se autoguardan.
 El editor decora sólo bloques visibles; no altera medidas, cursor ni historial.
-Siguiendo [la sintaxis de GitHub](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts),
-las alertas requieren un marcador completo en su propia línea de una cita
-principal. Código, marcadores escapados y citas anidadas permanecen literales.
+Las alertas requieren un marcador completo al inicio de una cita, en su propia
+línea. Código, marcadores escapados y marcadores posteriores del mismo nivel
+permanecen literales. InkNote admite alertas anidadas con `> > [!TIP]` y dentro
+de listas, según la referencia visual solicitada. Esta es una adaptación de
+InkNote: la [guía pública de Inkdrop](https://docs.inkdrop.app/writing/basic-writing-and-formatting-syntax#alerts)
+indica que las alertas no se pueden anidar. La barra continua conserva el color
+de la cita exterior y cada marcador interior usa el color de su propia alerta.
+Las citas ordinarias usan `--md-blockquote-border-color`.
+
+El menú `/` usa las secciones, iconos SVG y detalles de sintaxis de la API de
+[autocompletado de CodeMirror](https://codemirror.net/docs/ref/#autocomplete.CompletionConfig).
+Agrupa formato básico, alertas e inserción; conserva los identificadores de los
+comandos existentes. CodeMirror mantiene filtrado, teclado, selección y ubicación
+del popup. Los snippets continúan los prefijos de cita para insertar alertas
+anidadas sin perder su contexto. El menú usa la fuente de la interfaz y los
+[tokens oficiales de Inkdrop](https://github.com/inkdropapp/css/blob/main/syntax.css)
+`--editor-tooltip-*` y `--editor-completion-*`; los cinco iconos de alerta comparten
+`--gfm-alert-*` con el preview. No ejecuta HTML de las notas ni monta raíces React
+por opción. Los SVG estáticos proceden de Lucide e incluyen su licencia.
+
+`scripts/smoke-editor-decorations.mjs`, integrado en la prueba nativa de escritorio,
+verifica los siete temas con un perfil temporal: tipografía, contraste WCAG AA,
+grupos, iconos, teclado, ratón, deshacer y colores de alertas anidadas. Las capturas
+y medidas se guardan como evidencia fuera de los archivos versionados.
 
 Vite transpila TSX con el runtime JSX automático configurado en TypeScript.
 El renderer usa el soporte nativo de Vite, sin el plugin de React Fast Refresh

@@ -1,6 +1,8 @@
 # Historial de versiones
 
-## Sin publicar
+## 1.3.0 — 2026-11-13
+
+### Añadido y mejorado
 
 - El menú `/` agrupa formato básico, alertas e inserción con separadores, iconos
   SVG y ejemplos de sintaxis. Usa la fuente de la interfaz y los tokens del tema.
@@ -8,6 +10,14 @@
   continúan los prefijos de cita y las tareas mantienen su edición y deshacer.
 - El corrector de contraste cubre también texto, coincidencias y selección del
   autocompletado, conservando las paletas de los temas.
+
+### Pruebas
+
+- 384 pruebas automatizadas cubren la base existente y las nuevas regresiones.
+- El QA nativo verifica el menú y las alertas en siete temas, con teclado,
+  ratón, deshacer, contraste y ventanas de 640 y 360 px.
+- La publicación conserva la verificación de instalación y uso en macOS Apple
+  Silicon, macOS Intel, Windows y Linux antes de ofrecer las descargas.
 
 ## 1.2.3 — 2026-11-11
 

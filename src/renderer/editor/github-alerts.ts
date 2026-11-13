@@ -16,13 +16,15 @@ export function alertTypeFromMarker(marker: string): AlertType | null {
   return match ? (match[1].toLowerCase() as AlertType) : null;
 }
 
-// GitHub alerts are top-level blockquotes. Keep all original block positions;
-// only the removed marker's paragraph/text start moves to the body.
+// InkNote also accepts nested alerts, matching the supplied Inkdrop reference.
+// The public GitHub/Inkdrop guide only documents top-level alerts. Keep all
+// original block positions; only the removed marker's text start moves.
 // https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts
 export function remarkGithubAlerts() {
   return (tree: SourceNode, file: { value: unknown }) => {
     const source = String(file.value);
-    for (const quote of tree.children ?? []) {
+    function visit(quote: SourceNode) {
+      for (const child of quote.children ?? []) visit(child);
       const paragraph = quote.children?.[0];
       const position = paragraph?.position;
       const start = position?.start.offset;
@@ -33,15 +35,15 @@ export function remarkGithubAlerts() {
         !position ||
         position.start.line !== quote.position?.start.line
       )
-        continue;
+        return;
       const newline = source.indexOf('\n', start);
       const end = newline < 0 ? source.length : newline;
       const type = alertTypeFromMarker(
         source.slice(start, end).replace(/\r$/, ''),
       );
-      if (!type) continue;
+      if (!type) return;
       const nextLine = newline < 0 ? end : newline + 1;
-      const prefix = /^ {0,3}>[\t ]?/.exec(source.slice(nextLine));
+      const prefix = /^(?:[\t ]*>[\t ]?)+/.exec(source.slice(nextLine));
       const bodyStart = nextLine + (prefix?.[0].length ?? 0);
       const bodyPoint = {
         offset: bodyStart,
@@ -77,5 +79,6 @@ export function remarkGithubAlerts() {
         },
       };
     }
+    visit(tree);
   };
 }

@@ -32,8 +32,26 @@ it('recognizes top-level alert ranges and stops at the following paragraph', () 
   ).toHaveLength(1);
 });
 
-it('does not style code, escaped markers, nested alerts or markers with inline content', () => {
+it('does not style code, escaped markers or markers with inline content', () => {
   const source =
-    '```md\n> [!NOTE]\n```\n\n> > [!TIP]\n\n> \\[!NOTE]\n\n- item\n  > [!IMPORTANT]\n\n> [!CAUTION] inline\n\n> [!UNKNOWN]\n\n>\n> [!NOTE]\n> Body';
+    '```md\n> [!NOTE]\n```\n\n> \\[!NOTE]\n\n> [!CAUTION] inline\n\n> [!UNKNOWN]\n\n>\n> [!NOTE]\n> Body';
   expect(alertBlocks(stateFor(source))).toEqual([]);
+});
+
+it('recognizes nested alert ranges even when their parent starts above the viewport', () => {
+  const source =
+    '> [!CAUTION]\n> Parent\n> > [!TIP]\n> > Child\n\n- item\n  > [!NOTE]\n  > Body';
+  const state = stateFor(source);
+  expect(alertBlocks(state).map(({ type }) => type)).toEqual([
+    'caution',
+    'tip',
+    'note',
+  ]);
+  expect(
+    alertBlocks(
+      state,
+      source.indexOf('Child'),
+      source.indexOf('Child') + 5,
+    ).map(({ type }) => type),
+  ).toEqual(['caution', 'tip']);
 });

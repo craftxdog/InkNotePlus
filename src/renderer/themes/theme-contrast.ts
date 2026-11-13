@@ -112,6 +112,7 @@ export function createThemeContrastStyle(document: Document, nonce: string) {
       read('--editor-background-color', true) ?? page,
       base,
     );
+    const completion = surface('--editor-tooltip-background-color', editor);
     const syntax = [
       editor,
       compositeColor(
@@ -168,6 +169,23 @@ export function createThemeContrastStyle(document: Document, nonce: string) {
         ],
       ],
       [['--editor-foreground-color'], [editor]],
+      [
+        [
+          '--editor-completion-label',
+          '--editor-completion-detail-color',
+          '--editor-completion-matched-text-color',
+        ],
+        [completion],
+      ],
+      [
+        ['--editor-tooltip-autocomplete-item-selected-color'],
+        [
+          surface(
+            '--editor-tooltip-autocomplete-item-selected-background-color',
+            completion,
+          ),
+        ],
+      ],
       [
         ['--editor-gutter-color'],
         [

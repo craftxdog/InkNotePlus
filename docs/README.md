@@ -43,6 +43,13 @@ integrar y comprobar los cambios en `main`, `pnpm release` crea el tag local.
 se publica cuando los cuatro destinos pasan sus pruebas de instalación y uso.
 Una versión publicada se conserva; las correcciones reciben un tag nuevo.
 
+Se aplica [versionado semántico](https://semver.org/lang/es/): correcciones
+compatibles incrementan el parche (`1.2.4`); funciones nuevas compatibles
+incrementan la versión menor (`1.3.0`); cambios incompatibles incrementan la
+mayor (`2.0.0`). Cada release tiene un tag y sus propios instaladores. Los
+commits y PR pueden agruparse antes de publicar; no necesitan una versión por
+cada cambio. El changelog registra lo incluido en cada entrega.
+
 El workflow manual de instaladores construye y verifica sin publicar una release.
 La publicación corre aparte, valida el tag, commit y los cuatro checks nativos y
 reutiliza sus artefactos. En caso de fallo de subida, `Publish release` permite

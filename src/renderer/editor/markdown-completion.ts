@@ -5,12 +5,18 @@ import {
   snippetCompletion,
   type Completion,
   type CompletionSource,
+  type CompletionSection,
 } from '@codemirror/autocomplete';
 import { markdownLanguage } from '@codemirror/lang-markdown';
 import { syntaxTree } from '@codemirror/language';
 import { Facet } from '@codemirror/state';
 import type { Command, EditorView } from '@codemirror/view';
 import { alertLabels } from './github-alerts';
+import {
+  completionPresentation,
+  completionSectionHeader,
+  completionTheme,
+} from './markdown-completion-ui';
 
 const imagePicker = Facet.define<() => (() => void) | undefined>();
 export const insertEditorImage: Command = (view) => {
@@ -62,23 +68,118 @@ export function insertSnippet(
 ) {
   if (view.state.readOnly) return false;
   const { from, to } = view.state.selection.main;
-  snippet(markdownSnippets[command].template)(view, null, from, to);
+  snippet(contextTemplate(view, markdownSnippets[command].template, from))(
+    view,
+    null,
+    from,
+    to,
+  );
   view.focus();
   return true;
 }
 
+const formatting: CompletionSection = {
+  name: 'Formato básico',
+  rank: 0,
+  header: completionSectionHeader,
+};
+const alerts: CompletionSection = {
+  name: 'Alertas de GitHub',
+  rank: 1,
+  header: completionSectionHeader,
+};
+const inserting: CompletionSection = {
+  name: 'Insertar',
+  rank: 2,
+  header: completionSectionHeader,
+};
+
+function contextTemplate(view: EditorView, template: string, from: number) {
+  const line = view.state.doc.lineAt(from);
+  const prefix = view.state.sliceDoc(line.from, from);
+  if (!/^(?: {0,3}>[\t ]?)*[\t ]*$/.test(prefix)) return template;
+  // CodeMirror adds the line's leading indentation itself. Continue only the
+  // quote markers here, so an indented quote is not indented twice.
+  const quote = prefix.replace(/^[\t ]*/, '');
+  return template.replaceAll('\n', `\n${quote}`);
+}
+
+function option(
+  label: string,
+  template: string,
+  icon: string,
+  detail: string,
+  section: CompletionSection,
+  order: number,
+): Completion {
+  return {
+    ...snippetCompletion(template, { label }),
+    section,
+    type: `inknote-${icon}`,
+    detail,
+    sortText: String(order).padStart(2, '0'),
+    apply(view, completion, from, to) {
+      snippet(contextTemplate(view, template, from))(
+        view,
+        completion,
+        from,
+        to,
+      );
+    },
+  };
+}
+
 const slashOptions: Completion[] = [
-  ...[1, 2, 3, 4].map((level) =>
-    snippetCompletion('#'.repeat(level) + ' ${texto}', {
-      label: `Encabezado ${level}`,
-    }),
+  option(
+    'Bloque de código',
+    markdownSnippets['core:insert-code-block'].template,
+    'code',
+    '```',
+    formatting,
+    0,
   ),
-  snippetCompletion('- ${texto}', { label: 'Lista con viñetas' }),
-  snippetCompletion('1. ${texto}', { label: 'Lista numerada' }),
-  snippetCompletion('- [ ] ${tarea}', { label: 'Lista de tareas' }),
-  snippetCompletion('> ${texto}', { label: 'Cita' }),
-  ...Object.values(markdownSnippets).map(({ label, template }) =>
-    snippetCompletion(template, { label }),
+  ...[1, 2, 3, 4].map((level) =>
+    option(
+      `Encabezado ${level}`,
+      '#'.repeat(level) + ' ${texto}',
+      'heading',
+      '#'.repeat(level),
+      formatting,
+      level,
+    ),
+  ),
+  option(
+    'Separador horizontal',
+    markdownSnippets['core:insert-horizontal-rule'].template,
+    'rule',
+    '---',
+    formatting,
+    5,
+  ),
+  option('Lista numerada', '1. ${texto}', 'ordered', '1.', formatting, 6),
+  option(
+    'Tabla',
+    markdownSnippets['core:insert-table'].template,
+    'table',
+    '| --- |',
+    formatting,
+    7,
+  ),
+  option('Lista de tareas', '- [ ] ${tarea}', 'tasks', '- [ ]', formatting, 8),
+  option('Lista con viñetas', '- ${texto}', 'unordered', '-', formatting, 9),
+  option('Cita', '> ${texto}', 'quote', '>', formatting, 10),
+  ...(['caution', 'important', 'note', 'tip', 'warning'] as const).map(
+    (type, index) => {
+      const item = markdownSnippets[`core:insert-alert-${type}`];
+      return option(
+        item.label,
+        item.template,
+        type,
+        `> [!${type.toUpperCase()}]`,
+        alerts,
+        index,
+      );
+    },
   ),
 ];
 
@@ -160,19 +261,21 @@ export function markdownCompletion(options: {
       }
       return null;
     }
-    const alert = /^\s*>\s*\[!([a-z]*)$/i.exec(before);
+    const alert = /^(?:[\t ]*>[\t ]*)+\[!([a-z]*)$/i.exec(before);
     if (alert) {
       return {
         from: pos - alert[1].length,
         to: state.sliceDoc(pos, pos + 1) === ']' ? pos + 1 : pos,
-        options: Object.values(alertLabels).map((label) => ({
+        options: Object.entries(alertLabels).map(([type, label]) => ({
           label: label.toUpperCase(),
           apply: `${label.toUpperCase()}]`,
+          type: `inknote-${type}`,
+          detail: `[!${label.toUpperCase()}]`,
         })),
       };
     }
     if (
-      !/^ {0,3}\/[\p{L}\p{N} -]*$/u.test(before) ||
+      !/^(?: {0,3}>[\t ]?)* {0,3}\/[\p{L}\p{N} -]*$/u.test(before) ||
       state.sliceDoc(pos, line.to).trim()
     )
       return null;
@@ -181,6 +284,10 @@ export function markdownCompletion(options: {
     if (options.insertImage())
       actions.push({
         label: 'Imagen',
+        section: inserting,
+        type: 'inknote-image',
+        detail: '![…](…)',
+        sortText: '01',
         apply(view, completion, from, to) {
           view.dispatch({
             changes: { from, to, insert: '' },
@@ -191,7 +298,14 @@ export function markdownCompletion(options: {
         },
       });
     if (options.noteLinks)
-      actions.push({ label: 'Enlace a nota', apply: '[[' });
+      actions.push({
+        label: 'Enlace a nota',
+        apply: '[[',
+        section: inserting,
+        type: 'inknote-noteLink',
+        detail: '[[…]]',
+        sortText: '00',
+      });
     // Match after the slash but replace the whole trigger when accepting.
     return {
       from: slash + 1,
@@ -216,6 +330,7 @@ export function markdownCompletion(options: {
     };
   };
   return [
+    completionTheme,
     imagePicker.of(options.insertImage),
     markdownLanguage.data.of({ autocomplete: source }),
     markdownLanguage.data.of({ autocomplete: completeEmoji }),
@@ -223,6 +338,7 @@ export function markdownCompletion(options: {
       ? [markdownLanguage.data.of({ autocomplete: options.noteLinks })]
       : []),
     autocompletion({
+      ...completionPresentation,
       activateOnTypingDelay: 70,
       activateOnCompletion: (option) => option.label === 'Enlace a nota',
     }),

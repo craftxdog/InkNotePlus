@@ -1,5 +1,8 @@
 @layer theme.syntax {
   .cm-editor {
+    .cm-line.md-blockquote-line {
+      box-shadow: inset var(--4px) 0 0 var(--md-blockquote-border-color);
+    }
     .md-alert-note {
       --inknote-alert-color: var(--gfm-alert-note);
     }
@@ -21,8 +24,8 @@
     .md-alert-line .tok-quote {
       font-style: normal;
     }
-    .md-alert-line .md-alert-marker,
-    .md-alert-line .md-alert-marker * {
+    .md-blockquote-line .md-alert-marker,
+    .md-blockquote-line .md-alert-marker * {
       color: var(--inknote-alert-color);
       font-style: normal;
       text-decoration: none;

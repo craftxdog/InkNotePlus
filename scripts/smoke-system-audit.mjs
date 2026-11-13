@@ -24,7 +24,7 @@ const settle = (page) =>
 
 // Measure computed colors after alpha compositing, including modal backdrops.
 // https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html
-function inspectText() {
+export function inspectText() {
   const canvas = document
     .createElement('canvas')
     .getContext('2d', { willReadFrequently: true });

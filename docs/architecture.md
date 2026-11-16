@@ -217,6 +217,33 @@ y una actualización por frame. Las medidas se invalidan al cambiar contenido,
 anchura o tema; la conexión sigue la instancia real de CodeMirror en StrictMode.
 El estado de scroll no pasa por Zustand ni provoca un render de React.
 
+El preview confirma su contenido desde `useLayoutEffect`, con la misma
+normalización LF/CRLF que CodeMirror. Guarda la referencia inmutable del
+documento correspondiente al DOM renderizado; un cambio pendiente del editor
+invalida esa referencia aunque React todavía muestre el borrador anterior.
+La comparación usa `Text.eq`: dos acciones rápidas pueden restaurar el mismo
+texto en otro documento inmutable sin que el preview necesite un nuevo commit.
+Al confirmar un preview diferido, cancela el frame anterior y alinea el scroll
+antes de pintar. Los callbacks de CodeMirror conservan su actualización por
+frame para medir fuera de una transacción del editor. En límites de wrap usa
+las coordenadas de la letra renderizada, porque el cursor puede estar ya en la
+siguiente línea visual. El guardado y su consulta de la lista ocurren en segundo
+plano, sin insertar una fila de carga en cada actualización.
+La dirección cambia al interactuar con un panel (rueda, puntero, toque o
+teclado), no por un evento `scroll` de reflow o de una corrección anterior.
+Los bloques de código normalizan CRLF/LF para conservar los diagramas cuando
+CodeMirror normaliza una nota al editarla por primera vez.
+
+`scripts/smoke-preview-stability.mjs` compara coordenadas DOM en cada fotograma
+mientras se escribe y se confirma el autoguardado, incluyendo celdas de tablas
+y texto posterior a diagramas en los cuatro modos de wrap. Incluye cambio de
+notas con contenido idéntico y saltos CRLF, comprueba el texto guardado y que se
+conserve la instancia del editor y los SVG existentes. Se ejecuta con perfiles
+temporales dentro del QA de los instaladores y conserva sus medidas en
+`preview-stability.json`.
+También aplica y revierte formato dentro de una misma tarea de eventos y
+verifica el desplazamiento posterior con una rueda real de Chromium.
+
 El renderer conserva posiciones de texto inline además de las de bloque.
 Las coordenadas reales de CodeMirror y DOM Range siguen el cursor dentro de
 una línea partida visualmente, incluso con enlaces cuyo destino no aparece

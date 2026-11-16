@@ -86,10 +86,13 @@ export function readMarkdownFence(node: ExtraProps['node']) {
         (value) => typeof value === 'string' && value.startsWith('language-'),
       )
     : undefined;
-  const text =
+  // CodeMirror normalizes line endings on the first edit. Render identical
+  // fence content identically so that edit cannot remount a diagram or formula.
+  const text = (
     element?.children
       .filter((child) => child.type === 'text')
       .map((child) => child.value)
-      .join('') ?? '';
+      .join('') ?? ''
+  ).replace(/\r\n?/g, '\n');
   return { element, language, text };
 }

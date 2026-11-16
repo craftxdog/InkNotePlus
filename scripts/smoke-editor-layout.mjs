@@ -244,15 +244,24 @@ export async function verifyEditorLayout(page) {
       ['editor', editorSelector, 0.35],
       ['preview', previewSelector, 0.68],
     ]) {
-      await page.evaluate(
+      const gesture = await page.evaluate(
         (selector, fraction) => {
           document.activeElement.blur();
           const pane = document.querySelector(selector);
-          pane.scrollTop = (pane.scrollHeight - pane.clientHeight) * fraction;
+          const bounds = pane.getBoundingClientRect();
+          return {
+            x: bounds.left + bounds.width / 2,
+            y: bounds.top + bounds.height / 2,
+            deltaY:
+              (pane.scrollHeight - pane.clientHeight) * fraction -
+              pane.scrollTop,
+          };
         },
         selector,
         fraction,
       );
+      await page.mouse.move(gesture.x, gesture.y);
+      await page.mouse.wheel({ deltaY: gesture.deltaY });
       await settle(page);
       assertSameVisualRow(
         await page.evaluate(renderedWords, { words: visibleWords, from }),

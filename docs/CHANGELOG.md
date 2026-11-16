@@ -1,5 +1,35 @@
 # Historial de versiones
 
+## 1.3.2 — 2026-11-16
+
+### Corregido
+
+- El autoguardado actualiza la lista actual en segundo plano, evitando mostrar
+  su indicador de carga mientras se escribe en notas filtradas u ordenadas.
+- El preview alinea su desplazamiento antes de pintar el Markdown actualizado.
+  La sincronización espera al documento real de CodeMirror, sin confundir un
+  render anterior de React con el texto actual del editor.
+- El anclaje usa la letra que produjo el texto del preview, evitando el salto
+  de una línea en límites de ajuste de texto y celdas de tablas.
+- Los cambios de tamaño y el scroll provocado por el navegador no invierten
+  la sincronización ni desplazan el editor mientras se escribe.
+- Editar una nota CRLF conserva los diagramas cuando su contenido no cambia.
+- Aplicar y revertir formato rápidamente conserva la sincronización aunque
+  CodeMirror cree otro documento con el mismo texto.
+- Añadidas regresiones de autoguardado y sincronización antes de pintar, además
+  de una prueba nativa por fotogramas durante escritura y guardado real.
+
+### Pruebas
+
+- 393 pruebas automatizadas, lint y TypeScript aprobados.
+- El paquete de macOS Apple Silicon pasó el QA completo de editor, temas,
+  respaldo, exportación, papelera y búsqueda con 3.000 notas.
+- Nueve escenarios de escritura en cuatro modos de wrap midieron 1.813
+  fotogramas, con una desviación máxima de 0,211 px y sin recargas de la lista,
+  reemplazos del editor ni reconstrucciones de diagramas.
+- La prueba de formato aplicado y revertido dentro de una misma tarea de
+  eventos confirmó que el desplazamiento posterior sigue sincronizado.
+
 ## 1.3.1 — 2026-11-16
 
 ### Corregido

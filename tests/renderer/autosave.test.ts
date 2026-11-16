@@ -10,6 +10,34 @@ import {
 
 afterEach(() => vi.useRealTimers());
 describe('automatic note persistence', () => {
+  it('refreshes a sorted note list after saving without a foreground loading state', async () => {
+    let stored = firstNote;
+    const { api } = createApi({
+      list: async () => success([stored]),
+      update: async (input) => {
+        stored = { ...stored, ...input, revision: input.expectedRevision + 1 };
+        return success(stored);
+      },
+    });
+    const store = createWorkspaceStore(api);
+    await store.getState().updatePreferences({ noteSort: 'title' });
+    await store.getState().refreshNotes();
+    const states: string[] = [];
+    const stop = store.subscribe((state) => states.push(state.noteList.status));
+    store
+      .getState()
+      .updateDraft({ body: 'Text already visible in the editor' });
+    await store.getState().saveDraft();
+    stop();
+    expect(store.getState().document).toMatchObject({
+      noteId: firstNote.id,
+      body: 'Text already visible in the editor',
+      isDirty: false,
+    });
+    expect(store.getState().noteList.notes[0].body).toBe(stored.body);
+    expect(states).not.toContain('loading');
+  });
+
   it('saves during continuous typing without writing on every keystroke', async () => {
     vi.useFakeTimers();
     let count = 0;

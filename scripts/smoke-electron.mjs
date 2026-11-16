@@ -13,6 +13,7 @@ import { verifyEnterScroll } from './smoke-enter-scroll.mjs';
 import { verifyScrollReflow } from './smoke-scroll-reflow.mjs';
 import { verifyEditorDecorations } from './smoke-editor-decorations.mjs';
 import { verifyThemeSelection } from './smoke-theme-selection.mjs';
+import { verifyPreviewStability } from './smoke-preview-stability.mjs';
 import { verifyNotebookNavigation } from './smoke-notebook-navigation.mjs';
 import {
   chooseNoteStatus,
@@ -351,11 +352,26 @@ try {
         preview: first('.mde-preview h2', '.pane--preview'),
       };
     });
-  await page.evaluate(() => {
-    document.activeElement.blur();
-    const element = document.querySelector('.cm-scroller');
-    element.scrollTop = (element.scrollHeight - element.clientHeight) * 0.55;
-  });
+  const scrollPane = async (selector, fraction) => {
+    const gesture = await page.$eval(
+      selector,
+      (element, fraction) => {
+        document.activeElement.blur();
+        const bounds = element.getBoundingClientRect();
+        return {
+          x: bounds.left + bounds.width / 2,
+          y: bounds.top + bounds.height / 2,
+          deltaY:
+            (element.scrollHeight - element.clientHeight) * fraction -
+            element.scrollTop,
+        };
+      },
+      fraction,
+    );
+    await page.mouse.move(gesture.x, gesture.y);
+    await page.mouse.wheel({ deltaY: gesture.deltaY });
+  };
+  await scrollPane('.cm-scroller', 0.55);
   await settle();
   let blocks = await visibleBlocks();
   console.log('Editor to preview:', blocks);
@@ -365,10 +381,7 @@ try {
       Math.abs(blocks.editor - blocks.preview) <= 1,
     JSON.stringify(blocks),
   );
-  await page.evaluate(() => {
-    const element = document.querySelector('.pane--preview');
-    element.scrollTop = (element.scrollHeight - element.clientHeight) * 0.3;
-  });
+  await scrollPane('.pane--preview', 0.3);
   await settle();
   blocks = await visibleBlocks();
   console.log('Preview to editor:', blocks);
@@ -599,6 +612,7 @@ try {
   await verifyScrollReflow({ page, profile });
   await verifyEditorDecorations({ page, profile });
   await verifyThemeSelection({ page, profile });
+  await verifyPreviewStability({ page, profile });
   if (reviewDatabase) {
     const source = new DatabaseSync(reviewDatabase, { readOnly: true });
     let notes;

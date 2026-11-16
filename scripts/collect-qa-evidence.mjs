@@ -13,7 +13,7 @@ for (const name of await readdir(tmpdir())) {
   if (!(await lstat(source)).isDirectory()) continue;
   for (const file of await readdir(source)) {
     if (
-      !/\.png$|^(?:theme-audit|layout-audit|scale-qa|editor-decorations|selection-contrast)\.json$/.test(
+      !/\.png$|^(?:theme-audit|layout-audit|scale-qa|editor-decorations|selection-contrast|preview-stability)\.json$/.test(
         file,
       )
     )

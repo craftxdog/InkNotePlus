@@ -408,6 +408,26 @@ forma atómica. `onDidChangeActiveThemes` se emite después de cargar las hojas;
 Mermaid vuelve a renderizar con los colores efectivos. Una carga fallida
 mantiene el tema anterior y cancela selecciones pendientes obsoletas.
 
+El corrector de contraste compara el texto con las superficies donde realmente
+se pinta. En el editor incluye selección con foco y sin foco, línea activa y
+código en línea. La capa de selección de CodeMirror usa los tokens públicos del
+tema con la especificidad de su componente, para evitar su fondo claro por
+defecto en temas oscuros. Las filas activas de biblioteca, notas y Preferencias
+resuelven texto y etiquetas por contexto: un único color no siempre puede servir
+en una fila amarilla y un panel oscuro. Editor y preview comparten los tokens
+`--gfm-alert-*` también en temas que declaran colores directos para sus títulos.
+
+Los colores modernos que `getComputedStyle()` conserva como `color(srgb ...)`,
+P3 u `oklch()` se convierten a sRGB con un canvas de un píxel, creado sólo si hace
+falta durante el cambio de tema. No se añade trabajo al escribir o seleccionar.
+`scripts/smoke-theme-selection.mjs` mide contraste sobre las capas realmente
+pintadas, con selección total, parcial y múltiple, pérdida de foco y cambios de
+tema en vivo. Admite `--theme-directory=<userData>/themes` para probar copias de
+los CSS instalados en un perfil aislado; no copia notas ni preferencias del
+usuario. La prueba por defecto incluye los siete temas y un paquete de regresión
+con `color-mix()`, `oklch()` y P3. Las capturas y medidas quedan en los artefactos
+de QA.
+
 Preferencias consulta el catálogo público de Inkdrop mediante las rutas v2 y
 la cabecera de versión que usa su IPM. Permite instalar temas unificados de
 Inkdrop 6 e importar carpetas descargadas. Los paquetes se guardan bajo

@@ -170,12 +170,17 @@ export function MarkdownEditor({
               backgroundColor: 'var(--editor-active-line-background-color)',
             },
             '.cm-cursor': { borderLeftColor: 'var(--editor-caret-color)' },
-            '.cm-selectionBackground': {
-              backgroundColor: 'var(--editor-selection-background)',
-            },
-            '&.cm-focused .cm-selectionBackground': {
-              backgroundColor: 'var(--editor-focused-selection-background)',
-            },
+            // Match the selection layer's base-theme specificity. A dark page
+            // must not inherit CodeMirror's opaque light-theme selection.
+            // https://github.com/codemirror/view/blob/main/src/theme.ts
+            '&.cm-editor > .cm-scroller > .cm-selectionLayer .cm-selectionBackground':
+              {
+                backgroundColor: 'var(--editor-selection-background)',
+              },
+            '&.cm-editor.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground':
+              {
+                backgroundColor: 'var(--editor-focused-selection-background)',
+              },
             '.cm-foldGutter': { width: '12px' },
             '.cm-tooltip': {
               backgroundColor: 'var(--popup-background)',

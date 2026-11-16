@@ -151,11 +151,11 @@ export function createScrollSync(
           (trackingCursor && lastSourcePosition !== null
             ? previewAtSource(view, preview, lastSourcePosition)
             : null);
-        // Link URLs and delimiters have no preview glyph. While scrolling,
-        // measure the source glyph that actually produced the preview anchor.
-        const cursor = view.coordsAtPos(
-          point && (!trackingCursor || !caretPoint) ? point.position : position,
-        );
+        // Measure the source glyph that produced the preview anchor. A caret
+        // at the end of a table cell can already sit on the next soft-wrapped
+        // row while its last rendered letter is still on the previous one.
+        // URLs and Markdown delimiters likewise have no preview glyph.
+        const cursor = view.coordsAtPos(point?.position ?? position);
         if (
           cursor &&
           point &&
@@ -210,7 +210,9 @@ export function createScrollSync(
         return;
       }
       delete expected[pane];
-      owner = pane;
+      // A scroll event alone can come from layout/scroll anchoring, including
+      // delayed events from our own writes. Only interaction changes ownership;
+      // otherwise a preview reflow can pull the editor away from its caret.
       schedule();
     };
     const interact = (event: Event) => {
@@ -240,11 +242,16 @@ export function createScrollSync(
   observer?.observe(preview);
   if (preview.firstElementChild) observer?.observe(preview.firstElementChild);
   return {
-    refresh(active = true) {
+    refresh(active = true, { beforePaint = false } = {}) {
       if (enabled !== active) lastEditorTop = editor.scrollTop;
       enabled = active;
       dirty = true;
-      schedule();
+      if (beforePaint) {
+        // Called from the committed deferred preview's layout effect. Ordinary
+        // CodeMirror updates stay frame-scheduled, outside the editor update.
+        cancelAnimationFrame(frame);
+        sync();
+      } else schedule();
     },
     editorChanged(selectionChanged = false, changes?: ChangeDesc) {
       dirty = true;

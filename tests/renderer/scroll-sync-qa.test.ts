@@ -336,6 +336,40 @@ it('keeps an anchor already preserved by browser scroll anchoring when an earlie
   }
 });
 
+it('does not treat a preview layout scroll as user input while the editor owns synchronization', () => {
+  const panes = createPanes();
+  try {
+    panes.selectLine(5);
+    panes.flushFrame();
+    const editorTop = panes.editor.scrollTop;
+    // A content reflow can scroll the other pane before the committed preview
+    // corrects its position. It must not move the active source in response.
+    panes.scroll(panes.preview, panes.preview.scrollTop + 80);
+    panes.sync.refresh(true, { beforePaint: true });
+    expect(panes.editor.scrollTop).toBe(editorTop);
+    expect(panes.positions()).toEqual({ editor: 100, preview: 100 });
+  } finally {
+    panes.destroy();
+  }
+});
+
+it.each(['wheel', 'pointerdown', 'touchstart', 'keydown'])(
+  'lets a preview %s interaction take ownership of scrolling',
+  (event) => {
+    const panes = createPanes();
+    try {
+      panes.selectLine(5);
+      panes.flushFrame();
+      panes.preview.dispatchEvent(new Event(event));
+      panes.scroll(panes.preview, 400);
+      panes.flushFrame();
+      expect(panes.positions(12)).toEqual({ editor: 150, preview: 150 });
+    } finally {
+      panes.destroy();
+    }
+  },
+);
+
 it('follows the user pane across preview wheel, unmapped editing, and editor wheel', () => {
   const panes = createPanes();
   try {

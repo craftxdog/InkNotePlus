@@ -3,7 +3,7 @@ import {
   useDeferredValue,
   createContext,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useRef,
   type ComponentProps,
   lazy,
@@ -60,7 +60,9 @@ export const MarkdownPreview = memo(function MarkdownPreview({
   const deferredBody = useDeferredValue(body);
   const rendered = useRef(onRendered);
   rendered.current = onRendered;
-  useEffect(() => rendered.current?.(deferredBody), [deferredBody]);
+  // The new preview and its scroll position must reach the same paint.
+  // https://react.dev/reference/react/useLayoutEffect
+  useLayoutEffect(() => rendered.current?.(deferredBody), [deferredBody]);
   const openLink = useWorkspace((state) => state.openExternalLink);
   const openNoteLink = useWorkspace((state) => state.openNoteLink);
   const toggle = useWorkspace((state) => state.toggleTask);

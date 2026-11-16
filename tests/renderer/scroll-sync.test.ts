@@ -186,6 +186,48 @@ function createPanes(height: number, isPreviewCurrent = () => true) {
   };
 }
 
+it('aligns a committed preview before paint, cancels the older frame and waits for the current source document', () => {
+  let current = false;
+  const panes = createPanes(300, () => current);
+  try {
+    panes.type('!');
+    panes.renderTypedCharacter();
+    panes.sync.refresh(true, { beforePaint: true });
+    expect(panes.preview.scrollTop).toBe(0);
+    current = true;
+    panes.sync.refresh(true, { beforePaint: true });
+    const aligned = panes.visiblePositions();
+    expect(aligned.preview).toBe(aligned.editor);
+    expect(panes.preview.scrollTop).toBeGreaterThan(0);
+    panes.flushFrame();
+    expect(panes.visiblePositions()).toEqual(aligned);
+  } finally {
+    panes.destroy();
+  }
+});
+
+it('aligns the rendered source glyph when a soft-wrap boundary puts the caret on the next visual row', () => {
+  const panes = createPanes(300);
+  const coordinates = vi
+    .mocked(panes.view.coordsAtPos)
+    .getMockImplementation()!;
+  vi.mocked(panes.view.coordsAtPos).mockImplementation((position, side) => {
+    const rect = coordinates(position, side);
+    return rect && position === panes.view.state.doc.length
+      ? { ...rect, top: rect.top + 25, bottom: rect.bottom + 25 }
+      : rect;
+  });
+  try {
+    panes.type('!');
+    panes.renderTypedCharacter();
+    panes.flushFrame();
+    const aligned = panes.visiblePositions();
+    expect(aligned.preview).toBe(aligned.editor);
+  } finally {
+    panes.destroy();
+  }
+});
+
 it('keeps visible text aligned when Enter moves the cursor to an unrendered final blank line without scrolling the editor', () => {
   const panes = createPanes(300);
   try {

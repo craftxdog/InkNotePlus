@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import type { EditorView } from '@codemirror/view';
+import type { Text } from '@codemirror/state';
 import {
   ArrowLeft,
   ArrowRight,
@@ -111,9 +112,8 @@ export function DocumentWorkspace({
   const preview = useRef<HTMLElement>(null);
   const sync = useRef<ReturnType<typeof createScrollSync> | null>(null);
   const position = useRef<ReturnType<typeof connectEditorSession> | null>(null);
-  const currentBody = useRef(draft.body);
-  currentBody.current = draft.body;
   const renderedBody = useRef<string | null>(null);
+  const renderedDocument = useRef<Text | null>(null);
   const [splitRatio, setSplitRatio] = useState(preferences.splitRatio);
   const [imageSelected, setImageSelected] = useState(false);
   const [tableSelected, setTableSelected] = useState(false);
@@ -199,7 +199,16 @@ export function DocumentWorkspace({
   const previewRendered = useCallback(
     (body: string) => {
       renderedBody.current = body;
-      sync.current?.refresh(mode === 'split' && preferences.syncScroll);
+      const instance = view.current;
+      // Match CodeMirror's actual immutable document, including LF/CRLF
+      // normalization, rather than the last React render of the draft.
+      renderedDocument.current =
+        instance && instance.state.doc.eq(instance.state.toText(body))
+          ? instance.state.doc
+          : null;
+      sync.current?.refresh(mode === 'split' && preferences.syncScroll, {
+        beforePaint: true,
+      });
     },
     [mode, preferences.syncScroll],
   );
@@ -550,6 +559,13 @@ export function DocumentWorkspace({
                     position.current?.destroy();
                     position.current = null;
                     view.current = instance;
+                    const body = renderedBody.current;
+                    renderedDocument.current =
+                      instance &&
+                      body !== null &&
+                      instance.state.doc.eq(instance.state.toText(body))
+                        ? instance.state.doc
+                        : null;
                     setImageSelected(!!instance && !!imageAtCursor(instance));
                     setTableSelected(
                       !!instance && !!tableAtCursor(instance.state),
@@ -565,7 +581,12 @@ export function DocumentWorkspace({
                       sync.current = createScrollSync(
                         instance,
                         preview.current,
-                        () => renderedBody.current === currentBody.current,
+                        // Commands can change and restore text before React
+                        // commits a deferred preview. Equal immutable documents
+                        // are current even when their references differ.
+                        () =>
+                          renderedDocument.current?.eq(instance.state.doc) ??
+                          false,
                       );
                       sync.current.refresh(
                         mode === 'split' && preferences.syncScroll,

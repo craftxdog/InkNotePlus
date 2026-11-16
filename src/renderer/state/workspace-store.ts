@@ -90,9 +90,12 @@ export function createWorkspaceStore(
           ? { sort: get().preferences.noteSort }
           : navigationFilter(get().navigation, get().preferences)),
       };
-      set((state) => ({
-        noteList: { ...state.noteList, status: 'loading', errorCode: null },
-      }));
+      // Persistence refreshes the current query in the background. Keep the
+      // visible list in place instead of flashing its loading row on every save.
+      if (!preserveLoaded || get().noteList.status !== 'ready')
+        set((state) => ({
+          noteList: { ...state.noteList, status: 'loading', errorCode: null },
+        }));
       try {
         const count =
           preserveLoaded && !append

@@ -1,5 +1,28 @@
 # Historial de versiones
 
+## 1.3.1 — 2026-11-16
+
+### Corregido
+
+- La selección del editor respeta el fondo de cada tema, con foco y sin foco,
+  en lugar de imponer el lavanda predeterminado de CodeMirror.
+- El contraste de texto normal, sintaxis y alertas contempla el fondo de la
+  selección, la línea activa y el código en línea.
+- Las filas activas, sus etiquetas y las pestañas de Preferencias ajustan el
+  texto a su propio fondo. Los temas con `color-mix()`, `oklch()` y colores P3
+  se convierten con el motor del navegador.
+- El QA nativo cubre selección parcial, múltiple, cambios de tema en vivo y
+  temas instalados, además de los siete incluidos.
+
+### Pruebas
+
+- 384 pruebas automatizadas aprobadas.
+- El paquete de macOS Apple Silicon pasó el QA de editor, guardado, backups,
+  exportación, papelera, búsqueda con 3.000 notas y paneles responsivos.
+- La comprobación local de nueve temas reales y un tema de regresión incluye
+  4.830 mediciones de contraste, selección de código en línea y las cinco alertas.
+- Los instaladores se publican tras aprobar los cuatro destinos nativos en CI.
+
 ## 1.3.0 — 2026-11-13
 
 ### Añadido y mejorado

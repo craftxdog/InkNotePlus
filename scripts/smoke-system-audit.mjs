@@ -24,7 +24,7 @@ const settle = (page) =>
 
 // Measure computed colors after alpha compositing, including modal backdrops.
 // https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html
-export function inspectText() {
+export function inspectText({ selection = false } = {}) {
   const canvas = document
     .createElement('canvas')
     .getContext('2d', { willReadFrequently: true });
@@ -48,6 +48,12 @@ export function inspectText() {
       return sum + linear * [0.2126, 0.7152, 0.0722][index];
     }, 0);
   const result = [];
+  const selections = selection
+    ? [...document.querySelectorAll('.cm-selectionBackground')].map((node) => ({
+        bounds: node.getBoundingClientRect(),
+        color: getComputedStyle(node).backgroundColor,
+      }))
+    : [];
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     if (!node.textContent.trim()) continue;
@@ -77,11 +83,26 @@ export function inspectText() {
     for (let parent = element; parent; parent = parent.parentElement)
       ancestors.unshift(parent);
     let background = [255, 255, 255];
-    for (const parent of ancestors)
+    let selected = false;
+    for (const parent of ancestors) {
       background = composite(
         rgba(getComputedStyle(parent).backgroundColor),
         background,
       );
+      if (parent.classList.contains('cm-scroller')) {
+        const marker = selections.find(
+          ({ bounds }) =>
+            box.left < bounds.right &&
+            box.right > bounds.left &&
+            box.top < bounds.bottom &&
+            box.bottom > bounds.top,
+        );
+        if (marker) {
+          background = composite(rgba(marker.color), background);
+          selected = true;
+        }
+      }
+    }
     const foreground = composite(rgba(style.color), background);
     const levels = [luminance(foreground), luminance(background)].sort(
       (a, b) => b - a,
@@ -100,6 +121,20 @@ export function inspectText() {
       ratio: Math.round(ratio * 100) / 100,
       required,
       font: style.fontFamily,
+      ...(selection
+        ? {
+            selected,
+            context: element.closest('.cm-content')
+              ? 'editor'
+              : element.closest('.note-list-item[data-active="true"]')
+                ? 'active-note'
+                : element.closest(
+                      '.navigation-item[data-active="true"], .notebook-row[data-active="true"]',
+                    )
+                  ? 'active-sidebar'
+                  : 'other',
+          }
+        : {}),
     });
   }
   return result;

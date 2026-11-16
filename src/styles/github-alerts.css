@@ -1,22 +1,35 @@
+@layer theme {
+  .md-alert-note,
+  .gfm-alert-type-note {
+    --inknote-alert-color: var(--gfm-alert-note);
+  }
+  .md-alert-tip,
+  .gfm-alert-type-tip {
+    --inknote-alert-color: var(--gfm-alert-tip);
+  }
+  .md-alert-important,
+  .gfm-alert-type-important {
+    --inknote-alert-color: var(--gfm-alert-important);
+  }
+  .md-alert-warning,
+  .gfm-alert-type-warning {
+    --inknote-alert-color: var(--gfm-alert-warning);
+  }
+  .md-alert-caution,
+  .gfm-alert-type-caution {
+    --inknote-alert-color: var(--gfm-alert-caution);
+  }
+  .mde-preview .gfm-alert {
+    border-color: var(--inknote-alert-color);
+  }
+  .mde-preview .gfm-alert > .gfm-alert-title {
+    color: var(--inknote-alert-color);
+  }
+}
 @layer theme.syntax {
   .cm-editor {
     .cm-line.md-blockquote-line {
       box-shadow: inset var(--4px) 0 0 var(--md-blockquote-border-color);
-    }
-    .md-alert-note {
-      --inknote-alert-color: var(--gfm-alert-note);
-    }
-    .md-alert-tip {
-      --inknote-alert-color: var(--gfm-alert-tip);
-    }
-    .md-alert-important {
-      --inknote-alert-color: var(--gfm-alert-important);
-    }
-    .md-alert-warning {
-      --inknote-alert-color: var(--gfm-alert-warning);
-    }
-    .md-alert-caution {
-      --inknote-alert-color: var(--gfm-alert-caution);
     }
     .cm-line.md-alert-line {
       box-shadow: inset var(--4px) 0 0 var(--inknote-alert-color);

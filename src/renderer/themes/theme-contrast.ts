@@ -68,18 +68,38 @@ export function createThemeContrastStyle(document: Document, nonce: string) {
   const probe = document.createElement('span');
   probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none';
   root.append(probe);
+  let colorContext: CanvasRenderingContext2D | null | undefined;
   const read = (token: string, background = false): Rgba | null => {
     if (!computed.getPropertyValue(token).trim()) return null;
     probe.style.color = `var(${token})`;
     probe.style.background = background ? `var(${token})` : 'transparent';
     const style = getComputedStyle(probe);
-    const value = (background ? style.backgroundColor : style.color)
+    const color = background ? style.backgroundColor : style.color;
+    const value = color
       .match(/^rgba?\(([^)]+)\)$/)?.[1]
       .split(',')
       .map(Number);
-    return value && value.length >= 3
-      ? [value[0], value[1], value[2], value[3] ?? 1]
-      : null;
+    if (value && value.length >= 3)
+      return [value[0], value[1], value[2], value[3] ?? 1];
+    // Modern CSS colors can remain color(srgb ...), oklch() or color-mix()
+    // after getComputedStyle(). Let the browser convert them to sRGB rather
+    // than silently treating an unreadable selected background as transparent.
+    if (colorContext === undefined) {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 1;
+      colorContext = canvas.getContext('2d', { willReadFrequently: true });
+    }
+    if (!colorContext) return null;
+    colorContext.clearRect(0, 0, 1, 1);
+    colorContext.fillStyle = color;
+    colorContext.fillRect(0, 0, 1, 1);
+    const [red, green, blue, alpha] = colorContext.getImageData(
+      0,
+      0,
+      1,
+      1,
+    ).data;
+    return [red, green, blue, alpha / 255];
   };
   try {
     const page = read('--page-background', true);
@@ -99,26 +119,41 @@ export function createThemeContrastStyle(document: Document, nonce: string) {
       '--input-background',
       '--popup-background',
     );
-    const selected = [
-      surface('--note-list-view-item-selected-background', noteList),
-      surface('--note-list-view-item-active-background', noteList),
-      surface('--sidebar-menu-item-active-background', sidebar),
-      surface(
-        '--preferences-sidebar-item-active-background',
-        surface('--preferences-sidebar-background'),
-      ),
+    const selectedRegions: [string, Rgb][] = [
+      [
+        '.note-list-item[data-active="true"]',
+        surface('--note-list-view-item-active-background', noteList),
+      ],
+      [
+        '.navigation-item[data-active="true"], .notebook-row[data-active="true"]',
+        surface('--sidebar-menu-item-active-background', sidebar),
+      ],
+      [
+        '.preferences-navigation button[aria-selected="true"]',
+        surface(
+          '--preferences-sidebar-item-active-background',
+          surface('--preferences-sidebar-background'),
+        ),
+      ],
     ];
     const editor = compositeColor(
       read('--editor-background-color', true) ?? page,
       base,
     );
     const completion = surface('--editor-tooltip-background-color', editor);
-    const syntax = [
+    // The selection layer sits below line decorations and inline-code pills.
+    // Check both focus states and the active-line overlay in that paint order.
+    const editorSurfaces = [
       editor,
-      compositeColor(
-        read('--editor-active-line-background-color', true) ?? [0, 0, 0, 0],
-        editor,
-      ),
+      surface('--editor-selection-background', editor),
+      surface('--editor-focused-selection-background', editor),
+    ].flatMap((background) => [
+      background,
+      surface('--editor-active-line-background-color', background),
+      surface('--md-inline-code-background-color', background),
+    ]);
+    const syntax = [
+      ...editorSurfaces,
       surface('--mde-preview-codeblock-background-color', preview),
       surface('--mde-preview-inline-code-background-color', preview),
       surface('--mde-preview-table-head-background-color', preview),
@@ -136,7 +171,6 @@ export function createThemeContrastStyle(document: Document, nonce: string) {
         ],
         ui,
       ],
-      [['--selected-text-color'], selected],
       [
         ['--button-text-color'],
         [
@@ -168,7 +202,7 @@ export function createThemeContrastStyle(document: Document, nonce: string) {
           surface('--note-list-view-item-selected-background', noteList),
         ],
       ],
-      [['--editor-foreground-color'], [editor]],
+      [['--editor-foreground-color'], editorSurfaces],
       [
         [
           '--editor-completion-label',
@@ -214,25 +248,26 @@ export function createThemeContrastStyle(document: Document, nonce: string) {
         ),
         [
           preview,
+          ...editorSurfaces,
           surface('--mde-preview-table-head-background-color', preview),
           surface('--mde-preview-table-row-background-color', preview),
         ],
       ],
     ];
     const appearance = root.style.colorScheme === 'dark' ? 'dark' : 'light';
-    for (const token of computed) {
-      if (
+    const tagTokens = [...computed].filter(
+      (token) =>
         token.startsWith(`--tag-${appearance}-`) &&
-        token.endsWith('-text-color')
-      ) {
-        const background = token.replace(/-text-color$/, '-background-color');
-        groups.push([
-          [token],
-          [base, sidebar, noteList, ...selected].map((parent) =>
-            surface(background, parent),
-          ),
-        ]);
-      }
+        token.endsWith('-text-color'),
+    );
+    for (const token of tagTokens) {
+      const background = token.replace(/-text-color$/, '-background-color');
+      groups.push([
+        [token],
+        [base, sidebar, noteList, preview].map((parent) =>
+          surface(background, parent),
+        ),
+      ]);
     }
     const rules: string[] = [];
     for (const [tokens, surfaces] of groups) {
@@ -242,12 +277,33 @@ export function createThemeContrastStyle(document: Document, nonce: string) {
         if (color) rules.push(`${token}:rgb(${color.join(',')})`);
       }
     }
-    if (!rules.length) return null;
+    // A single foreground cannot always contrast with both a bright active row
+    // and a dark preferences tab. Resolve selected text and tag colors in their
+    // actual component context, preserving the theme's background and hue.
+    const scoped = selectedRegions.map(([selector, background]) => {
+      const declarations: string[] = [];
+      for (const token of ['--selected-text-color', ...tagTokens]) {
+        const original = read(token);
+        if (!original) continue;
+        const target =
+          token === '--selected-text-color'
+            ? background
+            : surface(
+                token.replace(/-text-color$/, '-background-color'),
+                background,
+              );
+        const color =
+          readableColor(original, [target]) ?? compositeColor(original, target);
+        declarations.push(`${token}:rgb(${color.join(',')})`);
+      }
+      return `${selector}{${declarations.join(';')}}`;
+    });
+    if (!rules.length && !scoped.length) return null;
     const style = document.createElement('style');
     style.nonce = nonce;
     style.dataset.themeContrast = '';
     // User styles outside a cascade layer keep their documented priority.
-    style.textContent = `@layer theme { :root { ${rules.join(';')} } }`;
+    style.textContent = `@layer theme { :root { ${rules.join(';')} } ${scoped.join('\n')} }`;
     return style;
   } finally {
     probe.remove();

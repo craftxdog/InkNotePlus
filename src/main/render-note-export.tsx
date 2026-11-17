@@ -16,9 +16,12 @@ import { remarkHighlights } from '../renderer/editor/highlights';
 import { parseImageDimensions } from '../renderer/editor/image-dimensions';
 import {
   HighlightedCode,
+  FencedCodeBlock,
   MarkdownAlert,
   readMarkdownFence,
 } from '../renderer/editor/markdown-presentation';
+import { remarkCodeFenceMeta } from '../renderer/editor/code-fence';
+import { loadCodeLanguage } from '../renderer/editor/code-languages';
 import {
   MathEquation,
   type MathEquationProps,
@@ -27,7 +30,13 @@ import { attachmentName } from './markdown-export';
 import { readAvailableImage } from './transfer-files';
 
 type ExportPreferences = Pick<Preferences, 'mathEnabled' | 'mermaidEnabled'>;
-const plugins = [remarkGfm, remarkMath, remarkGithubAlerts, remarkHighlights];
+const plugins = [
+  remarkGfm,
+  remarkMath,
+  remarkGithubAlerts,
+  remarkHighlights,
+  remarkCodeFenceMeta,
+];
 const mathOptions: MathEquationProps['options'] = {
   output: 'mathml',
   trust: false,
@@ -55,8 +64,8 @@ export async function renderNoteExport(
         </HighlightedCode>
       );
     },
-    pre({ node, children }) {
-      const { language, text } = readMarkdownFence(node);
+    pre({ node }) {
+      const { language, text, metadata } = readMarkdownFence(node);
       if (language === 'language-math' && preferences.mathEnabled)
         return <MathEquation code={text} options={mathOptions} />;
       const diagram =
@@ -66,7 +75,7 @@ export async function renderNoteExport(
           <img src={diagram} alt="Diagrama Mermaid" />
         </figure>
       ) : (
-        <pre>{children}</pre>
+        <FencedCodeBlock language={language} text={text} metadata={metadata} />
       );
     },
     img({ src, alt }: ComponentProps<'img'>) {
@@ -129,6 +138,14 @@ export async function renderNoteExport(
       for (const node of nodes) {
         if (node.type !== 'element') continue;
         for (const child of node.children) nodes.push(child);
+        if (node.tagName === 'pre') {
+          const { language } = readMarkdownFence(node);
+          // Server rendering has no effects; load the same grammar before HTML
+          // is rendered so HTML and PDF retain the preview's highlighting.
+          await loadCodeLanguage(
+            language?.replace(/^language-/, '') ?? '',
+          ).catch(() => null);
+        }
         if (node.tagName === 'img') {
           const url = node.properties.src;
           if (
@@ -183,6 +200,19 @@ const exportStyles = `
   code { background: #f4f6f8; padding: 0.1em 0.25em; border-radius: 3px; }
   pre { padding: 1rem; background: #f4f6f8; white-space: pre-wrap; overflow-wrap: anywhere; }
   pre code { background: none; padding: 0; }
+  .codeblock { margin: 1rem 0; }
+  .codeblock pre { margin: 0; border-radius: 0 0 6px 6px; }
+  .codeblock-meta { display: flex; gap: 0.75rem; align-items: center; padding: 0.5rem 1rem; background: #e8ebee; color: #454c53; border-radius: 6px 6px 0 0; font-size: 85%; }
+  .codeblock-meta-icon { display: flex; flex-direction: column; align-items: center; }
+  .codeblock-language { font-size: 0.65em; text-transform: uppercase; }
+  .codeblock-meta-body { min-width: 0; }
+  .codeblock-title, .codeblock-filename { font-weight: 600; }
+  .codeblock-info { display: flex; flex-wrap: wrap; gap: 0.5em; }
+  .codeblock-info a { display: inline-flex; align-items: center; gap: 0.25em; }
+  .mde-preview-code { display: flex; gap: 1em; }
+  .mde-preview-code-line-number { white-space: pre; user-select: none; text-align: right; color: #656d76; flex: none; }
+  .mde-preview-code-body { min-width: 0; }
+  .with-line-numbers .mde-preview-code-body { white-space: pre; overflow: auto; }
   blockquote, .gfm-alert { margin: 1rem 0; border-inline-start: 4px solid var(--alert, #c8cfd6); padding: 0.25rem 1rem; }
   .gfm-alert-title { display: flex; gap: 0.5em; align-items: center; color: var(--alert); font-weight: 600; }
   .gfm-alert-title .icon { display: inline-flex; }
@@ -195,10 +225,10 @@ const exportStyles = `
   table { border-collapse: collapse; }
   th, td { border: 1px solid #c8cfd6; padding: 0.3em 0.55em; }
   tr, figure, math { break-inside: avoid; }
-  .tok-keyword { color: #8250df; }
+  .tok-keyword, .tok-definition-keyword, .tok-module-keyword, .tok-control-keyword, .tok-operator-keyword { color: #8250df; }
   .tok-string { color: #116329; }
   .tok-number, .tok-bool, .tok-null { color: #0550ae; }
-  .tok-comment { color: #656d76; }
+  .tok-comment, .tok-line-comment, .tok-block-comment, .tok-doc-comment { color: #656d76; }
   @page { size: A4; margin: 15mm; }
   @media print { main { max-width: none; padding: 0; } :root { print-color-adjust: exact; } }
 `;

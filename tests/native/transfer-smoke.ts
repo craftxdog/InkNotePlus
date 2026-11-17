@@ -48,9 +48,11 @@ void app.whenReady().then(async () => {
       sourceDirectory,
       () => true,
     );
+    const codeFence =
+      '```python filename="src/greet.py" line=18 title="Native code export"\ndef greet(name):\n    return "Hello " + name\n```';
     const note = source.notes.create({
       title: 'QA español 日本語 <export>',
-      body: `## Native export\n\nInline $x^2$ and **bold**.\n\n> [!NOTE]\n> Export alert.\n\n- [x] Finished\n\n| Name | Count |\n| --- | --- |\n| Notes | 2 |\n\n~~~mermaid\nflowchart LR\n  A[Start] --> B[Done]\n~~~\n\n![Managed image](${image.url})\n\n<script>throw new Error('must not execute')</script>`,
+      body: `## Native export\n\nInline $x^2$ and **bold**.\n\n> [!NOTE]\n> Export alert.\n\n- [x] Finished\n\n| Name | Count |\n| --- | --- |\n| Notes | 2 |\n\n~~~mermaid\nflowchart LR\n  A[Start] --> B[Done]\n~~~\n\n${codeFence}\n\n![Managed image](${image.url})\n\n<script>throw new Error('must not execute')</script>`,
       metadata: {
         ...defaultNoteMetadata,
         notebookId: book.id,
@@ -104,6 +106,9 @@ void app.whenReady().then(async () => {
     assert.equal(exported.missingAttachments, 0);
     assert.match(exported.html, /<math/);
     assert.match(exported.html, /data:image\/svg\+xml;base64,/);
+    assert.match(exported.html, /class="codeblock-title">Native code export/);
+    assert.match(exported.html, /tok-definition-keyword/);
+    assert.match(exported.html, /aria-hidden="true">18\n19<\/span>/);
     assert(!exported.html.includes('<script>'));
     const html = path.join(output, 'native-export.html');
     await writeFile(html, exported.html);

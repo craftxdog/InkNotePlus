@@ -25,15 +25,18 @@ import { linkedNoteId } from '../../shared/note-link';
 import { remarkGithubAlerts } from './github-alerts';
 import {
   HighlightedCode,
+  FencedCodeBlock,
   MarkdownAlert,
   readMarkdownFence,
 } from './markdown-presentation';
+import { remarkCodeFenceMeta } from './code-fence';
 
 const gfm = [
   remarkGfm,
   remarkMath,
   remarkGithubAlerts,
   remarkHighlights,
+  remarkCodeFenceMeta,
   remarkSourceMap,
 ];
 const sourceText = [rehypeSourceText];
@@ -195,10 +198,11 @@ function PreviewCode({ children, className }: ComponentProps<'code'>) {
   );
 }
 
-function PreviewBlock({ node, children }: ComponentProps<'pre'> & ExtraProps) {
-  const { element, language, text } = readMarkdownFence(node);
+function PreviewBlock({ node }: ComponentProps<'pre'> & ExtraProps) {
+  const { element, language, text, metadata } = readMarkdownFence(node);
   const math = useWorkspace((state) => state.preferences.mathEnabled);
   const mermaid = useWorkspace((state) => state.preferences.mermaidEnabled);
+  const context = useContext(PreviewContext);
   // Code fences own their source positions; react-markdown puts them on code.
   const source = element
     ? Object.fromEntries(
@@ -229,5 +233,13 @@ function PreviewBlock({ node, children }: ComponentProps<'pre'> & ExtraProps) {
         </Suspense>
       </div>
     );
-  return <pre {...source}>{children}</pre>;
+  return (
+    <FencedCodeBlock
+      language={language}
+      text={text}
+      metadata={metadata}
+      source={source}
+      onOpenLink={context?.openLink}
+    />
+  );
 }

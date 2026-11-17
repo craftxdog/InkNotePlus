@@ -1,17 +1,26 @@
-import type { ComponentProps, ReactNode } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from 'react';
 import type { ExtraProps } from 'react-markdown';
 import { highlightTree } from '@lezer/highlight';
-import { javascriptLanguage } from '@codemirror/lang-javascript';
-import { jsonLanguage } from '@codemirror/lang-json';
+import type { LanguageDescription } from '@codemirror/language';
 import {
   Info,
   Lightbulb,
   MessageSquareWarning,
   TriangleAlert,
   OctagonAlert,
+  FileCode2,
+  ExternalLink,
 } from 'lucide-react';
 import { alertLabels, type AlertType } from './github-alerts';
 import { tokenHighlighter } from './token-highlighter';
+import { resolveCodeLanguage } from './code-languages';
+import { parseCodeFenceMeta, type CodeFenceMeta } from './code-fence';
 
 const alertIcons = {
   note: Info,
@@ -47,34 +56,152 @@ export function MarkdownAlert({
 export function HighlightedCode({
   children,
   className,
+  block = false,
 }: {
   children: string;
   className?: string;
+  block?: boolean;
 }) {
-  const name = className?.replace('language-', '');
-  const language = /^(js|javascript|ts|typescript|jsx|tsx)$/.test(name ?? '')
-    ? javascriptLanguage
-    : name === 'json'
-      ? jsonLanguage
-      : null;
-  if (!language) return <code className={className}>{children}</code>;
-  const spans: ReactNode[] = [];
-  let offset = 0;
-  highlightTree(
-    language.parser.parse(children),
-    tokenHighlighter,
-    (from, to, classes) => {
-      if (from > offset) spans.push(children.slice(offset, from));
-      spans.push(
-        <span className={classes} key={`${from}:${to}`}>
-          {children.slice(from, to)}
-        </span>,
-      );
-      offset = to;
-    },
+  const description = resolveCodeLanguage(
+    className?.replace(/^language-/, '') ?? '',
   );
-  spans.push(children.slice(offset));
-  return <code className={`codeblock ${className ?? ''}`}>{spans}</code>;
+  const [loaded, setLoaded] = useState<LanguageDescription | null>(null);
+  useEffect(() => {
+    if (!description || description.support) return;
+    let active = true;
+    void description
+      .load()
+      .then((support) => {
+        if (active && support) setLoaded(description);
+      })
+      .catch(() => {
+        // Keep code readable offline or when an optional grammar cannot load.
+      });
+    return () => {
+      active = false;
+    };
+  }, [description]);
+  const language =
+    description?.support?.language ??
+    (loaded === description ? loaded?.support?.language : null);
+  const spans = useMemo(() => {
+    if (!language) return children;
+    const result: ReactNode[] = [];
+    let offset = 0;
+    highlightTree(
+      language.parser.parse(children),
+      tokenHighlighter,
+      (from, to, classes) => {
+        if (from > offset) result.push(children.slice(offset, from));
+        result.push(
+          <span className={classes} key={`${from}:${to}`}>
+            {children.slice(from, to)}
+          </span>,
+        );
+        offset = to;
+      },
+    );
+    result.push(children.slice(offset));
+    return result;
+  }, [children, language]);
+  return (
+    <code
+      className={
+        [block && 'mde-preview-code-body', className]
+          .filter(Boolean)
+          .join(' ') || undefined
+      }
+    >
+      {spans}
+    </code>
+  );
+}
+
+export function FencedCodeBlock({
+  language,
+  text,
+  metadata,
+  source,
+  onOpenLink,
+}: {
+  language?: string;
+  text: string;
+  metadata: CodeFenceMeta;
+  source?: Record<string, unknown>;
+  onOpenLink?: (url: string) => unknown;
+}) {
+  const name = language?.replace(/^language-/, '');
+  const description = resolveCodeLanguage(name ?? '');
+  const { title, filename, line, commit, url } = metadata;
+  const hasMetadata = Object.keys(metadata).length > 0;
+  const lineCount = Math.max(
+    1,
+    text.split('\n').length - (text.endsWith('\n') ? 1 : 0),
+  );
+  const numbers =
+    line === undefined
+      ? null
+      : Array.from({ length: lineCount }, (_, index) =>
+          String(BigInt(line) + BigInt(index)),
+        ).join('\n');
+  return (
+    <div {...source} className="codeblock">
+      {hasMetadata && (
+        <div className="codeblock-meta">
+          <span
+            className="codeblock-meta-icon"
+            role="img"
+            aria-label={description?.name ?? name ?? 'Código'}
+          >
+            <FileCode2 size="1.25em" aria-hidden="true" />
+            {name && (
+              <span className="codeblock-language" aria-hidden="true">
+                {name}
+              </span>
+            )}
+          </span>
+          <div className="codeblock-meta-body">
+            {title && <div className="codeblock-title">{title}</div>}
+            {filename && <div className="codeblock-filename">{filename}</div>}
+            {(line !== undefined || commit || url) && (
+              <div className="codeblock-info">
+                {line !== undefined && <span>Línea {line}</span>}
+                {commit && <span>Commit {commit}</span>}
+                {url && (
+                  <a
+                    href={url}
+                    title={url}
+                    onClick={
+                      onOpenLink
+                        ? (event) => {
+                            event.preventDefault();
+                            void onOpenLink(url);
+                          }
+                        : undefined
+                    }
+                  >
+                    Ver origen <ExternalLink size="1em" aria-hidden="true" />
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      <pre
+        className={`mde-preview-code${numbers === null ? '' : ' with-line-numbers'}`}
+      >
+        {numbers !== null && (
+          <span className="mde-preview-code-line-number" aria-hidden="true">
+            {numbers}
+          </span>
+        )}
+        <HighlightedCode className={language} block>
+          {text}
+        </HighlightedCode>
+      </pre>
+    </div>
+  );
 }
 
 export function readMarkdownFence(node: ExtraProps['node']) {
@@ -94,5 +221,12 @@ export function readMarkdownFence(node: ExtraProps['node']) {
       .map((child) => child.value)
       .join('') ?? ''
   ).replace(/\r\n?/g, '\n');
-  return { element, language, text };
+  const meta = element?.properties['data-code-meta'];
+  const metadata = parseCodeFenceMeta(typeof meta === 'string' ? meta : '');
+  return {
+    element,
+    language: typeof language === 'string' ? language : undefined,
+    text,
+    metadata,
+  };
 }

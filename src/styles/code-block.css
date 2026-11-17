@@ -1,0 +1,38 @@
+@layer theme.preview {
+  .mde-preview .codeblock-meta-body {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .mde-preview .codeblock-meta-icon {
+    flex-direction: column;
+    gap: 0.15em;
+    flex-shrink: 0;
+  }
+
+  .mde-preview .codeblock-language {
+    font-size: 0.65em;
+    font-weight: 600;
+    line-height: 1;
+    text-transform: uppercase;
+    max-width: 6em;
+    overflow-wrap: anywhere;
+  }
+
+  .mde-preview .codeblock-info a {
+    display: inline-flex;
+    gap: 0.25em;
+    align-items: center;
+  }
+
+  .mde-preview .mde-preview-code-line-number {
+    color: var(--mde-preview-codeblock-meta-text-color);
+    white-space: pre;
+    flex-shrink: 0;
+  }
+
+  .mde-preview code.mde-preview-code-body {
+    flex: 1;
+    min-width: 0;
+  }
+}

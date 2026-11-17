@@ -32,14 +32,8 @@ import {
   syntaxHighlighting,
 } from '@codemirror/language';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
-import {
-  javascript,
-  javascriptLanguage,
-  jsxLanguage,
-  typescriptLanguage,
-  tsxLanguage,
-} from '@codemirror/lang-javascript';
-import { jsonLanguage } from '@codemirror/lang-json';
+import { javascript } from '@codemirror/lang-javascript';
+import { codeLanguages } from './code-languages';
 import { tokenHighlighter } from './token-highlighter';
 import { minimalTextChange } from './markdown-source-map';
 import { lineWrappingExtension } from './line-wrapping';
@@ -51,18 +45,6 @@ import type { VimAction } from './vim-mode';
 import { selectionToolbar } from './selection-toolbar';
 import type { CompletionSource } from '@codemirror/autocomplete';
 import { markdownTabKeys } from '../../shared/editor-keybindings';
-
-const codeLanguages = {
-  js: javascriptLanguage,
-  javascript: javascriptLanguage,
-  jsx: jsxLanguage,
-  ts: typescriptLanguage,
-  typescript: typescriptLanguage,
-  tsx: tsxLanguage,
-  json: jsonLanguage,
-  md: markdownLanguage,
-  markdown: markdownLanguage,
-};
 
 const externalChange = Annotation.define<boolean>();
 
@@ -243,10 +225,7 @@ export function MarkdownEditor({
           ),
           markdown({
             base: markdownLanguage,
-            codeLanguages: (info) =>
-              Object.hasOwn(codeLanguages, info)
-                ? codeLanguages[info as keyof typeof codeLanguages]
-                : null,
+            codeLanguages,
           }),
           javascript({ typescript: true }).support,
           markdownCompletion({

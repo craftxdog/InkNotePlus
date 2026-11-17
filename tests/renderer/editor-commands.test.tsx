@@ -48,6 +48,16 @@ function tab(view: EditorView, shiftKey = false) {
   });
 }
 
+it('loads a fenced language and highlights it in the mounted editor', async () => {
+  const doc = '```python\ndef hello():\n    return True\n```';
+  const view = editor(doc, { anchor: doc.indexOf('hello') });
+  await vi.waitFor(() =>
+    expect(
+      view.contentDOM.querySelector('.tok-definition-keyword')?.textContent,
+    ).toBe('def'),
+  );
+});
+
 it.each([
   ['- parent', 2],
   ['1. parent', 3],

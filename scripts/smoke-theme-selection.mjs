@@ -304,6 +304,10 @@ export async function verifyThemeSelection({ page, profile }) {
       await page.keyboard.down(modifier);
       await page.keyboard.press('a');
       await page.keyboard.up(modifier);
+      // Native select-all updates the DOM selection before CodeMirror has
+      // reconciled it. Opening a dialog in that gap tests an uncommitted range.
+      await page.waitForSelector('.cm-selectionBackground');
+      await settle(page);
       const relevant = (samples) =>
         samples.filter(
           (sample) =>
@@ -323,6 +327,7 @@ export async function verifyThemeSelection({ page, profile }) {
     }
     // Theme changes should recolor an existing selection without remounting
     // the editor or requiring a page reload.
+    const editor = await page.$('.cm-editor');
     for (const theme of [installed.at(-1) ?? 'inknote-dark', 'inknote-light']) {
       await page.click('button[aria-label="Preferencias"]');
       await page.click('#settings-tab-themes');
@@ -339,8 +344,18 @@ export async function verifyThemeSelection({ page, profile }) {
         'Selected preferences tabs must stay readable.',
       );
       await page.click('button[aria-label="Cerrar diálogo"]');
-      await page.focus('.cm-content');
+      await page.waitForSelector('dialog', { hidden: true });
+      // Inspect the range retained by the dialog flow. Forcing DOM focus here
+      // can replace Chromium's native range with a caret; focused and blurred
+      // selection contrast are both exercised explicitly in the loop above.
       await settle(page);
+      assert(
+        await page.evaluate(
+          (editor) => editor === document.querySelector('.cm-editor'),
+          editor,
+        ),
+        'Live theme activation preserves the editor instance.',
+      );
       const samples = (
         await page.evaluate(inspectText, { selection: true })
       ).filter((sample) => sample.selected);

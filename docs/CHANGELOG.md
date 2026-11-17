@@ -1,5 +1,37 @@
 # Historial de versiones
 
+## 1.4.0 — Preparada para revisión
+
+### Añadido
+
+- El editor, el preview y la exportación comparten 143 gramáticas del catálogo
+  oficial de CodeMirror. El autocompletado incluye sus alias y extensiones, con
+  carga bajo demanda para Bash, Python, C/C++, Go, Rust, Java y otros lenguajes.
+- Los bloques `diff`/`patch` resaltan cambios de Git; `github-actions` utiliza
+  YAML. Los lenguajes desconocidos conservan su contenido como texto legible.
+- Los bloques de código admiten título, nombre de archivo, línea inicial,
+  referencia de commit y enlace HTTP(S) de origen. HTML y PDF conservan las
+  cabeceras, la numeración y el resaltado.
+
+### Corregido
+
+- Detail aparece al pasar el puntero o navegar con teclado, sin quedarse
+  visible en un notebook previamente seleccionado. Su diseño conserva el
+  contorno compacto y evita solaparse con nombres largos.
+- El resaltado conserva las etiquetas semánticas de cada gramática, incluidos
+  funciones, definiciones, comentarios y cambios diff, con los colores del tema.
+- Los bloques TSX utilizan su gramática correspondiente en el preview.
+
+### Pruebas
+
+- 454 pruebas automatizadas, lint y TypeScript aprobados.
+- QA nativo local completo en macOS Apple Silicon: edición, autoguardado,
+  sincronización, respaldos, HTML/PDF, papelera, temas y búsqueda con 3.000 notas.
+- Doce lenguajes comprobados en siete temas; 972 mediciones de contraste por
+  tema, con un mínimo de 5,03:1 en los bloques evaluados.
+- Los paquetes de esta versión se construyen y comprueban en los cuatro
+  destinos nativos antes de ofrecer sus artefactos en GitHub Actions.
+
 ## 1.3.2 — 2026-11-16
 
 ### Corregido

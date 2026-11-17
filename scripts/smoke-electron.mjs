@@ -550,23 +550,19 @@ try {
       ?.textContent.includes('Released'),
   );
   await page.waitForSelector('.mermaid-block svg math');
-  await page.$$eval(
-    '.notebook-detail',
-    (elements) =>
-      elements
-        .find(
-          (element) =>
-            element.getAttribute('aria-label') === 'Detail de Native notebook',
-        )
-        .click(),
-    notebook,
+  await page.hover(
+    '.notebook-row:has(button[aria-label="Detail de Native notebook"])',
   );
+  await page.click('button[aria-label="Detail de Native notebook"]');
   await page.waitForSelector('[aria-label="Ruta del notebook"]');
   await page.waitForFunction(() =>
     document
       .querySelector('.note-list-footer')
       .textContent.trim()
       .startsWith('2 notas'),
+  );
+  await page.hover(
+    '.notebook-row:has(button[aria-label="Detail de Rendering child"])',
   );
   await page.click('button[aria-label="Detail de Rendering child"]');
   await page.waitForFunction(() =>

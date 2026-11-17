@@ -234,6 +234,35 @@ teclado), no por un evento `scroll` de reflow o de una corrección anterior.
 Los bloques de código normalizan CRLF/LF para conservar los diagramas cuando
 CodeMirror normaliza una nota al editarla por primera vez.
 
+Editor, preview y exportación comparten el catálogo oficial
+`@codemirror/language-data` (6.5.2). El autocompletado se genera de sus nombres,
+alias y extensiones; las gramáticas adicionales se cargan bajo demanda y se
+reutilizan entre bloques. `bash`/`sh` usan Shell, `diff`/`patch` usan diff y
+`github-actions` usa YAML. Git y GitHub no se presentan como lenguajes propios.
+JavaScript, JSX, TypeScript, TSX, JSON y Markdown conservan soporte inmediato.
+Un lenguaje desconocido conserva el código como texto, sin detección heurística.
+
+El resaltado sigue usando `highlightTree` de `@lezer/highlight`, con las etiquetas
+semánticas de cada gramática. El adaptador genera las clases públicas `.tok-*`
+de `@inkdropapp/css/syntax.css`, incluidos comentarios, funciones, definiciones y
+cambios diff. Los colores proceden de las variables del tema. El paquete antiguo
+`@codemirror/highlight` está deprecado; no se añade como dependencia.
+
+Las cabeceras interpretan `title`, `filename`, `line`, `commit` y `url`, conforme
+a los [atributos documentados por Inkdrop](https://docs.inkdrop.app/reference/agent-skills)
+y sus [ejemplos oficiales](https://github.com/inkdropapp/note-driven-agentic-coding-workflow/blob/main/commands/plan.md).
+Reutilizan los estilos `codeblock-meta` y `mde-preview-code` del paquete CSS.
+La numeración aparece al indicar una línea inicial positiva; título y archivo
+son texto escapado. Sólo las URL HTTP(S) sin credenciales pueden abrirse mediante
+la acción externa de la app. HTML/PDF precargan las gramáticas antes del render
+estático y conservan esos metadatos. Mermaid y matemáticas mantienen su renderer.
+
+El botón Detail del notebook se muestra al pasar el puntero o usar foco visible
+de teclado; el foco que deja un clic no lo mantiene abierto en otra fila.
+`smoke-notebook-detail.mjs` verifica ambos casos y la navegación en tres temas.
+`smoke-code-blocks.mjs` prueba doce lenguajes, metadatos, autocompletado y contraste
+en los siete temas usando la aplicación empaquetada y un perfil temporal.
+
 `scripts/smoke-preview-stability.mjs` compara coordenadas DOM en cada fotograma
 mientras se escribe y se confirma el autoguardado, incluyendo celdas de tablas
 y texto posterior a diagramas en los cuatro modos de wrap. Incluye cambio de

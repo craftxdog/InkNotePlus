@@ -6,7 +6,11 @@ import type {
   SearchNotesInput,
   UpdateNoteInput,
 } from './note';
-import type { ManageTrashInput } from '../shared/ipc';
+import type {
+  ManageTrashInput,
+  NoteRevision,
+  NoteRevisionSummary,
+} from '../shared/ipc';
 
 export interface NoteRepository {
   create(input: CreateNoteInput): Note;
@@ -16,6 +20,8 @@ export interface NoteRepository {
   moveToTrash(id: NoteId): Note;
   restore(id: NoteId): Note;
   manageTrash(input: ManageTrashInput): number;
+  listRevisions(id: NoteId): NoteRevisionSummary[];
+  getRevision(id: NoteId, revision: number): NoteRevision;
 }
 
 export class NoteNotFoundError extends Error {

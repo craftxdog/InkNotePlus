@@ -644,6 +644,10 @@ contraste de los siete temas, preferencias y tamaños de ventana. El workflow
 de instaladores ejecuta estas comprobaciones después de instalar cada paquete.
 Las ejecuciones manuales prueban artefactos y no publican una nueva versión.
 
+La importación se ejecuta en main y guarda todo en una sola transacción SQLite.
+Sólo lee imágenes dentro de la carpeta elegida, incluso a través de enlaces
+simbólicos, y convierte HTML y ENML a Markdown sin ejecutar su contenido.
+
 ## Seguridad
 
 - contextIsolation, sandbox y webSecurity activados; nodeIntegration desactivado.

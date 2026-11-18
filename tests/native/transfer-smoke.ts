@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, nativeImage } from 'electron';
 import { openDatabase } from '../../src/infrastructure/sqlite/database';
 import { SqliteNoteRepository } from '../../src/infrastructure/sqlite/sqlite-note-repository';
 import { SqliteLibraryRepository } from '../../src/infrastructure/sqlite/sqlite-library-repository';
@@ -13,6 +13,7 @@ import { exportMarkdown } from '../../src/main/markdown-export';
 import { renderNoteExport } from '../../src/main/render-note-export';
 import { printNote } from '../../src/main/print-note';
 import { storeImage } from '../../src/main/image-store';
+import { readImportSources } from '../../src/main/note-import';
 import { defaultNoteMetadata } from '../../src/shared/note-metadata';
 
 const output = path.dirname(fileURLToPath(import.meta.url));
@@ -128,6 +129,60 @@ void app.whenReady().then(async () => {
     const pages = [...bytes.toString('latin1').matchAll(/\/Type\s*\/Page\b/g)]
       .length;
     assert(pages >= 1);
+    // The import parsers must load and decode real images inside Electron.
+    const imports = path.join(output, 'import-source', 'Proyecto', 'Sub');
+    await mkdir(imports, { recursive: true });
+    const picture = nativeImage
+      .createFromDataURL(
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+      )
+      .toPNG();
+    await writeFile(path.join(imports, 'foto.png'), picture);
+    await writeFile(
+      path.join(imports, 'nota.md'),
+      '# Importada\n\n![Foto](foto.png)\n',
+    );
+    await writeFile(
+      path.join(imports, 'pagina.html'),
+      '<title>Página</title><p>Hola <b>HTML</b></p>',
+    );
+    await writeFile(
+      path.join(imports, 'libreta.enex'),
+      '<en-export><note><title>Evernote</title><content><![CDATA[<en-note><en-todo checked="true"/>Hecha</en-note>]]></content></note></en-export>',
+    );
+    const importDirectory = path.join(output, 'import-target');
+    await mkdir(importDirectory);
+    const importTarget = profile(importDirectory);
+    const importSource = await readImportSources(
+      [path.join(output, 'import-source', 'Proyecto')],
+      {
+        storeImage: async (bytes) =>
+          (
+            await storeImage(
+              bytes,
+              importDirectory,
+              (value) => !nativeImage.createFromBuffer(value).isEmpty(),
+            )
+          ).url,
+      },
+    );
+    assert.equal(importSource.skipped, 0);
+    assert.equal(importSource.images, 1);
+    assert.deepEqual(
+      new SqliteLibraryTransfer(
+        importTarget.db,
+        importTarget.notes,
+      ).importNotes(importSource.notes, null),
+      { notes: 3, notebooks: 3 },
+    );
+    const imported = importTarget.notes.list({ sort: 'title-asc' });
+    assert.deepEqual(
+      imported.map(({ title }) => title),
+      ['Evernote', 'Importada', 'Página'],
+    );
+    assert.match(imported[0].body, /- \[x\] Hecha/);
+    assert.match(imported[1].body, /!\[Foto\]\(inknote-asset:\/\/images\//);
+    assert.match(imported[2].body, /Hola \*\*HTML\*\*/);
     for (const db of databases) {
       assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(), []);
       assert.equal(

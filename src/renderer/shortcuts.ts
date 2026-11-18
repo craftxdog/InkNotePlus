@@ -87,6 +87,11 @@ export function executeShortcut(
     case 'telescope-themes:show':
       state.setCommandPaletteOpen(true, 'h ');
       return true;
+    case 'core:show-note-revisions':
+      if (!state.document.noteId || state.navigation.type === 'trash')
+        return false;
+      state.setRevisionsOpen(true);
+      return true;
     case 'preview:find':
       if (!state.document.noteId || state.preferences.editorMode === 'edit')
         return false;
@@ -360,6 +365,7 @@ export function installShortcuts(
           !state.templatePickerOpen &&
           !state.commandPaletteOpen &&
           !state.imageViewer &&
+          !state.revisionsOpen &&
           !state.libraryDialog &&
           !state.notebookDialogOpen) ||
           (state.settingsOpen &&

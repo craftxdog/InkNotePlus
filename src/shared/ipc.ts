@@ -40,6 +40,8 @@ export const IPC_CHANNELS = {
     moveToTrash: 'notes:move-to-trash',
     restore: 'notes:restore',
     manageTrash: 'notes:manage-trash',
+    listRevisions: 'notes:list-revisions',
+    getRevision: 'notes:get-revision',
   },
   events: {
     noteChanged: 'notes:changed',
@@ -149,6 +151,30 @@ export const noteSchema = z
 
 export const noteListSchema = z.array(noteSchema);
 
+export const noteRevisionInputSchema = z
+  .object({ id: noteIdSchema, revision: z.number().int().positive() })
+  .strict();
+export const noteRevisionSummarySchema = z
+  .object({
+    revision: z.number().int().positive(),
+    title: z.string(),
+    createdAt: timestampSchema,
+    current: z.boolean(),
+  })
+  .strict();
+export const noteRevisionSchema = z
+  .object({
+    revision: z.number().int().positive(),
+    title: z.string(),
+    body: z.string(),
+    createdAt: timestampSchema,
+  })
+  .strict();
+export const noteRevisionListSchema = z.array(noteRevisionSummarySchema);
+export type NoteRevisionInput = z.output<typeof noteRevisionInputSchema>;
+export type NoteRevisionSummary = z.output<typeof noteRevisionSummarySchema>;
+export type NoteRevision = z.output<typeof noteRevisionSchema>;
+
 export const noteChangedEventSchema = z
   .object({
     type: z.enum(['created', 'updated', 'trashed', 'restored']),
@@ -169,6 +195,15 @@ export const affectedCountResultSchema = z.discriminatedUnion('ok', [
 
 export const noteResultSchema = z.discriminatedUnion('ok', [
   z.object({ ok: z.literal(true), data: noteSchema }).strict(),
+  z.object({ ok: z.literal(false), error: appErrorSchema }).strict(),
+]);
+
+export const noteRevisionListResultSchema = z.discriminatedUnion('ok', [
+  z.object({ ok: z.literal(true), data: noteRevisionListSchema }).strict(),
+  z.object({ ok: z.literal(false), error: appErrorSchema }).strict(),
+]);
+export const noteRevisionResultSchema = z.discriminatedUnion('ok', [
+  z.object({ ok: z.literal(true), data: noteRevisionSchema }).strict(),
   z.object({ ok: z.literal(false), error: appErrorSchema }).strict(),
 ]);
 

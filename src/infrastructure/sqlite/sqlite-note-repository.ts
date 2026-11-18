@@ -19,7 +19,11 @@ import type {
 import type { NoteSyncOutbox } from '../../domain/sync';
 import { SqliteSyncOutbox } from './sqlite-sync-outbox';
 import { withSqliteWrite } from './database';
-import type { ManageTrashInput } from '../../shared/ipc';
+import type {
+  ManageTrashInput,
+  NoteRevision,
+  NoteRevisionSummary,
+} from '../../shared/ipc';
 import {
   noteMetadataSchema,
   defaultNoteMetadata,
@@ -264,6 +268,48 @@ export class SqliteNoteRepository implements NoteRepository {
       }
       return affected;
     });
+  }
+
+  // Metadata-only writes also create revisions; history shows content changes.
+  listRevisions(id: NoteId): NoteRevisionSummary[] {
+    this.requireNote(id);
+    return this.database
+      .prepare(`
+        SELECT revision, title, createdAt FROM (
+          SELECT revision, title, body, created_at AS createdAt,
+            LAG(revision) OVER versions AS previous,
+            LAG(title) OVER versions AS previousTitle,
+            LAG(body) OVER versions AS previousBody
+          FROM note_revisions WHERE note_id = ?
+          WINDOW versions AS (ORDER BY revision)
+        )
+        WHERE previous IS NULL OR title <> previousTitle OR body <> previousBody
+        ORDER BY revision DESC
+        LIMIT 200
+      `)
+      .all(id)
+      .map((row, index) => ({
+        revision: readInteger(row, 'revision'),
+        title: readString(row, 'title'),
+        createdAt: readString(row, 'createdAt'),
+        current: index === 0,
+      }));
+  }
+
+  getRevision(id: NoteId, revision: number): NoteRevision {
+    const row = this.database
+      .prepare(`
+        SELECT revision, title, body, created_at AS createdAt
+        FROM note_revisions WHERE note_id = ? AND revision = ?
+      `)
+      .get(id, revision);
+    if (!row) throw new NoteNotFoundError(id);
+    return {
+      revision: readInteger(row, 'revision'),
+      title: readString(row, 'title'),
+      body: readString(row, 'body'),
+      createdAt: readString(row, 'createdAt'),
+    };
   }
 
   // The caller owns the transaction when changing notes together with notebooks or tags.

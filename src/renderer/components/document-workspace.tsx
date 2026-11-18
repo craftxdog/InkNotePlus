@@ -36,6 +36,7 @@ import {
   Trash2,
   RotateCcw,
   Files,
+  History,
   ListTree,
   Copy,
   ImagePlus,
@@ -116,6 +117,7 @@ export function DocumentWorkspace({
   const setOutlineOpen = useWorkspace((state) => state.setOutlineOpen);
   const previewFindOpen = useWorkspace((state) => state.previewFindOpen);
   const setPreviewFindOpen = useWorkspace((state) => state.setPreviewFindOpen);
+  const setRevisionsOpen = useWorkspace((state) => state.setRevisionsOpen);
   const [outlineLine, setOutlineLine] = useState(1);
   const importImage = useWorkspace((state) => state.importImage);
   const exportNote = useWorkspace((state) => state.transfer.exportNote);
@@ -382,6 +384,18 @@ export function DocumentWorkspace({
               >
                 <Copy size={16} />
                 Duplicar nota
+              </button>
+              <button
+                type="button"
+                disabled={!draft.noteId || inTrash}
+                onClick={(event) => {
+                  const menu = event.currentTarget.closest('details');
+                  if (menu) menu.open = false;
+                  setRevisionsOpen(true);
+                }}
+              >
+                <History size={16} />
+                Historial de revisiones
               </button>
               <button
                 type="button"

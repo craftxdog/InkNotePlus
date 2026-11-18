@@ -9,17 +9,17 @@
 InkNote tiene una base sólida y todas sus pruebas pasan, pero esas pruebas no cubrían
 varias diferencias con Inkdrop. La auditoría registró **23 funciones implementadas de
 forma incorrecta o incompleta** y **31 funciones sin implementar**. Ya están resueltos
-INC-01 a INC-08, INC-11, INC-12, INC-13, INC-15, INC-16, FAL-03, FAL-04, FAL-05, FAL-08, FAL-09, FAL-10, FAL-11 y FAL-21, así que quedan **10 incorrectas y 23 faltantes**.
+INC-01 a INC-08, INC-11, INC-12, INC-13, INC-15, INC-16, FAL-02, FAL-03, FAL-04, FAL-05, FAL-08, FAL-09, FAL-10, FAL-11 y FAL-21, así que quedan **10 incorrectas y 22 faltantes**. FAL-01 está resuelto en parte y sigue contado como pendiente.
 
 | Prioridad     | Significado                                       | Incorrectas | Faltantes |  Total |
 | ------------- | ------------------------------------------------- | ----------: | --------: | -----: |
 | P0            | Riesgo para el uso diario o los datos (resueltos) |           0 |         0 |      0 |
-| P1            | Función básica que el usuario espera              |           0 |         4 |      4 |
+| P1            | Función básica que el usuario espera              |           0 |         3 |      3 |
 | P2            | Paridad importante                                |           7 |        10 |     17 |
 | P3            | Ecosistema, integraciones y mejoras               |           3 |         9 |     12 |
-| **Pendiente** |                                                   |      **10** |    **23** | **33** |
+| **Pendiente** |                                                   |      **10** |    **22** | **32** |
 
-El siguiente bloque recomendado es el de datos: **FAL-02** (historial de revisiones) y **FAL-01** (importación).
+El siguiente bloque recomendado es completar los datos: **INC-19** (exportación), **INC-14** (límites) e **INC-23** (modelo de datos).
 
 ## Resultados de las pruebas
 
@@ -297,15 +297,15 @@ La ausencia de estas funciones se comprobó en el código fuente.
 
 ### P1: funciones básicas
 
-| ID     | Función                  | Qué ofrece Inkdrop                                                               | Implementación propuesta                                                                                  |
-| ------ | ------------------------ | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| FAL-01 | Importación              | Evernote, Apple Notes, Notion, Bear, Markdown y HTML, con subcarpetas e imágenes | Empezar por Markdown y HTML, con carpetas convertidas en notebooks. Después, Evernote `.enex` y el resto. |
-| FAL-02 | Historial de revisiones  | Lista, diff, restaurar y deshacer la restauración                                | Los datos ya se guardan en `note_revisions`. Falta el IPC de lectura y un diálogo con diff.               |
-| FAL-03 | Gestión de notebooks     | Renombrar, mover y ordenar con arrastre                                          | **Resuelto el 2026-11-18.** Renombrar, mover y ordenar con arrastre o desde el menú contextual.           |
-| FAL-04 | Duplicar nota            | Comando `core:duplicate-note` y Cmd/Ctrl+D                                       | **Resuelto el 2026-11-18.** Disponible con Cmd/Ctrl+D, en el menú de la nota y en la lista.               |
-| FAL-05 | Mover notas arrastrando  | Arrastrar de la lista a un notebook                                              | **Resuelto el 2026-11-18.** Admite selección múltiple y soltar en «Sin notebook».                         |
-| FAL-06 | Actualización automática | Actualización integrada en el instalador                                         | Usar `autoUpdater` en Windows y macOS. macOS exige firma real, y en Linux basta con avisar.               |
-| FAL-07 | Enlaces externos a notas | Protocolo `inkdrop://` registrado en el sistema                                  | Registrar `inknote://` y validar la URL. Depende de INC-02.                                               |
+| ID     | Función                  | Qué ofrece Inkdrop                                                               | Implementación propuesta                                                                                                                                                                                                                 |
+| ------ | ------------------------ | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FAL-01 | Importación              | Evernote, Apple Notes, Notion, Bear, Markdown y HTML, con subcarpetas e imágenes | **Resuelto en parte el 2026-11-18.** Importa Markdown, HTML, carpetas, imágenes y Evernote `.enex`, además de las exportaciones de Notion y Bear. Falta Apple Notes, que no ofrece un formato de exportación y necesita acceso a la app. |
+| FAL-02 | Historial de revisiones  | Lista, diff, restaurar y deshacer la restauración                                | **Resuelto el 2026-11-18.** Lista de versiones, diff, restaurar y deshacer la restauración.                                                                                                                                              |
+| FAL-03 | Gestión de notebooks     | Renombrar, mover y ordenar con arrastre                                          | **Resuelto el 2026-11-18.** Renombrar, mover y ordenar con arrastre o desde el menú contextual.                                                                                                                                          |
+| FAL-04 | Duplicar nota            | Comando `core:duplicate-note` y Cmd/Ctrl+D                                       | **Resuelto el 2026-11-18.** Disponible con Cmd/Ctrl+D, en el menú de la nota y en la lista.                                                                                                                                              |
+| FAL-05 | Mover notas arrastrando  | Arrastrar de la lista a un notebook                                              | **Resuelto el 2026-11-18.** Admite selección múltiple y soltar en «Sin notebook».                                                                                                                                                        |
+| FAL-06 | Actualización automática | Actualización integrada en el instalador                                         | Usar `autoUpdater` en Windows y macOS. macOS exige firma real, y en Linux basta con avisar.                                                                                                                                              |
+| FAL-07 | Enlaces externos a notas | Protocolo `inkdrop://` registrado en el sistema                                  | Registrar `inknote://` y validar la URL. Depende de INC-02.                                                                                                                                                                              |
 
 ### P2: paridad importante
 
@@ -343,7 +343,7 @@ La ausencia de estas funciones se comprobó en el código fuente.
 
 ## Orden de trabajo recomendado
 
-1. **Datos:** FAL-02, FAL-01, INC-19, INC-14 e INC-23.
+1. **Datos:** INC-19, INC-14, INC-23 y Apple Notes en FAL-01.
 2. **Integración con el escritorio:** INC-09, INC-10, INC-17, FAL-06, FAL-07, FAL-12, FAL-13 y FAL-20.
 3. **Plataforma:** FAL-14, FAL-15, FAL-18, FAL-19, FAL-16 y FAL-17, según D-2 y D-3.
 4. **Ecosistema:** el resto de tareas P3.

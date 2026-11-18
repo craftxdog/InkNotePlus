@@ -33,6 +33,10 @@
 - El clic derecho en el editor ofrece sugerencias ortográficas, añadir palabras al
   diccionario, cortar, copiar y pegar.
 - Los colores `#hex`, `rgb()` y `hsl()` en código en línea muestran una muestra.
+- El historial de revisiones compara versiones, las restaura y permite deshacer
+  la restauración.
+- Se importan archivos y carpetas Markdown o HTML con sus imágenes, exportaciones
+  de Evernote (.enex) y las de Notion y Bear. Las subcarpetas crean notebooks.
 - Los bloques de código ofrecen botón de copiar, icono de su familia de lenguaje
   y una preferencia para numerar siempre sus líneas.
 
@@ -57,7 +61,7 @@
 
 ### Pruebas
 
-- 683 pruebas automatizadas, lint y TypeScript aprobados.
+- 717 pruebas automatizadas, lint y TypeScript aprobados.
 - QA nativo local completo en macOS Apple Silicon: edición, autoguardado,
   sincronización, respaldos, HTML/PDF, papelera, temas y búsqueda con 3.000 notas.
 - Doce lenguajes comprobados en siete temas; 972 mediciones de contraste por

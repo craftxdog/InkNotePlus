@@ -269,6 +269,7 @@ export const shortcutCommands = [
       ['telescope-toc:show', 'Buscar en el esquema de la nota'],
       ['telescope-themes:show', 'Cambiar de tema'],
       ['view:toggle-outline', 'Mostrar u ocultar esquema de la nota'],
+      ['core:show-note-revisions', 'Ver historial de revisiones'],
     ] as const
   ).map(([id, label]) => ({ id, label, scope: 'app' as const, key: '' })),
   { id: 'view:show-editor', label: 'Sólo editor', scope: 'app', key: '' },

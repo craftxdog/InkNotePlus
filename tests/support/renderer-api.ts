@@ -53,6 +53,7 @@ export function createApi(overrides: Partial<InkNoteApi['notes']> = {}) {
       restoreBackup: async () => success(null),
       exportNote: async () => success(null),
       exportLibrary: async () => success(null),
+      importNotes: async () => success(null),
       onBackupChanged: () => () => {},
     },
     images: {
@@ -106,6 +107,8 @@ export function createApi(overrides: Partial<InkNoteApi['notes']> = {}) {
       moveToTrash: async () => failure('unavailable'),
       restore: async () => failure('unavailable'),
       manageTrash: async () => failure('unavailable'),
+      listRevisions: async () => failure('unavailable'),
+      getRevision: async () => failure('unavailable'),
       ...overrides,
     },
     onNoteChanged(listener) {

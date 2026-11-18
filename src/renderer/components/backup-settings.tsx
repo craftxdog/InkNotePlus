@@ -7,6 +7,7 @@ import { SettingGroup } from './settings-controls';
 
 export function BackupSettings() {
   const transfer = useWorkspace((state) => state.transfer);
+  const importNotes = useWorkspace((state) => state.importNotes);
   const [status, setStatus] = useState<BackupStatus | null>(null);
   const [selection, setSelection] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -191,6 +192,31 @@ export function BackupSettings() {
           >
             <ArchiveRestore size={16} />
             Restaurar…
+          </button>
+        </div>
+      </SettingGroup>
+      <SettingGroup title="Importar notas">
+        <p className="settings-description">
+          Admite Markdown, HTML y exportaciones de Evernote (.enex). Para Notion
+          y Bear, exporta primero a Markdown o TextBundle. Las subcarpetas se
+          convierten en notebooks.
+        </p>
+        <div className="transfer-actions">
+          <button
+            type="button"
+            className="button"
+            disabled={working}
+            onClick={() => void importNotes('files')}
+          >
+            Importar archivos…
+          </button>
+          <button
+            type="button"
+            className="button"
+            disabled={working}
+            onClick={() => void importNotes('folder')}
+          >
+            Importar carpeta…
           </button>
         </div>
       </SettingGroup>

@@ -90,6 +90,7 @@ export function NotebookTree({
   const openLibraryDialog = useWorkspace((state) => state.setLibraryDialog);
   const moveNotes = useWorkspace((state) => state.moveNotes);
   const reorder = useWorkspace((state) => state.reorderNotebook);
+  const importNotes = useWorkspace((state) => state.importNotes);
   const [drop, setDrop] = useState<{
     id: string;
     zone: NotebookDropZone;
@@ -307,6 +308,14 @@ export function NotebookTree({
                     ]
                   : [];
               }),
+              {
+                label: 'Importar archivos aquí…',
+                run: () => void importNotes('files', book.id),
+              },
+              {
+                label: 'Importar carpeta aquí…',
+                run: () => void importNotes('folder', book.id),
+              },
               {
                 label: 'Eliminar notebook…',
                 run: () =>

@@ -39,7 +39,103 @@
     display: block;
     color: var(--muted-text-color);
   }
-  .image-viewer {
+  .app-dialog.note-revisions {
+    inline-size: min(1000px, calc(100vw - 32px));
+  }
+  .note-revisions-body {
+    display: grid;
+    grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
+    gap: var(--12px);
+    block-size: min(70vh, 640px);
+    padding: var(--12px) var(--16px) var(--16px);
+  }
+  .note-revisions-list {
+    margin: 0;
+    padding: 0;
+    overflow: auto;
+    list-style: none;
+  }
+  .note-revisions-list button {
+    display: grid;
+    gap: 2px;
+    inline-size: 100%;
+    padding: var(--6px) var(--8px);
+    border: 0;
+    border-radius: var(--5px);
+    background: transparent;
+    color: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+  .note-revisions-list button[aria-current='true'],
+  .note-revisions-list button:hover {
+    background: var(--note-list-view-item-selected-background);
+  }
+  .note-revisions-list strong {
+    overflow: hidden;
+    font-size: var(--small);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .note-revisions-list small,
+  .note-revisions-title {
+    color: var(--muted-text-color);
+    font-size: var(--tiny);
+  }
+  .note-revisions-detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--8px);
+    min-inline-size: 0;
+    min-block-size: 0;
+  }
+  .note-revisions-detail p {
+    margin: 0;
+  }
+  .note-revisions-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--8px);
+  }
+  .note-revisions-actions .button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--6px);
+  }
+  .revision-diff {
+    flex: 1;
+    min-block-size: 0;
+    margin: 0;
+    padding: var(--6px) 0;
+    overflow: auto;
+    border: 1px solid var(--internal-border-color);
+    border-radius: var(--5px);
+    font-size: var(--small);
+    list-style: none;
+  }
+  .revision-diff li {
+    display: flex;
+    gap: var(--8px);
+    padding-inline: var(--8px);
+  }
+  .revision-diff code {
+    padding: 0;
+    background: transparent;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .revision-diff li[data-diff='added'] {
+    background: color-mix(in srgb, var(--color-green-500) 18%, transparent);
+  }
+  .revision-diff li[data-diff='removed'] {
+    background: color-mix(in srgb, var(--color-red-500) 18%, transparent);
+  }
+  .revision-diff li[data-diff='gap'] {
+    justify-content: center;
+    color: var(--muted-text-color);
+    font-size: var(--tiny);
+  }
+  .app-dialog.image-viewer {
     inline-size: min(1100px, calc(100vw - 32px));
   }
   .image-viewer-controls {

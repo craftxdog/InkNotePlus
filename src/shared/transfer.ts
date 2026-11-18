@@ -10,6 +10,7 @@ export const TRANSFER_CHANNELS = {
   restoreBackup: 'backup:restore',
   exportNote: 'export:note',
   exportLibrary: 'export:library',
+  importNotes: 'import:notes',
   backupChanged: 'backup:changed',
 } as const;
 
@@ -47,6 +48,35 @@ export const exportResultDataSchema = z
   })
   .strict();
 export type ExportSummary = z.output<typeof exportResultDataSchema>;
+
+export const importNotesSchema = z
+  .object({
+    kind: z.enum(['files', 'folder']),
+    notebookId: z.uuid().nullable(),
+  })
+  .strict();
+export type ImportNotesInput = z.output<typeof importNotesSchema>;
+export const importSummarySchema = z
+  .object({
+    notes: z.number().int().nonnegative(),
+    notebooks: z.number().int().nonnegative(),
+    images: z.number().int().nonnegative(),
+    missingImages: z.number().int().nonnegative(),
+    skipped: z.number().int().nonnegative(),
+  })
+  .strict();
+export type ImportSummary = z.output<typeof importSummarySchema>;
+export interface ImportedNote {
+  title: string;
+  body: string;
+  folders: readonly string[];
+  tags: readonly string[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+export const importResultSchema = transferResult(
+  importSummarySchema.nullable(),
+);
 
 export const backupDirectoryResultSchema = transferResult(
   z.string().nullable(),

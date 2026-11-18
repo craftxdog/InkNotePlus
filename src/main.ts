@@ -366,6 +366,9 @@ function initializeCoreModules(): Configuration {
           backup,
           library,
           userData,
+          isDecodableImage: (bytes) =>
+            !nativeImage.createFromBuffer(bytes).isEmpty(),
+          onImported: () => backup?.schedule(),
         });
         database = localDatabase;
         noteCommands = commandRegistration;

@@ -16,6 +16,7 @@ import { SettingsDialog } from './settings-dialog';
 import { NotebookDialog } from './notebook-dialog';
 import { CommandPalette } from './command-palette';
 import { ImageViewer } from './image-viewer';
+import { NoteRevisionsDialog } from './note-revisions-dialog';
 import { UiSlot } from '../extensions/ui-slots';
 import { LibraryActionDialog } from './library-action-dialog';
 import { SelectedNotesPanel } from './note-trash-actions';
@@ -34,6 +35,7 @@ export function AppShell() {
   const commandPaletteOpen = useWorkspace((state) => state.commandPaletteOpen);
   const libraryDialog = useWorkspace((state) => state.libraryDialog);
   const imageViewer = useWorkspace((state) => state.imageViewer);
+  const revisionsOpen = useWorkspace((state) => state.revisionsOpen);
   const multipleNotes = useWorkspace(
     (state) => state.selectedNoteIds.length > 1,
   );
@@ -173,6 +175,7 @@ export function AppShell() {
         {notebookDialogOpen && <NotebookDialog />}
         {commandPaletteOpen && <CommandPalette />}
         {imageViewer && <ImageViewer {...imageViewer} />}
+        {revisionsOpen && <NoteRevisionsDialog />}
         {libraryDialog && (
           <LibraryActionDialog
             key={libraryDialog.kind}

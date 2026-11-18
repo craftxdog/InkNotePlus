@@ -302,6 +302,12 @@ export function createWorkspaceStore(
           if (!(await get().flushDrafts())) return failure('conflict');
           return api.transfer.exportLibrary();
         },
+        async importNotes(input) {
+          if (!(await get().flushDrafts())) return failure('conflict');
+          const result = await api.transfer.importNotes(input);
+          if (result.ok && result.data) await refreshNotes();
+          return result;
+        },
       },
       importImage: (base64) =>
         base64 ? api.images.write(base64) : api.images.importFile(),
@@ -473,6 +479,41 @@ export function createWorkspaceStore(
       commandPaletteQuery: '',
       setCommandPaletteOpen(commandPaletteOpen, commandPaletteQuery = '') {
         set({ commandPaletteOpen, commandPaletteQuery });
+      },
+      revisionsOpen: false,
+      setRevisionsOpen(revisionsOpen) {
+        set({ revisionsOpen });
+      },
+      listNoteRevisions: (id) => api.notes.listRevisions({ id }),
+      getNoteRevision: (id, revision) =>
+        api.notes.getRevision({ id, revision }),
+      async restoreNoteVersion({ title, body }) {
+        const id = get().document.noteId;
+        if (!id || !(await get().flushDrafts())) return failure('unavailable');
+        const current = await api.notes.list({ id, limit: 1 });
+        if (!current.ok) return current;
+        const note = current.data.find((item) => item.id === id);
+        if (!note) return failure('not_found');
+        const result = await api.notes.update({
+          id,
+          title,
+          body,
+          expectedRevision: note.revision,
+          metadata: note.metadata,
+          isPinned: note.isPinned,
+        });
+        if (result.ok) await refreshNotes(false, true);
+        return result;
+      },
+      async importNotes(kind, notebookId = null) {
+        const result = await get().transfer.importNotes({ kind, notebookId });
+        if (!result.ok || result.data)
+          set({
+            libraryDialog: {
+              kind: 'import-result',
+              summary: result.ok ? result.data : null,
+            },
+          });
       },
       previewFindOpen: false,
       setPreviewFindOpen(previewFindOpen) {

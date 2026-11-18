@@ -1,10 +1,10 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import type { Note } from '../../domain/note';
 import { maxTitleLength } from '../../shared/ipc';
 import { defaultNoteMetadata } from '../../shared/note-metadata';
 import { notebookIconSchema } from '../../shared/notebook-icons';
-import type { RestoreSummary } from '../../shared/transfer';
+import type { ImportedNote, RestoreSummary } from '../../shared/transfer';
 import { tagRecordSchema, type TagRecord } from '../../shared/tags';
 import { z } from '../../shared/validation';
 import type { SqliteNoteRepository } from './sqlite-note-repository';
@@ -183,6 +183,74 @@ export class SqliteLibraryTransfer {
       for (const { noteId, sourceKey } of recoveries)
         rememberRecovery.run(noteId, sourceKey);
       return counts;
+    });
+  }
+
+  // One transaction: a failed import leaves the library exactly as it was.
+  importNotes(notes: readonly ImportedNote[], parentId: string | null) {
+    return this.withWriteLock(() => {
+      const select = this.database.prepare(
+        'SELECT id FROM notebooks WHERE parent_id IS ? AND name = ? COLLATE NOCASE LIMIT 1',
+      );
+      const insert = this.database.prepare(`
+        INSERT INTO notebooks (id, name, parent_id, created_at, position)
+        VALUES (?, ?, ?, ?, (
+          SELECT coalesce(max(position) + 1, 0) FROM notebooks WHERE parent_id IS ?
+        ))
+      `);
+      if (
+        parentId &&
+        !this.database
+          .prepare('SELECT 1 FROM notebooks WHERE id = ?')
+          .get(parentId)
+      )
+        throw new Error('Import notebook does not exist.');
+      const now = new Date().toISOString();
+      const known = new Map<string, string>();
+      let notebooks = 0;
+      const notebookFor = (folders: readonly string[]) => {
+        let current = parentId;
+        for (const folder of folders) {
+          const name = folder.trim().slice(0, 80) || 'Importado';
+          const key = `${current}\0${name.toLocaleLowerCase()}`;
+          let id = known.get(key);
+          if (!id) {
+            const row = select.get(current, name);
+            if (row) id = String(row.id);
+            else {
+              id = randomUUID();
+              insert.run(id, name, current, now, current);
+              notebooks++;
+            }
+            known.set(key, id);
+          }
+          current = id;
+        }
+        return current;
+      };
+      for (const note of notes) {
+        const createdAt = note.createdAt ?? now;
+        this.notes.insertSnapshot({
+          id: randomUUID(),
+          title: note.title.slice(0, maxTitleLength),
+          body: note.body,
+          isPinned: false,
+          createdAt,
+          updatedAt: note.updatedAt ?? createdAt,
+          deletedAt: null,
+          revision: 1,
+          metadata: {
+            ...defaultNoteMetadata,
+            notebookId: notebookFor(note.folders),
+            tags: [
+              ...new Set(
+                note.tags.map((tag) => tag.trim().slice(0, 40)).filter(Boolean),
+              ),
+            ].slice(0, 32),
+          },
+        });
+      }
+      return { notes: notes.length, notebooks };
     });
   }
 

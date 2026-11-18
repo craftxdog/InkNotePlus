@@ -112,6 +112,9 @@ export function LibraryActionDialog({
     setError(null);
     let result: Result<unknown>;
     switch (request.kind) {
+      case 'import-result':
+        close();
+        return;
       case 'restore':
         result = await state.manageTrash({
           action: 'restore',
@@ -386,6 +389,32 @@ function describeAction(request: LibraryDialogRequest, notes: string) {
         message: `Puedes recuperar ${notes} desde Papelera.`,
         danger: false,
       };
+    case 'import-result': {
+      const summary = request.summary;
+      if (!summary)
+        return {
+          title: 'No se pudo importar',
+          confirm: 'Aceptar',
+          message:
+            'No se guardó ninguna nota. Comprueba los archivos e inténtalo de nuevo.',
+          danger: false,
+        };
+      const details = [
+        `${summary.notes} ${summary.notes === 1 ? 'nota' : 'notas'}`,
+        `${summary.notebooks} ${summary.notebooks === 1 ? 'notebook nuevo' : 'notebooks nuevos'}`,
+        `${summary.images} ${summary.images === 1 ? 'imagen' : 'imágenes'}`,
+        ...(summary.missingImages
+          ? [`${summary.missingImages} adjuntos sin importar`]
+          : []),
+        ...(summary.skipped ? [`${summary.skipped} archivos omitidos`] : []),
+      ];
+      return {
+        title: 'Importación completada',
+        confirm: 'Aceptar',
+        message: details.join(' · '),
+        danger: false,
+      };
+    }
     case 'move-notes':
       return {
         title: 'Mover a notebook',

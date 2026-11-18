@@ -14,6 +14,9 @@ import {
   noteChangedEventSchema,
   noteIdInputSchema,
   noteListSchema,
+  noteRevisionInputSchema,
+  noteRevisionListSchema,
+  noteRevisionSchema,
   noteSchema,
   searchNotesInputSchema,
   success,
@@ -99,6 +102,24 @@ export function registerNoteIpcHandlers(
         noteIdInputSchema,
         NOTE_COMMAND_IDS.restore,
         'restored',
+      ),
+    ],
+    [
+      IPC_CHANNELS.notes.listRevisions,
+      createInvokeHandler(
+        options,
+        noteIdInputSchema,
+        NOTE_COMMAND_IDS.listRevisions,
+        noteRevisionListSchema,
+      ),
+    ],
+    [
+      IPC_CHANNELS.notes.getRevision,
+      createInvokeHandler(
+        options,
+        noteRevisionInputSchema,
+        NOTE_COMMAND_IDS.getRevision,
+        noteRevisionSchema,
       ),
     ],
     [

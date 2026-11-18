@@ -36,6 +36,10 @@ import {
   linkTitleResultSchema,
 } from '../shared/external-link';
 import {
+  importNotesSchema,
+  importResultSchema,
+  type ImportNotesInput,
+  type ImportSummary,
   TRANSFER_CHANNELS,
   backupDirectoryResultSchema,
   backupStatusResultSchema,
@@ -92,6 +96,12 @@ import {
   manageTrashSchema,
   noteChangedEventSchema,
   noteIdInputSchema,
+  noteRevisionInputSchema,
+  noteRevisionListResultSchema,
+  noteRevisionResultSchema,
+  type NoteRevision,
+  type NoteRevisionInput,
+  type NoteRevisionSummary,
   noteListResultSchema,
   noteResultSchema,
   searchNotesInputSchema,
@@ -123,6 +133,7 @@ export interface InkNoteApi {
     restoreBackup(): Promise<Result<RestoreSummary | null>>;
     exportNote(input: ExportNoteInput): Promise<Result<ExportSummary | null>>;
     exportLibrary(): Promise<Result<ExportSummary | null>>;
+    importNotes(input: ImportNotesInput): Promise<Result<ImportSummary | null>>;
     onBackupChanged(listener: (status: BackupStatus) => void): () => void;
   };
   images: {
@@ -168,6 +179,8 @@ export interface InkNoteApi {
     moveToTrash(input: NoteIdInput): Promise<Result<NoteProjection>>;
     restore(input: NoteIdInput): Promise<Result<NoteProjection>>;
     manageTrash(input: ManageTrashInput): Promise<Result<number>>;
+    listRevisions(input: NoteIdInput): Promise<Result<NoteRevisionSummary[]>>;
+    getRevision(input: NoteRevisionInput): Promise<Result<NoteRevision>>;
   };
   onNoteChanged(listener: (event: NoteChangedEvent) => void): () => void;
 }
@@ -218,6 +231,14 @@ export function createInkNoteApi(
         ),
       exportLibrary: () =>
         transferCall(TRANSFER_CHANNELS.exportLibrary, exportResultSchema),
+      importNotes: (input) =>
+        invoke(
+          ipcRenderer,
+          TRANSFER_CHANNELS.importNotes,
+          input,
+          importNotesSchema,
+          importResultSchema,
+        ),
       onBackupChanged(listener) {
         const handler = (_event: unknown, value: unknown) => {
           const parsed = backupStatusSchema.safeParse(value);
@@ -460,6 +481,22 @@ export function createInkNoteApi(
           input,
           updateNoteInputSchema,
           noteResultSchema,
+        ),
+      listRevisions: (input) =>
+        invoke(
+          ipcRenderer,
+          IPC_CHANNELS.notes.listRevisions,
+          input,
+          noteIdInputSchema,
+          noteRevisionListResultSchema,
+        ),
+      getRevision: (input) =>
+        invoke(
+          ipcRenderer,
+          IPC_CHANNELS.notes.getRevision,
+          input,
+          noteRevisionInputSchema,
+          noteRevisionResultSchema,
         ),
       list: (input = {}) =>
         invoke(

@@ -2,6 +2,8 @@ import type {
   AppErrorCode,
   ManageTrashInput,
   NoteProjection,
+  NoteRevision,
+  NoteRevisionSummary,
   NoteSort,
   Result,
 } from '../../shared/ipc';
@@ -12,6 +14,7 @@ import type { InkNoteApi } from '../../preload/api';
 import type { InstalledTheme } from '../../shared/themes';
 import type { ManagedImage } from '../../shared/images';
 import type { UpdateTagInput } from '../../shared/tags';
+import type { ImportNotesInput, ImportSummary } from '../../shared/transfer';
 import type {
   LibrarySnapshot,
   MoveNotebookInput,
@@ -43,7 +46,8 @@ export type LibraryDialogRequest =
       id: string;
       name: string;
     }
-  | { kind: 'edit-tag' | 'delete-tag'; name: string };
+  | { kind: 'edit-tag' | 'delete-tag'; name: string }
+  | { kind: 'import-result'; summary: ImportSummary | null };
 
 export interface DocumentState {
   readonly noteId: string | null;
@@ -76,6 +80,7 @@ export interface WorkspaceState {
   readonly commandPaletteQuery: string;
   readonly outlineOpen: boolean;
   readonly previewFindOpen: boolean;
+  readonly revisionsOpen: boolean;
   readonly imageViewer: { readonly src: string; readonly alt: string } | null;
   readonly preferences: Preferences;
   readonly styleNonce: string | null;
@@ -121,6 +126,17 @@ export interface WorkspaceActions {
   setCommandPaletteOpen(open: boolean, query?: string): void;
   setOutlineOpen(open: boolean): void;
   setPreviewFindOpen(open: boolean): void;
+  setRevisionsOpen(open: boolean): void;
+  listNoteRevisions(id: string): Promise<Result<NoteRevisionSummary[]>>;
+  getNoteRevision(id: string, revision: number): Promise<Result<NoteRevision>>;
+  restoreNoteVersion(version: {
+    title: string;
+    body: string;
+  }): Promise<Result<NoteProjection>>;
+  importNotes(
+    kind: ImportNotesInput['kind'],
+    notebookId?: string | null,
+  ): Promise<void>;
   setImageViewer(image: { src: string; alt: string } | null): void;
   getTemplateNotes(
     query?: string,

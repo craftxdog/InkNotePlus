@@ -35,6 +35,13 @@ function createRepository(
     moveToTrash: () => ({ ...note, deletedAt: note.updatedAt, revision: 2 }),
     restore: () => note,
     manageTrash: () => 0,
+    listRevisions: () => [],
+    getRevision: () => ({
+      revision: 1,
+      title: note.title,
+      body: note.body,
+      createdAt: note.createdAt,
+    }),
     ...overrides,
   };
 }

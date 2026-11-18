@@ -24,6 +24,8 @@ describe('shared IPC contract', () => {
         moveToTrash: 'notes:move-to-trash',
         restore: 'notes:restore',
         manageTrash: 'notes:manage-trash',
+        listRevisions: 'notes:list-revisions',
+        getRevision: 'notes:get-revision',
       },
       events: {
         noteChanged: 'notes:changed',

@@ -185,6 +185,7 @@
     display: none;
   }
   .editor-body {
+    position: relative;
     display: grid;
     grid-template-columns: minmax(0, var(--editor-ratio)) minmax(0, 1fr);
     flex: 1;
@@ -193,6 +194,74 @@
   }
   .editor-body > .pane {
     overflow: auto;
+  }
+  .note-outline {
+    position: absolute;
+    z-index: 5;
+    inset-block: 0;
+    inset-inline-end: 0;
+    display: flex;
+    flex-direction: column;
+    inline-size: min(280px, 70%);
+    border-inline-start: 1px solid var(--internal-border-color);
+    background: var(--editor-background-color);
+    box-shadow: var(--floating-shadow);
+  }
+  .note-outline header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--4px) var(--4px) var(--4px) var(--12px);
+    border-block-end: 1px solid var(--internal-border-color);
+  }
+  .note-outline h2 {
+    margin: 0;
+    font-size: var(--small);
+  }
+  .note-outline ol {
+    flex: 1;
+    min-block-size: 0;
+    margin: 0;
+    padding: var(--4px);
+    overflow: auto;
+    list-style: none;
+  }
+  .note-outline button[data-outline-kind] {
+    display: flex;
+    align-items: center;
+    gap: var(--6px);
+    inline-size: 100%;
+    padding-block: var(--4px);
+    padding-inline-end: var(--8px);
+    border: 0;
+    border-radius: var(--4px);
+    background: transparent;
+    color: inherit;
+    font-size: var(--small);
+    text-align: start;
+    cursor: pointer;
+  }
+  .note-outline button[data-outline-kind] span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .note-outline button[data-outline-kind='task'] {
+    color: var(--muted-text-color);
+  }
+  .note-outline button[data-outline-kind]:hover {
+    background: var(--note-list-view-item-selected-background);
+  }
+  .note-outline button[aria-current='location'] {
+    background: var(--note-list-view-item-selected-background);
+    color: var(--text-color);
+    font-weight: var(--font-weights-semibold);
+  }
+  .note-outline p {
+    margin: 0;
+    padding: var(--12px);
+    color: var(--muted-text-color);
+    font-size: var(--small);
   }
   .editor-body > .pane--preview {
     border-inline-start: 1px solid var(--internal-border-color);

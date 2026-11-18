@@ -71,6 +71,24 @@ export function executeShortcut(
     case 'core:toggle-telescope':
       state.setCommandPaletteOpen(!state.commandPaletteOpen);
       return true;
+    case 'core:telescope-commands':
+      state.setCommandPaletteOpen(true, '> ');
+      return true;
+    case 'core:telescope-notebooks':
+      state.setCommandPaletteOpen(true, 'b ');
+      return true;
+    case 'core:telescope-tags':
+      state.setCommandPaletteOpen(true, 't ');
+      return true;
+    case 'telescope-toc:show':
+      state.setCommandPaletteOpen(true, '# ');
+      return true;
+    case 'telescope-themes:show':
+      state.setCommandPaletteOpen(true, 'h ');
+      return true;
+    case 'view:toggle-outline':
+      state.setOutlineOpen(!state.outlineOpen);
+      return true;
     case 'application:open-preferences':
       if (state.settingsOpen && document.activeElement instanceof HTMLElement)
         document.activeElement.blur();

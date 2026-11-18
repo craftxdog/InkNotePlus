@@ -73,6 +73,8 @@ export interface WorkspaceState {
   readonly themeRevision: number;
   readonly templatePickerOpen: boolean;
   readonly commandPaletteOpen: boolean;
+  readonly commandPaletteQuery: string;
+  readonly outlineOpen: boolean;
   readonly preferences: Preferences;
   readonly styleNonce: string | null;
   readonly platform: 'darwin' | 'win32' | 'linux';
@@ -114,7 +116,8 @@ export interface WorkspaceActions {
   themeDidLoad(): void;
   themeDidFail(): void;
   setTemplatePickerOpen(open: boolean): void;
-  setCommandPaletteOpen(open: boolean): void;
+  setCommandPaletteOpen(open: boolean, query?: string): void;
+  setOutlineOpen(open: boolean): void;
   getTemplateNotes(
     query?: string,
     offset?: number,

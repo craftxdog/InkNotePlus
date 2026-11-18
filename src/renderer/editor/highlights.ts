@@ -6,6 +6,7 @@ import type { SourceNode } from './markdown-source-map';
 
 const opening = '<mark>';
 const closing = '</mark>';
+const safeInlineTag = /^<(\/?)(mark|sub|sup)>$/;
 
 export const toggleHighlight: Command = (view) => {
   const { state } = view;
@@ -59,7 +60,7 @@ export const toggleHighlight: Command = (view) => {
   return true;
 };
 
-// Only convert an exact, balanced pair of mark tags to a trusted AST node.
+// Only convert exact, balanced pairs of these tags to trusted AST nodes.
 // Raw Markdown HTML stays disabled in ReactMarkdown.
 export function remarkHighlights() {
   return (tree: SourceNode) => {
@@ -67,21 +68,28 @@ export function remarkHighlights() {
       if (!parent.children) return;
       const output: SourceNode[] = [];
       let start: SourceNode | undefined;
+      let startTag = '';
       let content: SourceNode[] = [];
       for (const child of parent.children) {
         visit(child);
-        if (child.type === 'html' && child.value === opening && !start) {
+        const tag =
+          child.type === 'html' ? safeInlineTag.exec(child.value ?? '') : null;
+        if (tag && !tag[1] && !start) {
           start = child;
-        } else if (child.type === 'html' && child.value === closing && start) {
-          output.push({
+          startTag = tag[2];
+        } else if (tag?.[1] && start && tag[2] === startTag) {
+          const element: SourceNode = {
             type: 'inknoteHighlight',
-            data: { hName: 'mark' },
+            data: { hName: startTag },
             children: content,
             position:
               start.position && child.position
                 ? { start: start.position.start, end: child.position.end }
                 : undefined,
-          });
+          };
+          // Tags nested in this pair were collected as plain siblings.
+          visit(element);
+          output.push(element);
           start = undefined;
           content = [];
         } else (start ? content : output).push(child);

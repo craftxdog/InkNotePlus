@@ -403,7 +403,7 @@ describe('portable editor exports', () => {
       '| --- | --- |',
       '| Notes | 2 |',
       '',
-      'Inline $x^2$ and <mark>marked</mark>.',
+      'Inline $x^2$ and <mark>marked</mark> H<sub>2</sub>O x<sup>2</sup>.',
       '',
       '~~~mermaid',
       'flowchart LR',
@@ -429,6 +429,8 @@ describe('portable editor exports', () => {
     expect(html).toContain('<table>');
     expect(html).toContain('gfm-alert-type-note');
     expect(html).toContain('<mark>marked</mark>');
+    expect(html).toContain('<sub>2</sub>');
+    expect(html).toContain('<sup>2</sup>');
     expect(html).toContain('type="checkbox"');
     expect(html).toContain('data:image/png;base64,');
     expect(html).toContain('data:image/svg+xml;base64,');

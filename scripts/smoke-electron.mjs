@@ -209,8 +209,8 @@ try {
   await shortcut('b');
   await page.waitForSelector('.mde-preview strong', { hidden: true });
   await shortcut('k');
-  await page.waitForSelector('dialog[aria-label="Comandos"] input');
-  await page.type('dialog[aria-label="Comandos"] input', 'cursiva');
+  await page.waitForSelector('dialog.command-palette input');
+  await page.type('dialog.command-palette input', 'cursiva');
   await page.keyboard.press('Enter');
   await page.waitForSelector('.mde-preview em');
   await shortcut('i');

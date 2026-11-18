@@ -255,6 +255,16 @@ export const shortcutCommands = [
       ['view:sort-by-date-updated-in-desc', 'Ordenar por cambios (recientes)'],
     ] as const
   ).map(([id, label]) => ({ id, label, scope: 'app' as const, key: '' })),
+  ...(
+    [
+      ['core:telescope-commands', 'Buscar sólo comandos'],
+      ['core:telescope-notebooks', 'Ir a un notebook'],
+      ['core:telescope-tags', 'Ir a una etiqueta'],
+      ['telescope-toc:show', 'Buscar en el esquema de la nota'],
+      ['telescope-themes:show', 'Cambiar de tema'],
+      ['view:toggle-outline', 'Mostrar u ocultar esquema de la nota'],
+    ] as const
+  ).map(([id, label]) => ({ id, label, scope: 'app' as const, key: '' })),
   { id: 'view:show-editor', label: 'Sólo editor', scope: 'app', key: '' },
   {
     id: 'view:show-side-by-side',

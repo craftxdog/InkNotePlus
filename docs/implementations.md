@@ -9,17 +9,17 @@
 InkNote tiene una base sólida y todas sus pruebas pasan, pero esas pruebas no cubrían
 varias diferencias con Inkdrop. La auditoría registró **23 funciones implementadas de
 forma incorrecta o incompleta** y **31 funciones sin implementar**. Ya están resueltos
-INC-01 a INC-06, INC-11, INC-12, INC-13, FAL-03, FAL-04 y FAL-05, así que quedan **14 incorrectas y 28 faltantes**.
+INC-01 a INC-08, INC-11, INC-12, INC-13, FAL-03, FAL-04, FAL-05 y FAL-08, así que quedan **12 incorrectas y 27 faltantes**.
 
 | Prioridad     | Significado                                       | Incorrectas | Faltantes |  Total |
 | ------------- | ------------------------------------------------- | ----------: | --------: | -----: |
 | P0            | Riesgo para el uso diario o los datos (resueltos) |           0 |         0 |      0 |
-| P1            | Función básica que el usuario espera              |           2 |         4 |      6 |
-| P2            | Paridad importante                                |           9 |        15 |     24 |
+| P1            | Función básica que el usuario espera              |           0 |         4 |      4 |
+| P2            | Paridad importante                                |           9 |        14 |     23 |
 | P3            | Ecosistema, integraciones y mejoras               |           3 |         9 |     12 |
-| **Pendiente** |                                                   |      **14** |    **28** | **42** |
+| **Pendiente** |                                                   |      **12** |    **27** | **39** |
 
-El siguiente bloque recomendado es escritura y lectura: **INC-07**, **INC-08** y **FAL-08**.
+El siguiente bloque recomendado es completar escritura y lectura: **FAL-09**, **FAL-10**, **FAL-11** e **INC-15**.
 
 ## Resultados de las pruebas
 
@@ -137,6 +137,8 @@ Estas tres decisiones cambian el alcance del trabajo, así que conviene resolver
 
 #### INC-07. `<sub>` y `<sup>` pierden su formato
 
+**Estado: resuelto el 2026-11-18.** Los pares exactos se muestran en preview, HTML y PDF, y el resto del HTML sigue bloqueado. Comprobado en la app empaquetada.
+
 - **Evidencia (Sonda):** `H<sub>2</sub>O` se muestra como «H2O» y `x<sup>2</sup>` como «x2».
 - **Causa:** `skipHtml` en [markdown-preview.tsx:86](../src/renderer/editor/markdown-preview.tsx:86) elimina esas etiquetas.
 - **Inkdrop:** [admite subíndice y superíndice](https://docs.inkdrop.app/writing/basic-writing-and-formatting-syntax) con estas etiquetas.
@@ -144,6 +146,8 @@ Estas tres decisiones cambian el alcance del trabajo, así que conviene resolver
 - **Aceptación:** se renderizan en preview, HTML y PDF, y otras etiquetas siguen bloqueadas.
 
 #### INC-08. La paleta Cmd+K solo busca comandos
+
+**Estado: resuelto el 2026-11-18.** La paleta busca comandos, notebooks, etiquetas, esquema y temas, con prefijos y acciones por tecla. Comprobado en la app empaquetada.
 
 - **Evidencia (Sonda):** `b Proyecto`, `# Footnote` y `h kanagawa` devuelven 0 resultados. `t alpha` devuelve comandos sin relación. Ver [command-palette.tsx:45](../src/renderer/components/command-palette.tsx:45).
 - **Inkdrop:** [Telescope](https://docs.inkdrop.app/reference/fuzzy-finder-telescope) tiene las fuentes `>` comandos, `b` notebooks, `t` etiquetas, `#` encabezados y tareas, y `h` temas.
@@ -303,7 +307,7 @@ La ausencia de estas funciones se comprobó en el código fuente.
 
 | ID     | Función                        | Qué ofrece Inkdrop                                                         | Implementación propuesta                                                                |
 | ------ | ------------------------------ | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| FAL-08 | Esquema de la nota             | Encabezados y tareas con la posición actual resaltada                      | Reutilizar el árbol de Lezer. Sirve también para la fuente `#` de INC-08.               |
+| FAL-08 | Esquema de la nota             | Encabezados y tareas con la posición actual resaltada                      | **Resuelto el 2026-11-18.** Panel con la posición actual y fuente `#` en la paleta.     |
 | FAL-09 | Buscar en el preview           | Búsqueda también dentro de bloques de código                               | Usar la CSS Custom Highlight API sin alterar el DOM.                                    |
 | FAL-10 | Visor de imágenes              | Se abre con doble clic                                                     | Crear un modal con zoom y teclado.                                                      |
 | FAL-11 | Pegado inteligente de enlaces  | Pegar URL sobre una selección crea un enlace, con título automático        | Crear el enlace primero. Obtener el título solo con permiso (D-1).                      |
@@ -335,7 +339,7 @@ La ausencia de estas funciones se comprobó en el código fuente.
 
 ## Orden de trabajo recomendado
 
-1. **Escritura y lectura:** INC-07, INC-08, FAL-08, FAL-09, FAL-10, FAL-11, INC-15, INC-16 y FAL-21.
+1. **Escritura y lectura:** FAL-09, FAL-10, FAL-11, INC-15, INC-16 y FAL-21.
 2. **Datos:** FAL-02, FAL-01, INC-19, INC-14 e INC-23.
 3. **Integración con el escritorio:** INC-09, INC-10, INC-17, FAL-06, FAL-07, FAL-12, FAL-13 y FAL-20.
 4. **Plataforma:** FAL-14, FAL-15, FAL-18, FAL-19, FAL-16 y FAL-17, según D-2 y D-3.

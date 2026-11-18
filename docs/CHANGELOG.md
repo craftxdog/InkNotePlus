@@ -21,6 +21,10 @@
 - Las notas seleccionadas se pueden mover, etiquetar y cambiar de estado en lote.
 - Pulsar etiquetas en la lista acumula filtros, y Alt+clic deja solo la pulsada.
 - Las notas se ordenan por título, creación o modificación, en ambos sentidos.
+- Cmd/Ctrl+K busca comandos, notebooks, etiquetas, encabezados, tareas y temas,
+  con los prefijos `>`, `b`, `t`, `#` y `h`.
+- El panel Esquema lista encabezados y tareas y resalta la posición actual.
+- El preview, HTML y PDF muestran subíndices y superíndices con `<sub>` y `<sup>`.
 
 ### Corregido
 
@@ -41,7 +45,7 @@
 
 ### Pruebas
 
-- 525 pruebas automatizadas, lint y TypeScript aprobados.
+- 561 pruebas automatizadas, lint y TypeScript aprobados.
 - QA nativo local completo en macOS Apple Silicon: edición, autoguardado,
   sincronización, respaldos, HTML/PDF, papelera, temas y búsqueda con 3.000 notas.
 - Doce lenguajes comprobados en siete temas; 972 mediciones de contraste por

@@ -466,8 +466,13 @@ export function createWorkspaceStore(
       parkedDrafts: {},
       templatePickerOpen: false,
       commandPaletteOpen: false,
-      setCommandPaletteOpen(commandPaletteOpen) {
-        set({ commandPaletteOpen });
+      commandPaletteQuery: '',
+      setCommandPaletteOpen(commandPaletteOpen, commandPaletteQuery = '') {
+        set({ commandPaletteOpen, commandPaletteQuery });
+      },
+      outlineOpen: false,
+      setOutlineOpen(outlineOpen) {
+        set({ outlineOpen });
       },
       setTemplatePickerOpen(templatePickerOpen) {
         if (

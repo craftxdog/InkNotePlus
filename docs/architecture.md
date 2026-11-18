@@ -316,7 +316,10 @@ Markdown, con historial de deshacer y autoguardado.
 
 En una línea vacía, `/` abre las inserciones Markdown. `[[` busca notas por
 título y crea enlaces `inknote://note/` que se abren dentro de la app.
-Cmd/Ctrl+K abre la paleta de comandos. En Preferencias → Edición se elige la
+Cmd/Ctrl+K abre la paleta, con fuentes de comandos (`>`), notebooks (`b`),
+etiquetas (`t`), esquema (`#`) y temas (`h`). El esquema sale del árbol Lezer, por
+lo que ignora el código. `<mark>`, `<sub>` y `<sup>` sólo se aceptan como pares
+exactos; el resto del HTML de las notas sigue sin renderizarse. En Preferencias → Edición se elige la
 barra flotante o fija, el teclado estándar o Vim y la anchura de lectura.
 La variable `--inknote-editor-readable-width` controla el límite de lectura,
 con 1024 px como valor inicial de InkNote.

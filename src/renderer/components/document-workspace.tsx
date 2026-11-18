@@ -36,6 +36,7 @@ import {
   Trash2,
   RotateCcw,
   Files,
+  ListTree,
   Copy,
   ImagePlus,
   Highlighter,
@@ -68,6 +69,8 @@ import { connectEditorSession } from '../editor/editor-session';
 import { NotebookPicker } from './notebook-picker';
 import { UiSlot } from '../extensions/ui-slots';
 import { NoteTrashActions } from './note-trash-actions';
+import { NoteOutlinePanel } from './note-outline-panel';
+import { jumpToNoteLine, previewLineAtTop } from '../editor/note-navigation';
 import type { ExportNoteInput } from '../../shared/transfer';
 
 const exportActions = [
@@ -108,6 +111,9 @@ export function DocumentWorkspace({
   const navigation = useWorkspace((state) => state.navigation);
   const openNoteAction = useWorkspace((state) => state.openNoteAction);
   const duplicateNotes = useWorkspace((state) => state.duplicateNotes);
+  const outlineOpen = useWorkspace((state) => state.outlineOpen);
+  const setOutlineOpen = useWorkspace((state) => state.setOutlineOpen);
+  const [outlineLine, setOutlineLine] = useState(1);
   const importImage = useWorkspace((state) => state.importImage);
   const exportNote = useWorkspace((state) => state.transfer.exportNote);
   const view = useRef<EditorView | null>(null);
@@ -220,6 +226,34 @@ export function DocumentWorkspace({
   useEffect(() => {
     view.current?.requestMeasure();
   }, [mode, splitRatio]);
+  const followEditorLine = useCallback(() => {
+    const instance = view.current;
+    if (instance)
+      setOutlineLine(
+        instance.state.doc.lineAt(instance.state.selection.main.head).number,
+      );
+  }, []);
+  useEffect(() => {
+    if (!outlineOpen) return;
+    const pane = preview.current;
+    if (mode !== 'preview' || !pane) {
+      followEditorLine();
+      return;
+    }
+    let frame = 0;
+    const follow = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() =>
+        setOutlineLine(previewLineAtTop(pane)),
+      );
+    };
+    follow();
+    pane.addEventListener('scroll', follow, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      pane.removeEventListener('scroll', follow);
+    };
+  }, [outlineOpen, mode, draft.noteId, followEditorLine]);
   const setMetadata = (patch: Partial<typeof draft.metadata>) => {
     updateDraft({ metadata: { ...draft.metadata, ...patch } });
   };
@@ -302,6 +336,13 @@ export function DocumentWorkspace({
                 ? 'Autoguardado pendiente'
                 : ''}
           </span>
+          <IconButton
+            icon={ListTree}
+            label="Esquema de la nota"
+            active={outlineOpen}
+            disabled={!draft.noteId}
+            onClick={() => setOutlineOpen(!outlineOpen)}
+          />
           <IconButton
             icon={Save}
             label="Guardar"
@@ -613,6 +654,8 @@ export function DocumentWorkspace({
                     if (view.current) {
                       setImageSelected(!!imageAtCursor(view.current));
                       setTableSelected(!!tableAtCursor(view.current.state));
+                      if (store.getState().outlineOpen && mode !== 'preview')
+                        followEditorLine();
                     }
                   }}
                 />
@@ -636,6 +679,14 @@ export function DocumentWorkspace({
                 onRendered={previewRendered}
               />
             </aside>
+            {outlineOpen && (
+              <NoteOutlinePanel
+                body={draft.body}
+                currentLine={outlineLine}
+                onJump={jumpToNoteLine}
+                onClose={() => setOutlineOpen(false)}
+              />
+            )}
           </div>
           {floatingToolbar &&
             mode !== 'preview' &&

@@ -9,7 +9,10 @@ import { SqliteLibraryRepository } from '../../src/infrastructure/sqlite/sqlite-
 import { SqliteLibraryTransfer } from '../../src/infrastructure/sqlite/sqlite-library-transfer';
 import { SqliteSyncOutbox } from '../../src/infrastructure/sqlite/sqlite-sync-outbox';
 import { BackupFiles } from '../../src/main/backup-files';
-import { exportMarkdown } from '../../src/main/markdown-export';
+import {
+  exportCollection,
+  exportMarkdown,
+} from '../../src/main/markdown-export';
 import { renderNoteExport } from '../../src/main/render-note-export';
 import { printNote } from '../../src/main/print-note';
 import { storeImage } from '../../src/main/image-store';
@@ -129,6 +132,22 @@ void app.whenReady().then(async () => {
     const pages = [...bytes.toString('latin1').matchAll(/\/Type\s*\/Page\b/g)]
       .length;
     assert(pages >= 1);
+    const collection = await exportCollection(
+      new SqliteLibraryTransfer(source.db, source.notes),
+      output,
+      path.join(sourceDirectory, 'images'),
+      {
+        format: 'html',
+        scope: { kind: 'notes', ids: [note.id] },
+        renderHtml: (item) =>
+          renderNoteExport(
+            item,
+            { mathEnabled: true, mermaidEnabled: true },
+            path.join(sourceDirectory, 'images'),
+          ),
+      },
+    );
+    assert.equal(collection?.notes, 1);
     // The import parsers must load and decode real images inside Electron.
     const imports = path.join(output, 'import-source', 'Proyecto', 'Sub');
     await mkdir(imports, { recursive: true });

@@ -45,6 +45,7 @@ import type { VimAction } from './vim-mode';
 import { selectionToolbar } from './selection-toolbar';
 import type { CompletionSource } from '@codemirror/autocomplete';
 import { markdownTabKeys } from '../../shared/editor-keybindings';
+import { importableImageType } from '../../shared/images';
 import { pasteLinkOverSelection } from './link-paste';
 import { linkPasteMenu, pasteUrlAtCursor } from './link-paste-menu';
 
@@ -191,7 +192,7 @@ export function MarkdownEditor({
           EditorView.domEventHandlers({
             paste(event, editor) {
               const files = [...(event.clipboardData?.files ?? [])].filter(
-                (file) => /^image\/(png|jpeg|gif|webp)$/.test(file.type),
+                (file) => importableImageType.test(file.type),
               );
               if (!files.length || !callbacks.current.onImageFiles) {
                 const text = event.clipboardData?.getData('text/plain') ?? '';
@@ -209,7 +210,7 @@ export function MarkdownEditor({
             },
             drop(event, editor) {
               const files = [...(event.dataTransfer?.files ?? [])].filter(
-                (file) => /^image\/(png|jpeg|gif|webp)$/.test(file.type),
+                (file) => importableImageType.test(file.type),
               );
               if (!files.length || !callbacks.current.onImageFiles)
                 return false;

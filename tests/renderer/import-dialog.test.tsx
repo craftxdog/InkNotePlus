@@ -80,3 +80,44 @@ it('explains a failed import', async () => {
     await screen.findByRole('dialog', { name: 'No se pudo importar' }),
   ).toBeTruthy();
 });
+
+it('reports where a collection was exported', async () => {
+  const { store } = setup(success(null));
+  const { transfer } = store.getState();
+  store.setState({
+    transfer: {
+      ...transfer,
+      exportNotes: async () =>
+        success({ path: '/tmp/Trabajo', notes: 2, missingAttachments: 1 }),
+    },
+  });
+  await store
+    .getState()
+    .exportNotes({ format: 'html', scope: { kind: 'all' } });
+  const dialog = await screen.findByRole('dialog', {
+    name: 'Exportación completada',
+  });
+  expect(dialog.textContent).toContain('2 notas exportadas en /tmp/Trabajo');
+  expect(dialog.textContent).toContain('1 adjuntos sin recuperar');
+});
+
+it('stays quiet when the export is cancelled and explains failures', async () => {
+  const { store } = setup(success(null));
+  const { transfer } = store.getState();
+  store.setState({
+    transfer: { ...transfer, exportNotes: async () => success(null) },
+  });
+  await store
+    .getState()
+    .exportNotes({ format: 'markdown', scope: { kind: 'all' } });
+  expect(store.getState().libraryDialog).toBeNull();
+  store.setState({
+    transfer: { ...transfer, exportNotes: async () => failure('unavailable') },
+  });
+  await store
+    .getState()
+    .exportNotes({ format: 'markdown', scope: { kind: 'all' } });
+  expect(
+    await screen.findByRole('dialog', { name: 'No se pudo exportar' }),
+  ).toBeTruthy();
+});

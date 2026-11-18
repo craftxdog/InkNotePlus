@@ -17,6 +17,7 @@ import type {
   UpdateNoteInput,
 } from '../../domain/note';
 import type { NoteSyncOutbox } from '../../domain/sync';
+import { maxNoteTags } from '../../shared/tags';
 import { SqliteSyncOutbox } from './sqlite-sync-outbox';
 import { withSqliteWrite } from './database';
 import type {
@@ -258,7 +259,7 @@ export class SqliteNoteRepository implements NoteRepository {
           ];
           if (JSON.stringify(tags) === JSON.stringify(metadata.tags)) continue;
           // Rejecting here rolls back the notes already changed in this batch.
-          if (tags.length > 32) throw new NoteConflictError(id);
+          if (tags.length > maxNoteTags) throw new NoteConflictError(id);
           this.writePlacement(note, { ...metadata, tags }, null);
         } else {
           if (note.deletedAt === null) throw new NoteConflictError(id);

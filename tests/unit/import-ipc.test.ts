@@ -90,3 +90,66 @@ it('rejects untrusted senders and invalid requests before any dialog', async () 
   });
   expect(showOpenDialog).not.toHaveBeenCalled();
 });
+
+it('exports a notebook to the chosen folder', async () => {
+  showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [directory] });
+  const handlers = new Map<
+    string,
+    (event: IpcMainInvokeEvent, input: unknown) => unknown
+  >();
+  const frame = {};
+  const webContents = { mainFrame: frame };
+  const id = '7a5115f8-747f-416d-82d5-d9c12e34d323';
+  const noteId = '5a5115f8-747f-416d-82d5-d9c12e34d323';
+  registerTransferHandlers({
+    ipc: {
+      handle: (channel: string, handler: never) =>
+        handlers.set(channel, handler),
+      removeHandler: () => {},
+    } as unknown as Pick<IpcMain, 'handle' | 'removeHandler'>,
+    getWindow: () => ({ webContents }) as unknown as BrowserWindow,
+    backup: {} as never,
+    library: {
+      listNotebooks: () => [
+        {
+          id,
+          name: 'Trabajo',
+          parentId: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          icon: 'book-open',
+          position: 0,
+        },
+      ],
+      listVersions: () => [{ id: noteId, revision: 1, trashed: false }],
+      readNote: () => ({
+        id: noteId,
+        title: 'Plan',
+        body: 'texto',
+        deletedAt: null,
+        metadata: {
+          notebookId: id,
+          status: 'none',
+          tags: [],
+          isTemplate: false,
+        },
+      }),
+    } as never,
+    userData: directory,
+    getPreferences: () =>
+      ({ mathEnabled: false, mermaidEnabled: false }) as never,
+    isDecodableImage: () => true,
+    onImported: () => {},
+  });
+  const result = await handlers.get(TRANSFER_CHANNELS.exportNotes)!(
+    { sender: webContents, senderFrame: frame } as IpcMainInvokeEvent,
+    { format: 'markdown', scope: { kind: 'notebook', id } },
+  );
+  expect(result).toEqual({
+    ok: true,
+    data: {
+      path: expect.stringContaining('Trabajo'),
+      notes: 1,
+      missingAttachments: 0,
+    },
+  });
+});

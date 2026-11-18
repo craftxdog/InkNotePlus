@@ -5,7 +5,12 @@ import { maxTitleLength } from '../../shared/ipc';
 import { defaultNoteMetadata } from '../../shared/note-metadata';
 import { notebookIconSchema } from '../../shared/notebook-icons';
 import type { ImportedNote, RestoreSummary } from '../../shared/transfer';
-import { tagRecordSchema, type TagRecord } from '../../shared/tags';
+import {
+  maxNoteTags,
+  maxTagLength,
+  tagRecordSchema,
+  type TagRecord,
+} from '../../shared/tags';
 import { z } from '../../shared/validation';
 import type { SqliteNoteRepository } from './sqlite-note-repository';
 import { withSqliteWrite } from './database';
@@ -231,10 +236,10 @@ export class SqliteLibraryTransfer {
       for (const note of notes) {
         const createdAt = note.createdAt ?? now;
         this.notes.insertSnapshot({
-          id: randomUUID(),
+          id: note.id ?? randomUUID(),
           title: note.title.slice(0, maxTitleLength),
           body: note.body,
-          isPinned: false,
+          isPinned: note.isPinned ?? false,
           createdAt,
           updatedAt: note.updatedAt ?? createdAt,
           deletedAt: null,
@@ -242,11 +247,15 @@ export class SqliteLibraryTransfer {
           metadata: {
             ...defaultNoteMetadata,
             notebookId: notebookFor(note.folders),
+            status: note.status ?? defaultNoteMetadata.status,
+            isTemplate: note.isTemplate ?? false,
             tags: [
               ...new Set(
-                note.tags.map((tag) => tag.trim().slice(0, 40)).filter(Boolean),
+                note.tags
+                  .map((tag) => tag.trim().slice(0, maxTagLength))
+                  .filter(Boolean),
               ),
-            ].slice(0, 32),
+            ].slice(0, maxNoteTags),
           },
         });
       }

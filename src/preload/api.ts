@@ -36,8 +36,10 @@ import {
   linkTitleResultSchema,
 } from '../shared/external-link';
 import {
+  exportNotesSchema,
   importNotesSchema,
   importResultSchema,
+  type ExportNotesInput,
   type ImportNotesInput,
   type ImportSummary,
   TRANSFER_CHANNELS,
@@ -134,6 +136,7 @@ export interface InkNoteApi {
     exportNote(input: ExportNoteInput): Promise<Result<ExportSummary | null>>;
     exportLibrary(): Promise<Result<ExportSummary | null>>;
     importNotes(input: ImportNotesInput): Promise<Result<ImportSummary | null>>;
+    exportNotes(input: ExportNotesInput): Promise<Result<ExportSummary | null>>;
     onBackupChanged(listener: (status: BackupStatus) => void): () => void;
   };
   images: {
@@ -231,6 +234,14 @@ export function createInkNoteApi(
         ),
       exportLibrary: () =>
         transferCall(TRANSFER_CHANNELS.exportLibrary, exportResultSchema),
+      exportNotes: (input) =>
+        invoke(
+          ipcRenderer,
+          TRANSFER_CHANNELS.exportNotes,
+          input,
+          exportNotesSchema,
+          exportResultSchema,
+        ),
       importNotes: (input) =>
         invoke(
           ipcRenderer,

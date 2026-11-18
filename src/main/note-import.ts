@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { lstat, readdir, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { fromHtml } from 'hast-util-from-html';
@@ -8,6 +8,14 @@ import { gfmToMarkdown } from 'mdast-util-gfm';
 import { toMarkdown } from 'mdast-util-to-markdown';
 import { SaxesParser } from 'saxes';
 import { parse as parseYaml } from 'yaml';
+import {
+  fromInkdropStatus,
+  fromInkdropTimestamp,
+  parseInkdropDocument,
+  rewriteInkdropLinks,
+  type InkdropDocument,
+} from '../shared/inkdrop-model';
+import { maxImageBytes } from '../shared/images';
 import { maxBodyLength, maxTitleLength } from '../shared/ipc';
 import type { ImportedNote } from '../shared/transfer';
 import { readRegularFile } from './transfer-files';
@@ -16,7 +24,6 @@ const markdownFiles = new Set(['.md', '.markdown', '.mdown', '.mkd', '.txt']);
 const htmlFiles = new Set(['.html', '.htm']);
 const maxTextFile = 20 * 1024 * 1024;
 const maxEnexFile = 512 * 1024 * 1024;
-const maxImage = 5_000_000;
 const maxEntries = 20_000;
 const maxDepth = 32;
 
@@ -52,7 +59,7 @@ async function storeBytes(
 ): Promise<string | null> {
   if (context.cache.has(key)) return context.cache.get(key)!;
   const url =
-    bytes.length > maxImage
+    bytes.length > maxImageBytes
       ? null
       : await context.storeImage(bytes).catch(() => null);
   context.cache.set(key, url);
@@ -113,7 +120,7 @@ async function readLocalImage(
     return await storeBytes(
       context,
       realTarget,
-      await readRegularFile(realTarget, maxImage),
+      await readRegularFile(realTarget, maxImageBytes),
     );
   } catch {
     return null;
@@ -387,6 +394,86 @@ async function readEnexNote(context: ImportContext, note: EnexNote) {
   };
 }
 
+// Inkdrop's continuous backup keeps one JSON document per file under `data`.
+// https://docs.inkdrop.app/reference/data-backup
+async function readInkdropDocuments(directory: string) {
+  const documents: InkdropDocument[] = [];
+  const data = path.join(directory, 'data');
+  const entries = await readdir(data, {
+    recursive: true,
+    withFileTypes: true,
+  }).catch(() => []);
+  for (const entry of entries.slice(0, maxEntries)) {
+    if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+    try {
+      const file = path.join(entry.parentPath, entry.name);
+      const text = await readRegularFile(file, maxTextFile);
+      const document = parseInkdropDocument(JSON.parse(text.toString('utf8')));
+      if (document) documents.push(document);
+    } catch {
+      // Other JSON in the folder is not part of the library.
+    }
+  }
+  return documents;
+}
+
+async function readInkdropLibrary(
+  context: ImportContext,
+  documents: readonly InkdropDocument[],
+) {
+  const books = new Map<string, { name: string; parent: string | null }>();
+  const tags = new Map<string, string>();
+  const noteIds = new Map<string, string>();
+  const fileUrls = new Map<string, string>();
+  for (const item of documents) {
+    if (item.kind === 'book')
+      books.set(item.doc._id, {
+        name: item.doc.name,
+        parent: item.doc.parentBookId ?? null,
+      });
+    else if (item.kind === 'tag') tags.set(item.doc._id, item.doc.name);
+    else if (item.kind === 'note') noteIds.set(item.doc._id, randomUUID());
+    else if (item.doc.contentType.startsWith('image/')) {
+      const bytes = Buffer.from(item.doc._attachments.index.data, 'base64');
+      const url = await storeBytes(context, item.doc._id, bytes);
+      if (url) fileUrls.set(item.doc._id, url);
+      else context.missingImages++;
+    }
+  }
+  const foldersOf = (bookId: string | null | undefined) => {
+    const folders: string[] = [];
+    const seen = new Set<string>();
+    for (
+      let current = bookId ?? null;
+      current && !seen.has(current);
+      current = books.get(current)?.parent ?? null
+    ) {
+      seen.add(current);
+      const name = books.get(current)?.name;
+      if (name) folders.unshift(name);
+    }
+    return folders;
+  };
+  return documents.flatMap((item): ImportedNote[] => {
+    if (item.kind !== 'note' || item.doc.bookId === 'trash') return [];
+    const { doc } = item;
+    return [
+      {
+        id: noteIds.get(doc._id),
+        title: (doc.title || 'Nota sin título').slice(0, maxTitleLength),
+        body: rewriteInkdropLinks(doc.body, noteIds, fileUrls),
+        folders: foldersOf(doc.bookId),
+        tags: doc.tags.flatMap((id) => tags.get(id) ?? []),
+        status: fromInkdropStatus(doc.status),
+        isPinned: doc.pinned ?? false,
+        isTemplate: doc.bookId === 'template',
+        createdAt: fromInkdropTimestamp(doc.createdAt),
+        updatedAt: fromInkdropTimestamp(doc.updatedAt),
+      },
+    ];
+  });
+}
+
 export async function readImportSources(
   paths: readonly string[],
   options: ImportOptions,
@@ -497,7 +584,11 @@ export async function readImportSources(
     try {
       const stat = await lstat(selected);
       if (stat.isDirectory()) {
-        if (selected.toLowerCase().endsWith('.textbundle'))
+        const inkdrop = await readInkdropDocuments(selected);
+        if (inkdrop.some(({ kind }) => kind === 'note'))
+          for (const note of await readInkdropLibrary(context, inkdrop))
+            add(note, note.folders as string[]);
+        else if (selected.toLowerCase().endsWith('.textbundle'))
           await readBundle(selected, []);
         else
           await walk(

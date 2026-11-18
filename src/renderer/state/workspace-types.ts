@@ -14,7 +14,12 @@ import type { InkNoteApi } from '../../preload/api';
 import type { InstalledTheme } from '../../shared/themes';
 import type { ManagedImage } from '../../shared/images';
 import type { UpdateTagInput } from '../../shared/tags';
-import type { ImportNotesInput, ImportSummary } from '../../shared/transfer';
+import type {
+  ExportNotesInput,
+  ExportSummary,
+  ImportNotesInput,
+  ImportSummary,
+} from '../../shared/transfer';
 import type {
   LibrarySnapshot,
   MoveNotebookInput,
@@ -47,7 +52,8 @@ export type LibraryDialogRequest =
       name: string;
     }
   | { kind: 'edit-tag' | 'delete-tag'; name: string }
-  | { kind: 'import-result'; summary: ImportSummary | null };
+  | { kind: 'import-result'; summary: ImportSummary | null }
+  | { kind: 'export-result'; summary: ExportSummary | null };
 
 export interface DocumentState {
   readonly noteId: string | null;
@@ -133,6 +139,7 @@ export interface WorkspaceActions {
     title: string;
     body: string;
   }): Promise<Result<NoteProjection>>;
+  exportNotes(input: ExportNotesInput): Promise<void>;
   importNotes(
     kind: ImportNotesInput['kind'],
     notebookId?: string | null,

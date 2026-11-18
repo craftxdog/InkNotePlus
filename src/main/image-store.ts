@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { ManagedImage } from '../shared/images';
+import { maxImageBytes, type ManagedImage } from '../shared/images';
+import { convertHeicToJpeg } from './heic-convert';
+import { looksLikeSvg, sanitizeSvg, svgDimensions } from './svg-sanitizer';
 
 export function inspectImage(bytes: Buffer): {
   extension: string;
@@ -11,8 +13,9 @@ export function inspectImage(bytes: Buffer): {
   let extension = '',
     width = 0,
     height = 0;
-  if (bytes.length > 5_000_000 || bytes.length < 24)
-    throw new Error('Invalid image.');
+  if (bytes.length > maxImageBytes) throw new Error('Invalid image.');
+  if (looksLikeSvg(bytes)) return { extension: 'svg', ...svgDimensions(bytes) };
+  if (bytes.length < 24) throw new Error('Invalid image.');
   if (
     bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
   ) {
@@ -82,13 +85,30 @@ export function inspectImage(bytes: Buffer): {
     throw new Error('Invalid image dimensions.');
   return { extension, width, height };
 }
+
+const isHeic = (bytes: Buffer) =>
+  bytes.toString('ascii', 4, 8) === 'ftyp' &&
+  ['heic', 'heix', 'hevc', 'hevx', 'heim', 'heis', 'mif1', 'msf1'].includes(
+    bytes.toString('ascii', 8, 12),
+  );
+
 export async function storeImage(
-  bytes: Buffer,
+  source: Buffer,
   userData: string,
   isDecodable: (bytes: Buffer) => boolean,
+  convertHeic: (bytes: Buffer) => Promise<Buffer | null> = convertHeicToJpeg,
 ): Promise<ManagedImage> {
+  if (source.length > maxImageBytes) throw new Error('Invalid image.');
+  let bytes = source;
+  if (isHeic(bytes)) {
+    const converted = await convertHeic(bytes);
+    if (!converted) throw new Error('Unsupported image.');
+    bytes = converted;
+  }
+  const vector = looksLikeSvg(bytes);
+  if (vector) bytes = sanitizeSvg(bytes);
   const { extension, width, height } = inspectImage(bytes);
-  if (!isDecodable(bytes)) throw new Error('Invalid image.');
+  if (!vector && !isDecodable(bytes)) throw new Error('Invalid image.');
   const name = `${createHash('sha256').update(bytes).digest('hex')}.${extension}`;
   const directory = path.join(userData, 'images');
   await mkdir(directory, { recursive: true });

@@ -1,4 +1,5 @@
 import { appErrorSchema } from './ipc';
+import type { NoteStatus } from './note-metadata';
 import { z } from './validation';
 
 export const TRANSFER_CHANNELS = {
@@ -11,6 +12,7 @@ export const TRANSFER_CHANNELS = {
   exportNote: 'export:note',
   exportLibrary: 'export:library',
   importNotes: 'import:notes',
+  exportNotes: 'export:notes',
   backupChanged: 'backup:changed',
 } as const;
 
@@ -49,6 +51,22 @@ export const exportResultDataSchema = z
   .strict();
 export type ExportSummary = z.output<typeof exportResultDataSchema>;
 
+export const exportScopeSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('all') }).strict(),
+  z.object({ kind: z.literal('notebook'), id: z.uuid() }).strict(),
+  z
+    .object({
+      kind: z.literal('notes'),
+      ids: z.array(z.uuid()).min(1).max(10_000),
+    })
+    .strict(),
+]);
+export type ExportScope = z.output<typeof exportScopeSchema>;
+export const exportNotesSchema = z
+  .object({ format: z.enum(['markdown', 'html']), scope: exportScopeSchema })
+  .strict();
+export type ExportNotesInput = z.output<typeof exportNotesSchema>;
+
 export const importNotesSchema = z
   .object({
     kind: z.enum(['files', 'folder']),
@@ -67,6 +85,10 @@ export const importSummarySchema = z
   .strict();
 export type ImportSummary = z.output<typeof importSummarySchema>;
 export interface ImportedNote {
+  id?: string;
+  status?: NoteStatus;
+  isPinned?: boolean;
+  isTemplate?: boolean;
   title: string;
   body: string;
   folders: readonly string[];

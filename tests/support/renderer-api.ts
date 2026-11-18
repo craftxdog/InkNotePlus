@@ -54,6 +54,7 @@ export function createApi(overrides: Partial<InkNoteApi['notes']> = {}) {
       exportNote: async () => success(null),
       exportLibrary: async () => success(null),
       importNotes: async () => success(null),
+      exportNotes: async () => success(null),
       onBackupChanged: () => () => {},
     },
     images: {

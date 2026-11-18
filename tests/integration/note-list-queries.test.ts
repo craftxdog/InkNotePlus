@@ -141,7 +141,7 @@ describe('bulk note changes', () => {
     const small = tagged('Pequeña', []);
     const full = tagged(
       'Llena',
-      Array.from({ length: 32 }, (_, index) => `t${index}`),
+      Array.from({ length: 1000 }, (_, index) => `t${index}`),
     );
     expect(() =>
       notes.manageTrash({

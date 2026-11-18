@@ -1,7 +1,12 @@
 import { z } from './validation';
 import { appErrorSchema } from './ipc';
+// Inkdrop's attachment limit: 10 MiB per file.
+// https://developers.inkdrop.app/data-access/files
+export const maxImageBytes = 10_485_760;
+export const importableImageType =
+  /^image\/(?:png|jpeg|gif|webp|svg\+xml|heic|heif)$/;
 export const managedImageUrlPattern =
-  /^inknote-asset:\/\/images\/[a-f0-9]{64}\.(?:png|jpg|gif|webp)$/;
+  /^inknote-asset:\/\/images\/[a-f0-9]{64}\.(?:png|jpg|gif|webp|svg)$/;
 export const imageSchema = z
   .object({
     url: z.string().regex(managedImageUrlPattern),
@@ -15,7 +20,7 @@ export const imageWriteSchema = z
     base64: z
       .string()
       .min(1)
-      .max(6_666_668)
+      .max(Math.ceil(maxImageBytes / 3) * 4)
       .regex(/^[a-zA-Z0-9+/]+={0,2}$/),
   })
   .strict();

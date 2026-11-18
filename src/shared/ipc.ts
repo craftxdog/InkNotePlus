@@ -1,6 +1,6 @@
 import { z } from './validation';
 import { noteMetadataSchema, noteStatusSchema } from './note-metadata';
-import { tagNameSchema } from './tags';
+import { maxNoteTags, tagNameSchema } from './tags';
 
 export const maxTitleLength = 512;
 export const maxBodyLength = 1_000_000;
@@ -126,7 +126,7 @@ export const manageTrashSchema = z.discriminatedUnion('action', [
     .object({
       action: z.literal('tag'),
       ids: selectedNoteIds,
-      add: z.array(tagNameSchema).max(32),
+      add: z.array(tagNameSchema).max(maxNoteTags),
       remove: z.array(tagNameSchema).max(1000),
     })
     .strict(),

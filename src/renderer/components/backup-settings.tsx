@@ -8,6 +8,7 @@ import { SettingGroup } from './settings-controls';
 export function BackupSettings() {
   const transfer = useWorkspace((state) => state.transfer);
   const importNotes = useWorkspace((state) => state.importNotes);
+  const exportNotes = useWorkspace((state) => state.exportNotes);
   const [status, setStatus] = useState<BackupStatus | null>(null);
   const [selection, setSelection] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -197,9 +198,9 @@ export function BackupSettings() {
       </SettingGroup>
       <SettingGroup title="Importar notas">
         <p className="settings-description">
-          Admite Markdown, HTML y exportaciones de Evernote (.enex). Para Notion
-          y Bear, exporta primero a Markdown o TextBundle. Las subcarpetas se
-          convierten en notebooks.
+          Admite Markdown, HTML, Evernote (.enex) y carpetas de respaldo de
+          Inkdrop. Para Notion y Bear, exporta primero a Markdown o TextBundle.
+          Las subcarpetas se convierten en notebooks.
         </p>
         <div className="transfer-actions">
           <button
@@ -222,7 +223,8 @@ export function BackupSettings() {
       </SettingGroup>
       <SettingGroup title="Exportar biblioteca">
         <p className="settings-description">
-          Crea archivos Markdown con sus adjuntos y la jerarquía de notebooks.
+          Crea archivos Markdown o HTML con sus adjuntos y la jerarquía de
+          notebooks.
         </p>
         <div className="transfer-actions">
           <button
@@ -252,6 +254,16 @@ export function BackupSettings() {
             }
           >
             Exportar todas las notas…
+          </button>
+          <button
+            type="button"
+            className="button"
+            disabled={working}
+            onClick={() =>
+              void exportNotes({ format: 'html', scope: { kind: 'all' } })
+            }
+          >
+            Exportar como HTML…
           </button>
         </div>
       </SettingGroup>

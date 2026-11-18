@@ -4,6 +4,7 @@ import {
   shortcutFor,
   type ShortcutCommand,
 } from '../../shared/keybindings';
+import { maxNoteTags } from '../../shared/tags';
 import { jumpToNoteLine } from '../editor/note-navigation';
 import { noteOutline } from '../editor/note-outline';
 import { notebookTree } from '../notebooks/notebook-hierarchy';
@@ -138,7 +139,10 @@ export function CommandPalette() {
               run: () => {
                 const state = store.getState();
                 const { metadata } = state.document;
-                if (metadata.tags.includes(name) || metadata.tags.length >= 32)
+                if (
+                  metadata.tags.includes(name) ||
+                  metadata.tags.length >= maxNoteTags
+                )
                   return;
                 state.updateDraft({
                   metadata: { ...metadata, tags: [...metadata.tags, name] },

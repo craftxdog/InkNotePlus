@@ -91,6 +91,7 @@ export function NotebookTree({
   const moveNotes = useWorkspace((state) => state.moveNotes);
   const reorder = useWorkspace((state) => state.reorderNotebook);
   const importNotes = useWorkspace((state) => state.importNotes);
+  const exportNotes = useWorkspace((state) => state.exportNotes);
   const [drop, setDrop] = useState<{
     id: string;
     zone: NotebookDropZone;
@@ -308,6 +309,14 @@ export function NotebookTree({
                     ]
                   : [];
               }),
+              ...(['markdown', 'html'] as const).map((format) => ({
+                label: `Exportar a ${format === 'html' ? 'HTML' : 'Markdown'}…`,
+                run: () =>
+                  void exportNotes({
+                    format,
+                    scope: { kind: 'notebook', id: book.id },
+                  }),
+              })),
               {
                 label: 'Importar archivos aquí…',
                 run: () => void importNotes('files', book.id),

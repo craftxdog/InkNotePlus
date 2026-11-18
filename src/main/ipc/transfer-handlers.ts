@@ -6,11 +6,13 @@ import type { Preferences } from '../../shared/preferences';
 import {
   TRANSFER_CHANNELS,
   exportNoteSchema,
+  exportNotesSchema,
   importNotesSchema,
 } from '../../shared/transfer';
 import { z } from '../../shared/validation';
 import type { BackupService } from '../backup-service';
 import {
+  exportCollection,
   exportLibraryMarkdown,
   exportMarkdown,
   exportName,
@@ -181,6 +183,27 @@ export function registerTransferHandlers(options: {
           : null,
       );
     }),
+  );
+  handle(
+    TRANSFER_CHANNELS.exportNotes,
+    exportNotesSchema,
+    (window, { format, scope }) =>
+      exportOnce(async () => {
+        const directory = await chooseDirectory(
+          window,
+          format === 'html' ? 'Exportar como HTML' : 'Exportar como Markdown',
+        );
+        if (!directory) return success(null);
+        const { renderNoteExport } = await import('../render-note-export');
+        return success(
+          await exportCollection(library, directory, images, {
+            format,
+            scope,
+            renderHtml: (note) =>
+              renderNoteExport(note, options.getPreferences(), images),
+          }),
+        );
+      }),
   );
   handle(
     TRANSFER_CHANNELS.importNotes,

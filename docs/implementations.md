@@ -9,17 +9,17 @@
 InkNote tiene una base sólida y todas sus pruebas pasan, pero esas pruebas no cubrían
 varias diferencias con Inkdrop. La auditoría registró **23 funciones implementadas de
 forma incorrecta o incompleta** y **31 funciones sin implementar**. Ya están resueltos
-INC-01 a INC-08, INC-11, INC-12, INC-13, INC-15, INC-16, FAL-02, FAL-03, FAL-04, FAL-05, FAL-08, FAL-09, FAL-10, FAL-11 y FAL-21, así que quedan **10 incorrectas y 22 faltantes**. FAL-01 está resuelto en parte y sigue contado como pendiente.
+INC-01 a INC-08, INC-11, INC-12, INC-13, INC-14, INC-15, INC-16, INC-19, INC-23, FAL-02, FAL-03, FAL-04, FAL-05, FAL-08, FAL-09, FAL-10, FAL-11 y FAL-21, así que quedan **7 incorrectas y 22 faltantes**. FAL-01 está resuelto en parte y sigue contado como pendiente.
 
 | Prioridad     | Significado                                       | Incorrectas | Faltantes |  Total |
 | ------------- | ------------------------------------------------- | ----------: | --------: | -----: |
 | P0            | Riesgo para el uso diario o los datos (resueltos) |           0 |         0 |      0 |
 | P1            | Función básica que el usuario espera              |           0 |         3 |      3 |
-| P2            | Paridad importante                                |           7 |        10 |     17 |
-| P3            | Ecosistema, integraciones y mejoras               |           3 |         9 |     12 |
-| **Pendiente** |                                                   |      **10** |    **22** | **32** |
+| P2            | Paridad importante                                |           5 |        10 |     15 |
+| P3            | Ecosistema, integraciones y mejoras               |           2 |         9 |     11 |
+| **Pendiente** |                                                   |       **7** |    **22** | **29** |
 
-El siguiente bloque recomendado es completar los datos: **INC-19** (exportación), **INC-14** (límites) e **INC-23** (modelo de datos).
+El siguiente bloque recomendado es la integración con el escritorio: **FAL-06** (actualización automática), **FAL-07** (enlaces externos) e **INC-17** (menú de la app).
 
 ## Resultados de las pruebas
 
@@ -213,6 +213,8 @@ Estas tres decisiones cambian el alcance del trabajo, así que conviene resolver
 
 #### INC-14. Los límites son más estrictos que en Inkdrop
 
+**Estado: resuelto el 2026-11-18.** Etiquetas de hasta 64 caracteres y 1000 por nota, e imágenes de hasta 10 MB en PNG, JPEG, GIF, WebP, SVG saneado y HEIC o HEIF. HEIC se convierte a JPEG y sólo está disponible en macOS.
+
 - **Evidencia (Código):**
 
 | Límite               | InkNote              | Inkdrop                         | Ubicación                                                |
@@ -254,6 +256,8 @@ Estas tres decisiones cambian el alcance del trabajo, así que conviene resolver
 
 #### INC-19. La exportación no cubre todos los casos
 
+**Estado: resuelto el 2026-11-18.** Se exportan notebooks, selecciones y toda la biblioteca en Markdown o HTML. El selector nativo de carpetas no se pulsó de forma automatizada.
+
 - **Evidencia (Código):** [transfer.ts:11](../src/shared/transfer.ts:11) solo define exportar una nota o toda la biblioteca, y [markdown-export.ts:103](../src/main/markdown-export.ts:103) exporta la biblioteca solo en Markdown.
 - **Inkdrop:** [nota, notebook o todas las notas, en Markdown o HTML](https://www.inkdrop.app/features).
 - **Cambio:** añadir exportación por notebook y por selección, y HTML para conjuntos de notas.
@@ -277,6 +281,8 @@ Estas tres decisiones cambian el alcance del trabajo, así que conviene resolver
 - **Cambio:** probarlo con un teclado físico y, si falla, comparar también `event.code`.
 
 #### INC-23. El modelo de datos no es intercambiable con Inkdrop
+
+**Estado: resuelto para la importación el 2026-11-18.** Un adaptador lee el modelo documentado de Inkdrop e importa sus respaldos. No se probó con un respaldo real de Inkdrop. La conversión de salida se hará con FAL-14 y FAL-16, que son quienes la necesitan.
 
 - **Evidencia (Código):** las diferencias afectan a la importación, la API y la sincronización.
 
@@ -343,7 +349,7 @@ La ausencia de estas funciones se comprobó en el código fuente.
 
 ## Orden de trabajo recomendado
 
-1. **Datos:** INC-19, INC-14, INC-23 y Apple Notes en FAL-01.
+1. **Datos:** Apple Notes en FAL-01.
 2. **Integración con el escritorio:** INC-09, INC-10, INC-17, FAL-06, FAL-07, FAL-12, FAL-13 y FAL-20.
 3. **Plataforma:** FAL-14, FAL-15, FAL-18, FAL-19, FAL-16 y FAL-17, según D-2 y D-3.
 4. **Ecosistema:** el resto de tareas P3.

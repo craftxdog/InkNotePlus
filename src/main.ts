@@ -260,7 +260,16 @@ function initializeCoreModules(): Configuration {
             filters: [
               {
                 name: 'Imágenes',
-                extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'],
+                extensions: [
+                  'png',
+                  'jpg',
+                  'jpeg',
+                  'gif',
+                  'webp',
+                  'svg',
+                  'heic',
+                  'heif',
+                ],
               },
             ],
           });

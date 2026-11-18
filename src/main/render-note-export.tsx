@@ -166,7 +166,7 @@ export async function renderNoteExport(
           images.set(
             url,
             bytes
-              ? `data:image/${extension === 'jpg' ? 'jpeg' : extension};base64,${bytes.toString('base64')}`
+              ? `data:image/${extension === 'jpg' ? 'jpeg' : extension === 'svg' ? 'svg+xml' : extension};base64,${bytes.toString('base64')}`
               : null,
           );
         }

@@ -225,6 +225,87 @@ describe('Evernote exports', () => {
   });
 });
 
+describe('Inkdrop backups', () => {
+  const doc = (name: string, value: unknown) =>
+    write(`Respaldo/data/${name}.json`, JSON.stringify(value));
+  async function backup() {
+    await write('Respaldo/state/x.json', '{}');
+    await doc('book1', {
+      _id: 'book:padre',
+      name: 'Padre',
+      parentBookId: null,
+    });
+    await doc('book2', {
+      _id: 'book:hijo',
+      name: 'Hijo',
+      parentBookId: 'book:padre',
+    });
+    await doc('tag1', { _id: 'tag:t1', name: 'trabajo', color: 'red' });
+    await doc('file1', {
+      _id: 'file:f1',
+      name: 'a.png',
+      contentType: 'image/png',
+      _attachments: { index: { data: image.toString('base64') } },
+    });
+    await doc('note1', {
+      _id: 'note:n1',
+      title: 'Primera',
+      body: '![x](inkdrop://file:f1) [otra](inkdrop://note/n2)',
+      bookId: 'book:hijo',
+      tags: ['tag:t1', 'tag:perdida'],
+      status: 'onHold',
+      pinned: true,
+      createdAt: 1704164645000,
+      updatedAt: 1706933106000,
+    });
+    await doc('note2', {
+      _id: 'note:n2',
+      title: 'Segunda',
+      body: 'b',
+      bookId: 'book:padre',
+    });
+    await doc('note3', {
+      _id: 'note:n3',
+      title: 'Borrada',
+      body: 'c',
+      bookId: 'trash',
+    });
+    await doc('note4', {
+      _id: 'note:n4',
+      title: 'Plantilla',
+      body: 'd',
+      bookId: 'template',
+    });
+    return path.join(root, 'Respaldo');
+  }
+  it('restores the hierarchy, metadata, attachments and internal links', async () => {
+    const { notes, images } = await read([await backup()]);
+    expect(notes.map(({ title }) => title).sort()).toEqual([
+      'Plantilla',
+      'Primera',
+      'Segunda',
+    ]);
+    const first = notes.find(({ title }) => title === 'Primera')!;
+    const second = notes.find(({ title }) => title === 'Segunda')!;
+    expect(first).toMatchObject({
+      folders: ['Padre', 'Hijo'],
+      tags: ['trabajo'],
+      status: 'onhold',
+      isPinned: true,
+      createdAt: '2024-01-02T03:04:05.000Z',
+      updatedAt: '2024-02-03T04:05:06.000Z',
+    });
+    expect(first.body).toBe(
+      `![x](${managed}) [otra](inknote://note/${second.id})`,
+    );
+    expect(images).toBe(1);
+    expect(notes.find(({ title }) => title === 'Plantilla')).toMatchObject({
+      isTemplate: true,
+      folders: [],
+    });
+  });
+});
+
 describe('saving imported notes', () => {
   const database = openDatabase(':memory:');
   const repository = new SqliteNoteRepository(database);
@@ -274,8 +355,8 @@ describe('saving imported notes', () => {
             ' uno ',
             'uno',
             '',
-            'x'.repeat(50),
-            ...Array.from({ length: 40 }, (_, i) => `t${i}`),
+            'x'.repeat(80),
+            ...Array.from({ length: 1200 }, (_, i) => `t${i}`),
           ],
         }),
       ],
@@ -285,8 +366,26 @@ describe('saving imported notes', () => {
     expect(saved.createdAt).toBe('2020-01-01T00:00:00.000Z');
     expect(saved.updatedAt).toBe('2021-01-01T00:00:00.000Z');
     expect(saved.metadata?.tags[0]).toBe('uno');
-    expect(saved.metadata?.tags).toHaveLength(32);
-    expect(saved.metadata?.tags.every((tag) => tag.length <= 40)).toBe(true);
+    expect(saved.metadata?.tags).toHaveLength(1000);
+    expect(saved.metadata?.tags[1]).toHaveLength(64);
+  });
+  it('keeps the identity and state of imported Inkdrop notes', () => {
+    const id = '5a5115f8-747f-416d-82d5-d9c12e34d323';
+    transfer.importNotes(
+      [
+        note('Fija', [], {
+          id,
+          status: 'onhold',
+          isPinned: true,
+          isTemplate: true,
+        }),
+      ],
+      null,
+    );
+    expect(repository.findById(id)).toMatchObject({
+      isPinned: true,
+      metadata: { status: 'onhold', isTemplate: true },
+    });
   });
   it('saves nothing if the target notebook no longer exists', () => {
     expect(() =>

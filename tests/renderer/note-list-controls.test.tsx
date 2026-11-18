@@ -222,7 +222,7 @@ describe('bulk actions', () => {
     });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Aplicar' }));
     expect((await within(dialog).findByRole('alert')).textContent).toContain(
-      '32 etiquetas',
+      '1000 etiquetas',
     );
   });
 });

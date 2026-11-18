@@ -3,6 +3,8 @@ import type { AppErrorCode, Result } from '../../shared/ipc';
 import type { NoteStatus } from '../../shared/note-metadata';
 import {
   tagColorSchema,
+  maxNoteTags,
+  maxTagLength,
   tagNameSchema,
   type TagColor,
 } from '../../shared/tags';
@@ -95,7 +97,7 @@ export function LibraryActionDialog({
     ),
   ];
   const validTags =
-    addedTags.length <= 32 &&
+    addedTags.length <= maxNoteTags &&
     addedTags.every((tag) => tagNameSchema.safeParse(tag).success);
   const currentTags = [
     ...new Set(selectedNotes.flatMap((note) => note.metadata?.tags ?? [])),
@@ -113,6 +115,7 @@ export function LibraryActionDialog({
     let result: Result<unknown>;
     switch (request.kind) {
       case 'import-result':
+      case 'export-result':
         close();
         return;
       case 'restore':
@@ -312,7 +315,7 @@ export function LibraryActionDialog({
                 autoFocus
                 type="text"
                 value={name}
-                maxLength={40}
+                maxLength={maxTagLength}
                 required
                 disabled={busy}
                 onChange={(event) => setName(event.target.value)}
@@ -344,7 +347,7 @@ export function LibraryActionDialog({
             {error === 'conflict' && request.kind === 'edit-tag'
               ? 'Ya existe una etiqueta con ese nombre.'
               : error === 'conflict' && request.kind === 'tag-notes'
-                ? 'Alguna nota superaría el límite de 32 etiquetas.'
+                ? `Alguna nota superaría el límite de ${maxNoteTags} etiquetas.`
                 : error === 'not_found'
                   ? 'El elemento ya no está disponible.'
                   : 'No se pudo completar la operación. Revisa los cambios pendientes.'}
@@ -389,6 +392,25 @@ function describeAction(request: LibraryDialogRequest, notes: string) {
         message: `Puedes recuperar ${notes} desde Papelera.`,
         danger: false,
       };
+    case 'export-result': {
+      const summary = request.summary;
+      if (!summary)
+        return {
+          title: 'No se pudo exportar',
+          confirm: 'Aceptar',
+          message: 'Comprueba la carpeta de destino e inténtalo de nuevo.',
+          danger: false,
+        };
+      const missing = summary.missingAttachments
+        ? ` · ${summary.missingAttachments} adjuntos sin recuperar`
+        : '';
+      return {
+        title: 'Exportación completada',
+        confirm: 'Aceptar',
+        message: `${summary.notes} ${summary.notes === 1 ? 'nota exportada' : 'notas exportadas'} en ${summary.path}${missing}`,
+        danger: false,
+      };
+    }
     case 'import-result': {
       const summary = request.summary;
       if (!summary)

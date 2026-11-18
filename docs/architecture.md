@@ -602,8 +602,10 @@ Se incluye el ejemplo Daily Report publicado en la guía, adaptado sin notebook
 fijo; el resto de la biblioteca privada de plantillas de Inkdrop no se inventa.
 Personalizar el ejemplo crea una plantilla propia y conserva el original.
 
-El editor importa, pega o recibe por arrastre PNG, JPEG, GIF y WebP. Se limitan
-a 5 MB y 16 megapíxeles antes de decodificar; se validan en main y se almacenan
+El editor importa, pega o recibe por arrastre PNG, JPEG, GIF, WebP, SVG, HEIC y
+HEIF. Los SVG se reconstruyen sin contenido activo y HEIC se convierte a JPEG con
+`sips`, por lo que sólo se admite en macOS. Se limitan a 10 MiB y 16 megapíxeles
+antes de decodificar; se validan en main y se almacenan
 por hash bajo `<userData>/images`. Markdown sólo renderiza estas URLs gestionadas;
 las imágenes remotas siguen sin solicitarse. Los archivos se guardan junto al
 perfil y todavía no tienen transporte de sincronización remota.

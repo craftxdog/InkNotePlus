@@ -37,6 +37,11 @@
   la restauración.
 - Se importan archivos y carpetas Markdown o HTML con sus imágenes, exportaciones
   de Evernote (.enex) y las de Notion y Bear. Las subcarpetas crean notebooks.
+- También se importan respaldos de Inkdrop con su jerarquía, etiquetas, estados y
+  enlaces internos.
+- Notebooks y selecciones de notas se exportan a Markdown o HTML.
+- Las imágenes admiten hasta 10 MB y los formatos SVG, HEIC y HEIF. Las etiquetas
+  llegan a 64 caracteres y cada nota admite hasta 1000.
 - Los bloques de código ofrecen botón de copiar, icono de su familia de lenguaje
   y una preferencia para numerar siempre sus líneas.
 
@@ -61,7 +66,7 @@
 
 ### Pruebas
 
-- 717 pruebas automatizadas, lint y TypeScript aprobados.
+- 766 pruebas automatizadas, lint y TypeScript aprobados.
 - QA nativo local completo en macOS Apple Silicon: edición, autoguardado,
   sincronización, respaldos, HTML/PDF, papelera, temas y búsqueda con 3.000 notas.
 - Doce lenguajes comprobados en siete temas; 972 mediciones de contraste por

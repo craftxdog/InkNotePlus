@@ -19,7 +19,7 @@ import {
   type NoteSort,
   type Result,
 } from '../../shared/ipc';
-import type { UpdateTagInput } from '../../shared/tags';
+import { maxNoteTags, type UpdateTagInput } from '../../shared/tags';
 import type {
   MoveNotebookInput,
   NoteMetadata,
@@ -405,6 +405,6 @@ export function metadataForNewNote(
   // A new note must satisfy the active filter or it would vanish at once.
   return {
     ...metadata,
-    tags: [...new Set([...metadata.tags, ...tagFilter])].slice(0, 32),
+    tags: [...new Set([...metadata.tags, ...tagFilter])].slice(0, maxNoteTags),
   };
 }

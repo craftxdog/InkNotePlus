@@ -302,6 +302,10 @@ export function createWorkspaceStore(
           if (!(await get().flushDrafts())) return failure('conflict');
           return api.transfer.exportLibrary();
         },
+        async exportNotes(input) {
+          if (!(await get().flushDrafts())) return failure('conflict');
+          return api.transfer.exportNotes(input);
+        },
         async importNotes(input) {
           if (!(await get().flushDrafts())) return failure('conflict');
           const result = await api.transfer.importNotes(input);
@@ -504,6 +508,16 @@ export function createWorkspaceStore(
         });
         if (result.ok) await refreshNotes(false, true);
         return result;
+      },
+      async exportNotes(input) {
+        const result = await get().transfer.exportNotes(input);
+        if (!result.ok || result.data)
+          set({
+            libraryDialog: {
+              kind: 'export-result',
+              summary: result.ok ? result.data : null,
+            },
+          });
       },
       async importNotes(kind, notebookId = null) {
         const result = await get().transfer.importNotes({ kind, notebookId });

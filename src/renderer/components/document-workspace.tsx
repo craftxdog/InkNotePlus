@@ -74,6 +74,7 @@ import { NoteOutlinePanel } from './note-outline-panel';
 import { PreviewFindBar } from './preview-find-bar';
 import { jumpToNoteLine, previewLineAtTop } from '../editor/note-navigation';
 import type { ExportNoteInput } from '../../shared/transfer';
+import { maxNoteTags, maxTagLength } from '../../shared/tags';
 
 const exportActions = [
   { format: 'markdown', label: 'Exportar Markdown…', icon: FileText },
@@ -765,7 +766,11 @@ function EditorMetadata({ disabled }: { disabled: boolean }) {
   const [tag, setTag] = useState('');
   const commitTag = () => {
     const value = tag.trim();
-    if (value && !metadata.tags.includes(value) && metadata.tags.length < 32)
+    if (
+      value &&
+      !metadata.tags.includes(value) &&
+      metadata.tags.length < maxNoteTags
+    )
       update({ metadata: { ...metadata, tags: [...metadata.tags, value] } });
     setTag('');
   };
@@ -809,8 +814,8 @@ function EditorMetadata({ disabled }: { disabled: boolean }) {
         <input
           aria-label="Añadir etiqueta"
           placeholder="Añadir etiquetas"
-          disabled={disabled || metadata.tags.length >= 32}
-          maxLength={40}
+          disabled={disabled || metadata.tags.length >= maxNoteTags}
+          maxLength={maxTagLength}
           value={tag}
           onChange={(event) => setTag(event.target.value)}
           onBlur={commitTag}

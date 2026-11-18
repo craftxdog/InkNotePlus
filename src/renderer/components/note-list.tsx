@@ -98,6 +98,7 @@ export function NoteList({
   const toggleTagFilter = useWorkspace((state) => state.toggleTagFilter);
   const setTagFilter = useWorkspace((state) => state.setTagFilter);
   const duplicate = useWorkspace((state) => state.duplicateNotes);
+  const exportNotes = useWorkspace((state) => state.exportNotes);
   const query = useWorkspace((state) => state.searchQuery);
   const terms = searchHighlightTerms(query);
   const customize = useWorkspace((state) => state.customizeTemplate);
@@ -362,6 +363,14 @@ export function NoteList({
                         : `Duplicar ${menu.ids.length} notas`,
                     run: () => void duplicate(menu.ids),
                   },
+                  ...(['markdown', 'html'] as const).map((format) => ({
+                    label: `Exportar a ${format === 'html' ? 'HTML' : 'Markdown'}…`,
+                    run: () =>
+                      void exportNotes({
+                        format,
+                        scope: { kind: 'notes', ids: [...menu.ids] },
+                      }),
+                  })),
                   {
                     label: 'Mover a papelera',
                     run: () => openNoteAction('trash', menu.ids),

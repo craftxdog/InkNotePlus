@@ -17,8 +17,29 @@ describe('documented Inkdrop search syntax', () => {
   });
   it('requires an inclusion, bounds complexity and reports incomplete phrases', () => {
     expect(parseNoteSearch('-book:Backend').valid).toBe(false);
-    expect(parseNoteSearch('title:"unclosed').valid).toBe(false);
     expect(parseNoteSearch('tag:work').valid).toBe(true);
     expect(parseNoteSearch('tag:work '.repeat(40)).valid).toBe(false);
+  });
+  it('ignores a standalone hyphen instead of discarding the whole query', () => {
+    expect(parseNoteSearch('foo - bar')).toEqual({
+      valid: true,
+      terms: [
+        { field: 'text', value: 'foo', exclude: false },
+        { field: 'text', value: 'bar', exclude: false },
+      ],
+    });
+    expect(parseNoteSearch('foo -').valid).toBe(true);
+    expect(parseNoteSearch('-').valid).toBe(false);
+  });
+  it('treats an open quote as a phrase while the user is still typing', () => {
+    expect(parseNoteSearch('title:"unclosed phrase')).toEqual({
+      valid: true,
+      terms: [{ field: 'title', value: 'unclosed phrase', exclude: false }],
+    });
+    expect(parseNoteSearch('foo "').terms).toEqual([
+      { field: 'text', value: 'foo', exclude: false },
+    ]);
+    expect(parseNoteSearch('"').valid).toBe(false);
+    expect(parseNoteSearch('"closed"suffix').valid).toBe(false);
   });
 });

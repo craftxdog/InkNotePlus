@@ -25,10 +25,14 @@
   macOS, en lugar de cambiar de nota.
 - Abrir InkNote de nuevo con el mismo perfil activa la ventana existente, sin
   iniciar un segundo proceso sobre la misma base de datos.
+- Las notas completadas y descartadas se ocultan en Todas las notas, etiquetas y
+  notebooks, y sus contadores coinciden. La búsqueda las sigue encontrando.
+- Un guion suelto o una comilla sin cerrar ya no vacían los resultados de búsqueda.
+- Las notas al pie del preview llevan a su definición y permiten volver al texto.
 
 ### Pruebas
 
-- 463 pruebas automatizadas, lint y TypeScript aprobados.
+- 474 pruebas automatizadas, lint y TypeScript aprobados.
 - QA nativo local completo en macOS Apple Silicon: edición, autoguardado,
   sincronización, respaldos, HTML/PDF, papelera, temas y búsqueda con 3.000 notas.
 - Doce lenguajes comprobados en siete temas; 972 mediciones de contraste por

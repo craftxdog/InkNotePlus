@@ -559,9 +559,9 @@ archivos JavaScript descargados del catálogo de temas.
 ## Organización, búsqueda, plantillas e imágenes
 
 Las notas nuevas empiezan en `none` (Sin estado); los estados ya guardados se
-conservan. Dentro de un notebook se ocultan `completed` y `dropped`, salvo que
-una consulta incluya explícitamente un estado. Los estados siguen accesibles
-en la biblioteca. El menú contextual permite crear subnotebooks, abrir Detail
+conservan. Todas las notas, los notebooks y las etiquetas ocultan `completed` y
+`dropped`, también en sus contadores. Las búsquedas sí las encuentran y cada
+estado sigue accesible en la biblioteca. El menú contextual permite crear subnotebooks, abrir Detail
 y cambiar iconos. Las notas se fijan desde el menú contextual o con P cuando
 la fila tiene foco; Mod-J abre las acciones del editor.
 

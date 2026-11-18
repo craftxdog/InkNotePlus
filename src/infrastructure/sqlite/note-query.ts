@@ -6,6 +6,9 @@ export const subtreeSql = `WITH RECURSIVE subtree(id) AS (
   UNION SELECT b.id FROM notebooks b JOIN subtree p ON b.parent_id = p.id
 ) SELECT id FROM subtree`;
 
+export const unfinishedSql = (table: string) =>
+  `json_extract(${table}.metadata_json,'$.status') NOT IN ('completed','dropped')`;
+
 export function noteFilter(input: ListNotesInput): {
   sql: string;
   params: (string | number)[];
@@ -41,9 +44,7 @@ export function noteFilter(input: ListNotesInput): {
     params.push(input.status);
   }
   if (input.excludeFinished && !input.status)
-    clauses.push(
-      "json_extract(notes.metadata_json,'$.status') NOT IN ('completed','dropped')",
-    );
+    clauses.push(unfinishedSql('notes'));
   if (input.templates)
     clauses.push("json_extract(notes.metadata_json,'$.isTemplate') = 1");
   if (input.tag) {

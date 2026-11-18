@@ -8,18 +8,18 @@
 
 InkNote tiene una base sólida y todas sus pruebas pasan, pero esas pruebas no cubrían
 varias diferencias con Inkdrop. La auditoría registró **23 funciones implementadas de
-forma incorrecta o incompleta** y **31 funciones sin implementar**. Los dos fallos P0
-ya están corregidos, así que quedan **21 incorrectas y 31 faltantes**.
+forma incorrecta o incompleta** y **31 funciones sin implementar**. Ya están corregidos
+INC-01, INC-02, INC-03, INC-05 e INC-06, así que quedan **18 incorrectas y 31 faltantes**.
 
 | Prioridad     | Significado                                       | Incorrectas | Faltantes |  Total |
 | ------------- | ------------------------------------------------- | ----------: | --------: | -----: |
 | P0            | Riesgo para el uso diario o los datos (resueltos) |           0 |         0 |      0 |
-| P1            | Función básica que el usuario espera              |           6 |         7 |     13 |
+| P1            | Función básica que el usuario espera              |           3 |         7 |     10 |
 | P2            | Paridad importante                                |          12 |        15 |     27 |
 | P3            | Ecosistema, integraciones y mejoras               |           3 |         9 |     12 |
-| **Pendiente** |                                                   |      **21** |    **31** | **52** |
+| **Pendiente** |                                                   |      **18** |    **31** | **49** |
 
-El siguiente bloque recomendado es **INC-03**, **INC-05** e **INC-06**.
+El siguiente bloque recomendado es la organización diaria: **FAL-03**, **FAL-04**, **INC-04** y **FAL-05**.
 
 ## Resultados de las pruebas
 
@@ -101,6 +101,8 @@ Estas tres decisiones cambian el alcance del trabajo, así que conviene resolver
 
 #### INC-03. Las notas completadas y descartadas aparecen en Todas las notas y en etiquetas
 
+**Estado: resuelto el 2026-11-18.** Todas las notas, las etiquetas, los notebooks y sus contadores ocultan esas notas, y la búsqueda las sigue encontrando. Comprobado en la app empaquetada.
+
 - **Evidencia (Código):** [library-actions.ts:71](../src/renderer/state/library-actions.ts:71) y [library-actions.ts:88](../src/renderer/state/library-actions.ts:88) no aplican `excludeFinished`. Solo lo hace la vista de notebook.
 - **Inkdrop:** las [oculta en All Notes, notebooks y etiquetas](https://docs.inkdrop.app/start-guide/how-to-organize-notes). La búsqueda por palabras clave sí las encuentra.
 - **Cambio:** añadir `excludeFinished: true` a las vistas `all` y `tag`, y alinear los contadores.
@@ -115,12 +117,16 @@ Estas tres decisiones cambian el alcance del trabajo, así que conviene resolver
 
 #### INC-05. Un guion suelto o unas comillas sin cerrar vacían la búsqueda
 
+**Estado: resuelto el 2026-11-18.** El guion suelto se ignora y una comilla abierta busca la frase escrita hasta ese punto. Comprobado en la app empaquetada.
+
 - **Evidencia (Sonda):** `foo - bar` devuelve 0 resultados aunque existe una nota con «foo - bar baz». `"foo` también devuelve 0 mientras se escribe.
 - **Causa:** [note-search.ts:48](../src/shared/note-search.ts:48) invalida toda la consulta si un término queda vacío, y [note-search.ts:42](../src/shared/note-search.ts:42) rechaza las comillas sin cerrar.
 - **Cambio:** tratar `-` aislado como separador ignorable y una comilla sin cerrar como frase hasta el final del texto.
 - **Aceptación:** ambas consultas devuelven resultados. `-tag:x` por sí solo sigue sin ser válido, como indica Inkdrop.
 
 #### INC-06. Las notas al pie no navegan
+
+**Estado: resuelto el 2026-11-18.** La referencia y el enlace de vuelta se desplazan dentro del preview, también con etiquetas acentuadas. Comprobado con clics reales en la app empaquetada.
 
 - **Evidencia (Sonda):** al pulsar la referencia, el preview no se desplaza.
 - **Causa:** [markdown-preview.tsx:143](../src/renderer/editor/markdown-preview.tsx:143) envía los enlaces `#user-content-fn-1` al manejador de enlaces externos.
@@ -321,13 +327,12 @@ La ausencia de estas funciones se comprobó en el código fuente.
 
 ## Orden de trabajo recomendado
 
-1. **Estabilidad:** INC-03, INC-05 e INC-06.
-2. **Organización diaria:** FAL-03, FAL-04, INC-04, FAL-05, INC-12, INC-11 e INC-13.
-3. **Escritura y lectura:** INC-07, INC-08, FAL-08, FAL-09, FAL-10, FAL-11, INC-15, INC-16 y FAL-21.
-4. **Datos:** FAL-02, FAL-01, INC-19, INC-14 e INC-23.
-5. **Integración con el escritorio:** INC-09, INC-10, INC-17, FAL-06, FAL-07, FAL-12, FAL-13 y FAL-20.
-6. **Plataforma:** FAL-14, FAL-15, FAL-18, FAL-19, FAL-16 y FAL-17, según D-2 y D-3.
-7. **Ecosistema:** el resto de tareas P3.
+1. **Organización diaria:** FAL-03, FAL-04, INC-04, FAL-05, INC-12, INC-11 e INC-13.
+2. **Escritura y lectura:** INC-07, INC-08, FAL-08, FAL-09, FAL-10, FAL-11, INC-15, INC-16 y FAL-21.
+3. **Datos:** FAL-02, FAL-01, INC-19, INC-14 e INC-23.
+4. **Integración con el escritorio:** INC-09, INC-10, INC-17, FAL-06, FAL-07, FAL-12, FAL-13 y FAL-20.
+5. **Plataforma:** FAL-14, FAL-15, FAL-18, FAL-19, FAL-16 y FAL-17, según D-2 y D-3.
+6. **Ecosistema:** el resto de tareas P3.
 
 ## Funciones verificadas sin diferencias relevantes
 

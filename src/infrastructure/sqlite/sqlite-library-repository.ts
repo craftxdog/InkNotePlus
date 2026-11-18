@@ -9,7 +9,7 @@ import {
   type LibrarySnapshot,
   type Notebook,
 } from '../../shared/library';
-import { noteFilter, subtreeSql } from './note-query';
+import { noteFilter, subtreeSql, unfinishedSql } from './note-query';
 import { compileNoteSearch } from './search-query';
 import type { SetNotebookIconInput } from '../../shared/notebook-icons';
 import { defaultNoteMetadata } from '../../shared/note-metadata';
@@ -59,8 +59,8 @@ export class SqliteLibraryRepository {
         UNION SELECT d.ancestor,b.id FROM descendants d JOIN notebooks b ON b.parent_id=d.id
       )
       SELECT b.id,b.name,b.parent_id AS parentId,b.icon,
-        (SELECT COUNT(*) FROM notes n WHERE n.deleted_at IS NULL AND json_extract(n.metadata_json,'$.notebookId')=b.id) AS count,
-        (SELECT COUNT(*) FROM notes n WHERE n.deleted_at IS NULL AND json_extract(n.metadata_json,'$.notebookId') IN (SELECT id FROM descendants WHERE ancestor=b.id)) AS descendantCount
+        (SELECT COUNT(*) FROM notes n WHERE n.deleted_at IS NULL AND ${unfinishedSql('n')} AND json_extract(n.metadata_json,'$.notebookId')=b.id) AS count,
+        (SELECT COUNT(*) FROM notes n WHERE n.deleted_at IS NULL AND ${unfinishedSql('n')} AND json_extract(n.metadata_json,'$.notebookId') IN (SELECT id FROM descendants WHERE ancestor=b.id)) AS descendantCount
       FROM notebooks b ORDER BY b.name COLLATE NOCASE
     `)
       .all()
@@ -68,18 +68,22 @@ export class SqliteLibraryRepository {
     const tagRows = this.database
       .prepare(`
       WITH counts AS (
-        SELECT j.value AS name, COUNT(DISTINCT notes.id) AS count
+        SELECT j.value AS name, COUNT(DISTINCT notes.id) AS used,
+          COUNT(DISTINCT CASE WHEN ${unfinishedSql('notes')} THEN notes.id END) AS count
         FROM notes, json_each(notes.metadata_json,'$.tags') j
         WHERE ${active.sql} GROUP BY j.value
       )
-      SELECT tags.name, tags.color, coalesce(counts.count, 0) AS count
+      SELECT tags.name, tags.color, coalesce(counts.count, 0) AS count,
+        coalesce(counts.used, 0) AS used
       FROM tags LEFT JOIN counts ON counts.name = tags.name
       ORDER BY tags.name COLLATE NOCASE
     `)
       .all(...active.params);
     const tags = tagRows
-      .filter(({ count }) => !input.scopeId || Number(count) > 0)
-      .map(({ color, ...tag }) => (color === null ? tag : { ...tag, color }));
+      .filter(({ used }) => !input.scopeId || Number(used) > 0)
+      .map(({ color, used: _used, ...tag }) =>
+        color === null ? tag : { ...tag, color },
+      );
     const tagColors = tagRows
       .filter(({ color }) => color !== null)
       .map(({ name, color }) => ({ name, color }));
@@ -102,10 +106,14 @@ export class SqliteLibraryRepository {
       tags,
       tagColors,
       statuses,
-      total: this.count(scope),
+      total: this.count({ ...scope, excludeFinished: true }),
       trash: this.count({ trashed: true }),
       templates: this.count({ ...scope, templates: true }),
-      unfiled: this.count({ ...scope, notebookId: null }),
+      unfiled: this.count({
+        ...scope,
+        notebookId: null,
+        excludeFinished: true,
+      }),
       matching: this.count(matchingFilter, input.query),
     });
   }

@@ -134,15 +134,29 @@ function PreviewCheckbox() {
     />
   );
 }
-function PreviewLink({ href, children }: ComponentProps<'a'>) {
+function PreviewLink({
+  node: _node,
+  href,
+  children,
+  ...props
+}: ComponentProps<'a'> & ExtraProps) {
   const context = useContext(PreviewContext)!;
   return (
     <a
+      {...props}
       href={href}
       title={href}
       onClick={(event) => {
         event.preventDefault();
-        if (href && linkedNoteId(href)) void context.openNoteLink(href);
+        if (href?.startsWith('#')) {
+          const id = href.slice(1);
+          const anchors = event.currentTarget
+            .closest('.mde-preview')
+            ?.querySelectorAll('[id]');
+          [...(anchors ?? [])]
+            .find((anchor) => anchor.id === id)
+            ?.scrollIntoView({ block: 'center' });
+        } else if (href && linkedNoteId(href)) void context.openNoteLink(href);
         else if (href) void context.openLink(href);
       }}
     >

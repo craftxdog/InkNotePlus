@@ -34,20 +34,21 @@ export function matchesNavigation(
   };
   if (preferences.notebookScopeId && !belongsTo(preferences.notebookScopeId))
     return false;
+  const unfinished = !['completed', 'dropped'].includes(metadata.status);
   switch (navigation.type) {
     case 'all':
-      return true;
+      return unfinished;
     case 'trash':
       return false;
     case 'templates':
       return metadata.isTemplate;
     case 'tag':
-      return metadata.tags.includes(navigation.name);
+      return unfinished && metadata.tags.includes(navigation.name);
     case 'status':
       return metadata.status === navigation.status;
     case 'notebook':
       return (
-        !['completed', 'dropped'].includes(metadata.status) &&
+        unfinished &&
         (navigation.id === 'unfiled'
           ? metadata.notebookId === null
           : preferences.expandedNotebookIds.includes(navigation.id)
@@ -69,7 +70,7 @@ export function navigationFilter(
   };
   switch (navigation.type) {
     case 'all':
-      return common;
+      return { ...common, excludeFinished: true };
     case 'templates':
       return { ...common, templates: true };
     case 'trash':
@@ -86,7 +87,7 @@ export function navigationFilter(
     case 'status':
       return { ...common, status: navigation.status };
     case 'tag':
-      return { ...common, tag: navigation.name };
+      return { ...common, excludeFinished: true, tag: navigation.name };
   }
 }
 

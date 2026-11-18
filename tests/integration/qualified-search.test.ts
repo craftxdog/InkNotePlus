@@ -87,3 +87,53 @@ it('matches qualified phrases and exclusions with identical list and count filte
   expect(notes.search({ query: '"closure functions" -tag:work' })).toEqual([]);
   expect(notes.search({ query: 'title:"x\\" OR 1=1 --"' })).toEqual([]);
 });
+
+it('hides finished notes from browsing counts while keyword search still finds them', () => {
+  const notes = new SqliteNoteRepository(database);
+  const library = new SqliteLibraryRepository(database);
+  const book = library.createNotebook({ name: 'Work' });
+  const metadata = { ...defaultNoteMetadata, notebookId: book.id };
+  notes.create({
+    title: 'Working',
+    body: 'shared',
+    metadata: { ...metadata, status: 'active', tags: ['work'] },
+  });
+  notes.create({
+    title: 'Done',
+    body: 'shared',
+    metadata: { ...metadata, status: 'completed', tags: ['work', 'archived'] },
+  });
+  notes.create({
+    title: 'Abandoned',
+    body: 'shared',
+    metadata: { ...defaultNoteMetadata, status: 'dropped' },
+  });
+
+  const snapshot = library.getSnapshot();
+  expect(snapshot.total).toBe(1);
+  expect(snapshot.unfiled).toBe(0);
+  expect(snapshot.notebooks[0]).toMatchObject({ count: 1, descendantCount: 1 });
+  expect(snapshot.tags.find(({ name }) => name === 'work')?.count).toBe(1);
+  expect(snapshot.statuses).toMatchObject({ completed: 1, dropped: 1 });
+
+  expect(
+    library
+      .getSnapshot({ scopeId: book.id })
+      .tags.find(({ name }) => name === 'archived')?.count,
+  ).toBe(0);
+
+  expect(notes.list({ excludeFinished: true })).toHaveLength(1);
+  expect(notes.search({ query: 'shared', excludeFinished: true })).toHaveLength(
+    3,
+  );
+  expect(
+    library.getSnapshot({ filter: { excludeFinished: true }, query: 'shared' })
+      .matching,
+  ).toBe(3);
+  expect(
+    notes.search({
+      query: 'shared -status:dropped',
+      excludeFinished: true,
+    }),
+  ).toHaveLength(2);
+});

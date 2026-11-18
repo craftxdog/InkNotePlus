@@ -21,10 +21,14 @@
 - El resaltado conserva las etiquetas semánticas de cada gramática, incluidos
   funciones, definiciones, comentarios y cambios diff, con los colores del tema.
 - Los bloques TSX utilizan su gramática correspondiente en el preview.
+- Cmd+← y Cmd+→ mueven el cursor dentro del editor y de los campos de texto en
+  macOS, en lugar de cambiar de nota.
+- Abrir InkNote de nuevo con el mismo perfil activa la ventana existente, sin
+  iniciar un segundo proceso sobre la misma base de datos.
 
 ### Pruebas
 
-- 454 pruebas automatizadas, lint y TypeScript aprobados.
+- 463 pruebas automatizadas, lint y TypeScript aprobados.
 - QA nativo local completo en macOS Apple Silicon: edición, autoguardado,
   sincronización, respaldos, HTML/PDF, papelera, temas y búsqueda con 3.000 notas.
 - Doce lenguajes comprobados en siete temas; 972 mediciones de contraste por

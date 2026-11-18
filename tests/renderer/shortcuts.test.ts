@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   installShortcuts,
   keystrokeMatches,
@@ -171,4 +171,81 @@ it('keeps stored shortcut overrides when Inkdrop command IDs replace old aliases
   expect(preferences.keybindings).toEqual([
     { command: 'core:strong', keystroke: 'Mod-Shift-b' },
   ]);
+});
+
+describe('note history shortcuts on macOS', () => {
+  const pressOn = (target: Element, key = 'ArrowLeft') => {
+    const event = new KeyboardEvent('keydown', {
+      key,
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    target.dispatchEvent(event);
+    return event;
+  };
+  const setup = (keybindings: { command: never; keystroke: string }[] = []) => {
+    const store = createWorkspaceStore(createApi().api);
+    const navigateHistory = vi.fn(async () => true);
+    store.setState({
+      platform: 'darwin',
+      navigateHistory,
+      preferences: { ...store.getState().preferences, keybindings },
+    });
+    return { store, navigateHistory, stop: installShortcuts(store) };
+  };
+  const mount = (html: string) => {
+    const host = document.createElement('div');
+    host.innerHTML = html;
+    document.body.append(host);
+    return host;
+  };
+
+  it.each([
+    [
+      'the Markdown editor',
+      '<div class="cm-content" contenteditable="true"></div>',
+    ],
+    ['a text input', '<input class="document-title-input" />'],
+    ['a text area', '<textarea></textarea>'],
+  ])('leaves Cmd+Arrow to native caret movement in %s', (_name, html) => {
+    const { navigateHistory, stop } = setup();
+    const host = mount(html);
+    try {
+      for (const key of ['ArrowLeft', 'ArrowRight']) {
+        const event = pressOn(host.firstElementChild!, key);
+        expect(event.defaultPrevented).toBe(false);
+      }
+      expect(navigateHistory).not.toHaveBeenCalled();
+    } finally {
+      stop();
+      host.remove();
+    }
+  });
+
+  it('navigates note history when focus is outside text fields', () => {
+    const { navigateHistory, stop } = setup();
+    const host = mount('<button type="button"></button>');
+    try {
+      expect(pressOn(host.firstElementChild!).defaultPrevented).toBe(true);
+      expect(navigateHistory).toHaveBeenCalledWith(-1);
+    } finally {
+      stop();
+      host.remove();
+    }
+  });
+
+  it('honors a binding the user explicitly assigned inside the editor', () => {
+    const { navigateHistory, stop } = setup([
+      { command: 'core:navigate-back' as never, keystroke: 'Meta-ArrowLeft' },
+    ]);
+    const host = mount('<div class="cm-content" contenteditable="true"></div>');
+    try {
+      pressOn(host.firstElementChild!);
+      expect(navigateHistory).toHaveBeenCalledWith(-1);
+    } finally {
+      stop();
+      host.remove();
+    }
+  });
 });

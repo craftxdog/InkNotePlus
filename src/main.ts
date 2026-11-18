@@ -15,6 +15,7 @@ import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import started from 'electron-squirrel-startup';
 import { installCloseGuard } from './main/close-guard';
+import { claimSingleInstance, revealWindow } from './main/single-instance';
 
 import { Configuration } from './application/config';
 import { coreConfigDefinitions } from './application/core-config';
@@ -84,6 +85,12 @@ let coreModules: ModuleRegistry | null = null;
 let configuration: Configuration | null = null;
 let quitting = false;
 let drainingBackup = false;
+
+const isPrimaryInstance = claimSingleInstance(app, () => {
+  if (mainWindow) revealWindow(mainWindow);
+  else if (app.isReady() && configuration)
+    mainWindow = createWindow(configuration);
+});
 
 function installSessionSecurity() {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
@@ -393,6 +400,7 @@ function initializeCoreModules(): Configuration {
 }
 
 app.whenReady().then(() => {
+  if (!isPrimaryInstance) return;
   configureAppIcon();
   installSessionSecurity();
   protocol.handle('inknote-asset', (request) =>

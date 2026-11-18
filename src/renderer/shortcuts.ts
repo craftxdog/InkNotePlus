@@ -42,6 +42,17 @@ export function keystrokeMatches(
   );
 }
 
+// Cmd+Arrow moves the caret to the line boundary in every macOS text field.
+function keepsNativeCaretMovement(
+  command: ShortcutCommand,
+  target: Element | null,
+) {
+  return (
+    (command === 'core:navigate-back' || command === 'core:navigate-forward') &&
+    !!target?.closest('.cm-content, input, textarea, [contenteditable="true"]')
+  );
+}
+
 export function executeShortcut(
   store: WorkspaceStoreApi,
   command: ShortcutCommand,
@@ -302,7 +313,10 @@ export function installShortcuts(
         );
     }
     let matches = shortcuts.filter(
-      ({ command, keys }) =>
+      ({ command, keys, custom }) =>
+        (custom ||
+          state.platform !== 'darwin' ||
+          !keepsNativeCaretMovement(command.id, element)) &&
         ((!state.settingsOpen &&
           !state.templatePickerOpen &&
           !state.commandPaletteOpen &&

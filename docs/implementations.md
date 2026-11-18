@@ -9,17 +9,17 @@
 InkNote tiene una base sólida y todas sus pruebas pasan, pero esas pruebas no cubrían
 varias diferencias con Inkdrop. La auditoría registró **23 funciones implementadas de
 forma incorrecta o incompleta** y **31 funciones sin implementar**. Ya están resueltos
-INC-01 a INC-08, INC-11, INC-12, INC-13, INC-15, FAL-03, FAL-04, FAL-05, FAL-08, FAL-09, FAL-10 y FAL-11, así que quedan **11 incorrectas y 24 faltantes**.
+INC-01 a INC-08, INC-11, INC-12, INC-13, INC-15, INC-16, FAL-03, FAL-04, FAL-05, FAL-08, FAL-09, FAL-10, FAL-11 y FAL-21, así que quedan **10 incorrectas y 23 faltantes**.
 
 | Prioridad     | Significado                                       | Incorrectas | Faltantes |  Total |
 | ------------- | ------------------------------------------------- | ----------: | --------: | -----: |
 | P0            | Riesgo para el uso diario o los datos (resueltos) |           0 |         0 |      0 |
 | P1            | Función básica que el usuario espera              |           0 |         4 |      4 |
-| P2            | Paridad importante                                |           8 |        11 |     19 |
+| P2            | Paridad importante                                |           7 |        10 |     17 |
 | P3            | Ecosistema, integraciones y mejoras               |           3 |         9 |     12 |
-| **Pendiente** |                                                   |      **11** |    **24** | **35** |
+| **Pendiente** |                                                   |      **10** |    **23** | **33** |
 
-El siguiente bloque recomendado es cerrar escritura y lectura con **INC-16** y **FAL-21**.
+El siguiente bloque recomendado es el de datos: **FAL-02** (historial de revisiones) y **FAL-01** (importación).
 
 ## Resultados de las pruebas
 
@@ -234,6 +234,8 @@ Estas tres decisiones cambian el alcance del trabajo, así que conviene resolver
 
 #### INC-16. El corrector ortográfico no ofrece sugerencias
 
+**Estado: resuelto el 2026-11-18.** El clic derecho ofrece sugerencias, añadir al diccionario, cortar, copiar y pegar. El reemplazo se comprobó con CodeMirror en Electron, pero el menú nativo no se pulsó de forma automatizada.
+
 - **Evidencia (Código):** [main.ts:121](../src/main.ts:121) solo crea menú contextual en modo desarrollo. No se usa `dictionarySuggestions` ni `replaceMisspelling`.
 - **Cambio:** añadir un menú nativo con sugerencias, cortar, copiar y pegar.
 - **Aceptación:** clic derecho sobre una palabra subrayada permite reemplazarla.
@@ -322,7 +324,7 @@ La ausencia de estas funciones se comprobó en el código fuente.
 | FAL-18 | Plugins                        | `activate`, `deactivate`, comandos, layouts e `ipm`                        | Crear el cargador sobre el manifiesto actual, con permisos limitados. Requiere D-3.                                                 |
 | FAL-19 | Script `init.js`               | JavaScript del usuario al arrancar                                         | Ofrecerlo solo con la API de FAL-18, activación explícita y sin acceso a Node.                                                      |
 | FAL-20 | Atajos globales y nota rápida  | Mostrar u ocultar la ventana, nota rápida, bandeja del sistema             | Usar `globalShortcut`, `Tray` y una segunda ventana con la misma seguridad.                                                         |
-| FAL-21 | Muestras de color              | Muestra junto a `#hex`, `rgb()` y `hsl()` en código en línea               | Añadir un componente en el renderer del preview.                                                                                    |
+| FAL-21 | Muestras de color              | Muestra junto a `#hex`, `rgb()` y `hsl()` en código en línea               | **Resuelto el 2026-11-18.** Disponible en el preview y en la exportación a HTML y PDF.                                              |
 | FAL-22 | Copiar ID y arrastrar enlaces  | Copiar ID de nota, notebook y etiqueta. Arrastrar una nota como enlace     | Añadir entradas al menú contextual y datos al arrastre.                                                                             |
 
 ### P3: ecosistema
@@ -341,11 +343,10 @@ La ausencia de estas funciones se comprobó en el código fuente.
 
 ## Orden de trabajo recomendado
 
-1. **Escritura y lectura:** INC-16 y FAL-21.
-2. **Datos:** FAL-02, FAL-01, INC-19, INC-14 e INC-23.
-3. **Integración con el escritorio:** INC-09, INC-10, INC-17, FAL-06, FAL-07, FAL-12, FAL-13 y FAL-20.
-4. **Plataforma:** FAL-14, FAL-15, FAL-18, FAL-19, FAL-16 y FAL-17, según D-2 y D-3.
-5. **Ecosistema:** el resto de tareas P3.
+1. **Datos:** FAL-02, FAL-01, INC-19, INC-14 e INC-23.
+2. **Integración con el escritorio:** INC-09, INC-10, INC-17, FAL-06, FAL-07, FAL-12, FAL-13 y FAL-20.
+3. **Plataforma:** FAL-14, FAL-15, FAL-18, FAL-19, FAL-16 y FAL-17, según D-2 y D-3.
+4. **Ecosistema:** el resto de tareas P3.
 
 ## Funciones verificadas sin diferencias relevantes
 

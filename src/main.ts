@@ -11,6 +11,7 @@ import {
 } from 'electron';
 import { registerExternalLinkHandler } from './main/ipc/external-link-handler';
 import { fetchPageTitle } from './main/link-title';
+import { contextMenuTemplate } from './main/context-menu';
 import type { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
@@ -127,13 +128,19 @@ function createWindow(activeConfiguration: Configuration): BrowserWindow {
 
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('context-menu', (_event, params) => {
-    if (!activeConfiguration.get(coreConfig.appearance).developmentMode) return;
-    Menu.buildFromTemplate([
+    const template = contextMenuTemplate(
+      params,
       {
-        label: 'Inspeccionar elemento',
-        click: () => window.webContents.inspectElement(params.x, params.y),
+        replaceMisspelling: (word) =>
+          window.webContents.replaceMisspelling(word),
+        addToDictionary: (word) => {
+          window.webContents.session.addWordToSpellCheckerDictionary(word);
+        },
+        inspect: (x, y) => window.webContents.inspectElement(x, y),
       },
-    ]).popup({ window });
+      activeConfiguration.get(coreConfig.appearance).developmentMode,
+    );
+    if (template.length) Menu.buildFromTemplate(template).popup({ window });
   });
   const lifecycle = installCloseGuard(window, ipcMain);
   window.webContents.on('will-prevent-unload', () => lifecycle.reload());

@@ -206,6 +206,7 @@ const exportStyles = `
   code { background: #f4f6f8; padding: 0.1em 0.25em; border-radius: 3px; }
   pre { padding: 1rem; background: #f4f6f8; white-space: pre-wrap; overflow-wrap: anywhere; }
   pre code { background: none; padding: 0; }
+  .color-swatch { display: inline-block; width: 0.75em; height: 0.75em; margin-inline-start: 0.35em; border: 1px solid #8a929a; border-radius: 50%; vertical-align: -0.05em; }
   .codeblock { margin: 1rem 0; }
   .codeblock pre { margin: 0; border-radius: 0 0 6px 6px; }
   .codeblock-meta { display: flex; gap: 0.75rem; align-items: center; padding: 0.5rem 1rem; background: #e8ebee; color: #454c53; border-radius: 6px 6px 0 0; font-size: 85%; }

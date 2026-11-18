@@ -403,7 +403,7 @@ describe('portable editor exports', () => {
       '| --- | --- |',
       '| Notes | 2 |',
       '',
-      'Inline $x^2$ and <mark>marked</mark> H<sub>2</sub>O x<sup>2</sup>.',
+      'Inline $x^2$ and <mark>marked</mark> H<sub>2</sub>O x<sup>2</sup> `#ff0000`.',
       '',
       '~~~mermaid',
       'flowchart LR',
@@ -432,6 +432,7 @@ describe('portable editor exports', () => {
     expect(html).toContain('<sub>2</sub>');
     expect(html).toContain('<sup>2</sup>');
     expect(html).not.toContain('codeblock-actions');
+    expect(html).toContain('class="color-swatch"');
     expect(html).toContain('type="checkbox"');
     expect(html).toContain('data:image/png;base64,');
     expect(html).toContain('data:image/svg+xml;base64,');

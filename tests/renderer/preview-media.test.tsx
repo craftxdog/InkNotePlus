@@ -88,6 +88,26 @@ describe('code block actions', () => {
   });
 });
 
+describe('color swatches', () => {
+  it('shows a swatch next to color values in inline code only', async () => {
+    const { container } = mount(
+      'Usa `#ff0000`, `rgb(0, 128, 255)` y `hsl(120, 50%, 50%)`, no `rojo`.\n\n```css\n#00ff00\n```\n',
+    );
+    await waitFor(() =>
+      expect(
+        container.querySelectorAll('.mde-preview .color-swatch'),
+      ).toHaveLength(3),
+    );
+    const swatches = [
+      ...container.querySelectorAll<HTMLElement>('.mde-preview .color-swatch'),
+    ];
+    expect(swatches[0].style.backgroundColor).toBe('rgb(255, 0, 0)');
+    expect(swatches[0].closest('code')?.textContent).toBe('#ff0000');
+    expect(swatches[0].getAttribute('aria-hidden')).toBe('true');
+    expect(container.querySelector('pre .color-swatch')).toBeNull();
+  });
+});
+
 describe('copyText', () => {
   it('falls back to the document command when the clipboard API is denied', async () => {
     clipboard(async () => {

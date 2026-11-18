@@ -30,6 +30,9 @@
 - Pegar una URL sobre texto seleccionado crea un enlace Markdown.
 - Pegar una URL en el cursor ofrece mantenerla, crear un enlace o usar el título
   de la página. El título sólo se consulta con permiso y nunca en redes internas.
+- El clic derecho en el editor ofrece sugerencias ortográficas, añadir palabras al
+  diccionario, cortar, copiar y pegar.
+- Los colores `#hex`, `rgb()` y `hsl()` en código en línea muestran una muestra.
 - Los bloques de código ofrecen botón de copiar, icono de su familia de lenguaje
   y una preferencia para numerar siempre sus líneas.
 
@@ -54,7 +57,7 @@
 
 ### Pruebas
 
-- 648 pruebas automatizadas, lint y TypeScript aprobados.
+- 683 pruebas automatizadas, lint y TypeScript aprobados.
 - QA nativo local completo en macOS Apple Silicon: edición, autoguardado,
   sincronización, respaldos, HTML/PDF, papelera, temas y búsqueda con 3.000 notas.
 - Doce lenguajes comprobados en siete temas; 972 mediciones de contraste por

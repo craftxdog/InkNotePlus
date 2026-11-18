@@ -39,6 +39,16 @@
     cursor: pointer;
   }
 
+  .mde-preview .color-swatch {
+    display: inline-block;
+    inline-size: 0.75em;
+    block-size: 0.75em;
+    margin-inline-start: 0.35em;
+    border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+    border-radius: 50%;
+    vertical-align: -0.05em;
+  }
+
   .mde-preview img[tabindex] {
     cursor: zoom-in;
   }

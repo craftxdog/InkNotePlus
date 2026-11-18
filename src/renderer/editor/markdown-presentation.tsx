@@ -30,6 +30,7 @@ import { tokenHighlighter } from './token-highlighter';
 import { resolveCodeLanguage } from './code-languages';
 import { parseCodeFenceMeta, type CodeFenceMeta } from './code-fence';
 import { copyText } from './clipboard';
+import { parseCssColor } from './css-color';
 
 // Lucide has no brand logos, so languages are grouped by what they describe.
 const codeIcons = {
@@ -169,6 +170,7 @@ export function HighlightedCode({
     result.push(children.slice(offset));
     return result;
   }, [children, language]);
+  const color = block || className ? null : parseCssColor(children);
   return (
     <code
       className={
@@ -178,6 +180,13 @@ export function HighlightedCode({
       }
     >
       {spans}
+      {color && (
+        <span
+          className="color-swatch"
+          style={{ backgroundColor: color }}
+          aria-hidden="true"
+        />
+      )}
     </code>
   );
 }

@@ -29,7 +29,8 @@ import {
 import { attachmentName } from './markdown-export';
 import { readAvailableImage } from './transfer-files';
 
-type ExportPreferences = Pick<Preferences, 'mathEnabled' | 'mermaidEnabled'>;
+type ExportPreferences = Pick<Preferences, 'mathEnabled' | 'mermaidEnabled'> &
+  Partial<Pick<Preferences, 'codeLineNumbers'>>;
 const plugins = [
   remarkGfm,
   remarkMath,
@@ -75,7 +76,12 @@ export async function renderNoteExport(
           <img src={diagram} alt="Diagrama Mermaid" />
         </figure>
       ) : (
-        <FencedCodeBlock language={language} text={text} metadata={metadata} />
+        <FencedCodeBlock
+          language={language}
+          text={text}
+          metadata={metadata}
+          lineNumbers={preferences.codeLineNumbers}
+        />
       );
     },
     img({ src, alt }: ComponentProps<'img'>) {

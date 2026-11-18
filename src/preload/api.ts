@@ -30,8 +30,10 @@ import {
 } from '../shared/window-lifecycle';
 import {
   EXTERNAL_LINK_CHANNEL,
+  LINK_TITLE_CHANNEL,
   externalLinkSchema,
   externalLinkResultSchema,
+  linkTitleResultSchema,
 } from '../shared/external-link';
 import {
   TRANSFER_CHANNELS,
@@ -140,7 +142,10 @@ export interface InkNoteApi {
   onBeforeClose(listener: () => Promise<boolean>): () => void;
   setWindowBackground(color: string): Promise<Result<boolean>>;
   reloadWindow(): Promise<Result<boolean>>;
-  links: { openExternal(url: string): Promise<Result<boolean>> };
+  links: {
+    openExternal(url: string): Promise<Result<boolean>>;
+    fetchTitle(url: string): Promise<Result<string | null>>;
+  };
   library: {
     get(input?: LibraryInput): Promise<Result<LibrarySnapshot>>;
     createNotebook(input: CreateNotebookInput): Promise<Result<Notebook>>;
@@ -345,6 +350,14 @@ export function createInkNoteApi(
           { url },
           externalLinkSchema,
           externalLinkResultSchema,
+        ),
+      fetchTitle: (url) =>
+        invoke(
+          ipcRenderer,
+          LINK_TITLE_CHANNEL,
+          { url },
+          externalLinkSchema,
+          linkTitleResultSchema,
         ),
     },
     library: {

@@ -45,6 +45,8 @@ import type { VimAction } from './vim-mode';
 import { selectionToolbar } from './selection-toolbar';
 import type { CompletionSource } from '@codemirror/autocomplete';
 import { markdownTabKeys } from '../../shared/editor-keybindings';
+import { pasteLinkOverSelection } from './link-paste';
+import { linkPasteMenu, pasteUrlAtCursor } from './link-paste-menu';
 
 const externalChange = Annotation.define<boolean>();
 
@@ -60,6 +62,7 @@ export function MarkdownEditor({
   onVimAction,
   onFloatingToolbar,
   noteLinks,
+  fetchLinkTitle,
 }: {
   value: string;
   nonce: string;
@@ -72,6 +75,7 @@ export function MarkdownEditor({
   onVimAction?: (action: VimAction, argument?: string) => void;
   onFloatingToolbar?: (element: HTMLElement | null) => void;
   noteLinks?: CompletionSource;
+  fetchLinkTitle?: (url: string) => Promise<string | null>;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -84,6 +88,8 @@ export function MarkdownEditor({
     onVimAction,
     onFloatingToolbar,
     noteLinks,
+    fetchLinkTitle,
+    linkTitleFetch: preferences.linkTitleFetch,
   });
   callbacks.current = {
     onChange,
@@ -94,6 +100,8 @@ export function MarkdownEditor({
     onVimAction,
     onFloatingToolbar,
     noteLinks,
+    fetchLinkTitle,
+    linkTitleFetch: preferences.linkTitleFetch,
   };
   const initialValue = useRef(value);
   const settings = useRef(new Compartment()).current;
@@ -181,12 +189,20 @@ export function MarkdownEditor({
           }),
           history(),
           EditorView.domEventHandlers({
-            paste(event) {
+            paste(event, editor) {
               const files = [...(event.clipboardData?.files ?? [])].filter(
                 (file) => /^image\/(png|jpeg|gif|webp)$/.test(file.type),
               );
-              if (!files.length || !callbacks.current.onImageFiles)
-                return false;
+              if (!files.length || !callbacks.current.onImageFiles) {
+                const text = event.clipboardData?.getData('text/plain') ?? '';
+                if (
+                  !pasteLinkOverSelection(editor, text) &&
+                  !pasteUrlAtCursor(editor, text)
+                )
+                  return false;
+                event.preventDefault();
+                return true;
+              }
               event.preventDefault();
               callbacks.current.onImageFiles(files);
               return true;
@@ -212,6 +228,11 @@ export function MarkdownEditor({
           drawSelection(),
           bracketMatching(),
           tableEditing,
+          linkPasteMenu({
+            fetchTitle: (url) =>
+              callbacks.current.fetchLinkTitle?.(url) ?? Promise.resolve(null),
+            autoFetch: () => callbacks.current.linkTitleFetch,
+          }),
           Prec.high(
             keymap.of([
               {

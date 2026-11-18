@@ -1,4 +1,9 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  type KeyboardEventHandler,
+  type ReactNode,
+} from 'react';
 import { X } from 'lucide-react';
 import { IconButton } from './icon-button';
 
@@ -7,11 +12,13 @@ export function Modal({
   onClose,
   children,
   className = '',
+  onKeyDown,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   className?: string;
+  onKeyDown?: KeyboardEventHandler<HTMLDialogElement>;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const close = () => {
@@ -31,6 +38,7 @@ export function Modal({
       ref={dialog}
       className={`app-dialog ${className}`}
       aria-label={title}
+      onKeyDown={onKeyDown}
       onCancel={(event) => {
         event.preventDefault();
         close();

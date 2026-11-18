@@ -37,6 +37,12 @@ export const shortcutCommands = [
     key: 'Mod-f',
   },
   {
+    id: 'preview:find',
+    label: 'Buscar en la vista previa',
+    scope: 'app',
+    key: 'Mod-f',
+  },
+  {
     id: 'editor:close-search',
     label: 'Cerrar búsqueda',
     scope: 'editor',
@@ -370,6 +376,12 @@ export function shortcutConflict(
   const selected = normalize(keystroke);
   return shortcutCommands.find((candidate) => {
     if (candidate.id === command) return false;
+    // The same key searches whichever pane has the focus.
+    if (
+      [candidate.id, command].includes('editor:find') &&
+      [candidate.id, command].includes('preview:find')
+    )
+      return false;
     const scope = shortcutCommands.find((item) => item.id === command)?.scope;
     if (
       scope !== 'app' &&

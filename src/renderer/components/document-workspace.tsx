@@ -70,6 +70,7 @@ import { NotebookPicker } from './notebook-picker';
 import { UiSlot } from '../extensions/ui-slots';
 import { NoteTrashActions } from './note-trash-actions';
 import { NoteOutlinePanel } from './note-outline-panel';
+import { PreviewFindBar } from './preview-find-bar';
 import { jumpToNoteLine, previewLineAtTop } from '../editor/note-navigation';
 import type { ExportNoteInput } from '../../shared/transfer';
 
@@ -113,6 +114,8 @@ export function DocumentWorkspace({
   const duplicateNotes = useWorkspace((state) => state.duplicateNotes);
   const outlineOpen = useWorkspace((state) => state.outlineOpen);
   const setOutlineOpen = useWorkspace((state) => state.setOutlineOpen);
+  const previewFindOpen = useWorkspace((state) => state.previewFindOpen);
+  const setPreviewFindOpen = useWorkspace((state) => state.setPreviewFindOpen);
   const [outlineLine, setOutlineLine] = useState(1);
   const importImage = useWorkspace((state) => state.importImage);
   const exportNote = useWorkspace((state) => state.transfer.exportNote);
@@ -589,6 +592,7 @@ export function DocumentWorkspace({
                   onInsertImage={() => void insertImage()}
                   onFloatingToolbar={setFloatingToolbar}
                   noteLinks={noteLinks}
+                  fetchLinkTitle={store.getState().fetchLinkTitle}
                   onVimAction={(action, argument) => {
                     const aliases = {
                       write: 'core:save-note',
@@ -679,6 +683,16 @@ export function DocumentWorkspace({
                 onRendered={previewRendered}
               />
             </aside>
+            {previewFindOpen && mode !== 'edit' && preview.current && (
+              <PreviewFindBar
+                pane={preview.current}
+                onReveal={() => sync.current?.previewNavigated()}
+                onClose={() => {
+                  setPreviewFindOpen(false);
+                  preview.current?.focus();
+                }}
+              />
+            )}
             {outlineOpen && (
               <NoteOutlinePanel
                 body={draft.body}

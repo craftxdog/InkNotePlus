@@ -16,11 +16,76 @@ import {
   OctagonAlert,
   FileCode2,
   ExternalLink,
+  SquareTerminal,
+  Braces,
+  Database,
+  Globe,
+  FileDiff,
+  FileText,
+  Check,
+  Copy,
 } from 'lucide-react';
 import { alertLabels, type AlertType } from './github-alerts';
 import { tokenHighlighter } from './token-highlighter';
 import { resolveCodeLanguage } from './code-languages';
 import { parseCodeFenceMeta, type CodeFenceMeta } from './code-fence';
+import { copyText } from './clipboard';
+
+// Lucide has no brand logos, so languages are grouped by what they describe.
+const codeIcons = {
+  terminal: SquareTerminal,
+  data: Braces,
+  database: Database,
+  web: Globe,
+  diff: FileDiff,
+  text: FileText,
+  code: FileCode2,
+};
+const codeFamilies: Record<string, keyof typeof codeIcons> = Object.fromEntries(
+  (
+    [
+      ['terminal', 'bash sh shell zsh fish powershell ps1 console'],
+      ['data', 'json jsonc json5 yaml yml toml xml csv ini properties'],
+      ['database', 'sql mysql postgresql pgsql sqlite plsql'],
+      ['web', 'html htm css scss sass less vue svelte'],
+      ['diff', 'diff patch'],
+      ['text', 'markdown md mdx txt text plaintext'],
+    ] as const
+  ).flatMap(([family, names]) =>
+    names.split(' ').map((name) => [name, family]),
+  ),
+);
+function codeFamily(name: string | undefined, resolved: string | undefined) {
+  return (
+    codeFamilies[name?.toLowerCase() ?? ''] ??
+    codeFamilies[resolved?.toLowerCase() ?? ''] ??
+    'code'
+  );
+}
+
+function CopyCodeButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 1500);
+    return () => clearTimeout(timer);
+  }, [copied]);
+  const label = copied ? 'Código copiado' : 'Copiar código';
+  const Icon = copied ? Check : Copy;
+  return (
+    <button
+      type="button"
+      className="codeblock-copy"
+      aria-label={label}
+      title={label}
+      onClick={() => {
+        void copyText(text.replace(/\n$/, '')).then(setCopied);
+      }}
+    >
+      <Icon size="1.1em" aria-hidden="true" />
+    </button>
+  );
+}
 
 const alertIcons = {
   note: Info,
@@ -123,29 +188,47 @@ export function FencedCodeBlock({
   metadata,
   source,
   onOpenLink,
+  lineNumbers = false,
+  copyable = false,
 }: {
   language?: string;
   text: string;
   metadata: CodeFenceMeta;
   source?: Record<string, unknown>;
   onOpenLink?: (url: string) => unknown;
+  lineNumbers?: boolean;
+  copyable?: boolean;
 }) {
   const name = language?.replace(/^language-/, '');
   const description = resolveCodeLanguage(name ?? '');
+  const family = codeFamily(name, description?.name);
+  const LanguageIcon = codeIcons[family];
   const { title, filename, line, commit, url } = metadata;
   const hasMetadata = Object.keys(metadata).length > 0;
   const lineCount = Math.max(
     1,
     text.split('\n').length - (text.endsWith('\n') ? 1 : 0),
   );
+  const firstLine = line ?? (lineNumbers ? 1 : undefined);
   const numbers =
-    line === undefined
+    firstLine === undefined
       ? null
       : Array.from({ length: lineCount }, (_, index) =>
-          String(BigInt(line) + BigInt(index)),
+          String(BigInt(firstLine) + BigInt(index)),
         ).join('\n');
   return (
     <div {...source} className="codeblock">
+      {copyable && (
+        <div className="codeblock-actions">
+          {name && !hasMetadata && (
+            <span className="codeblock-badge" data-code-icon={family}>
+              <LanguageIcon size="1.1em" aria-hidden="true" />
+              {name}
+            </span>
+          )}
+          <CopyCodeButton text={text} />
+        </div>
+      )}
       {hasMetadata && (
         <div className="codeblock-meta">
           <span
@@ -153,7 +236,7 @@ export function FencedCodeBlock({
             role="img"
             aria-label={description?.name ?? name ?? 'Código'}
           >
-            <FileCode2 size="1.25em" aria-hidden="true" />
+            <LanguageIcon size="1.25em" aria-hidden="true" />
             {name && (
               <span className="codeblock-language" aria-hidden="true">
                 {name}

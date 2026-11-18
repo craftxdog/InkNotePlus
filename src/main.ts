@@ -10,6 +10,7 @@ import {
   Menu,
 } from 'electron';
 import { registerExternalLinkHandler } from './main/ipc/external-link-handler';
+import { fetchPageTitle } from './main/link-title';
 import type { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
@@ -272,6 +273,7 @@ function initializeCoreModules(): Configuration {
         ipc: ipcMain,
         getMainWebContents: () => mainWindow?.webContents ?? null,
         openExternal: (url) => shell.openExternal(url),
+        fetchTitle: (url) => fetchPageTitle(url),
       });
     },
     deactivate() {

@@ -37,6 +37,7 @@ const fields = {
   keyboardMode: z.enum(['standard', 'vim']),
   activeLine: z.boolean(),
   spellcheck: z.boolean(),
+  linkTitleFetch: z.boolean(),
   showToolbar: z.boolean(),
   toolbarPlacement: z.enum(['fixed', 'floating']),
   previewFontFamily: fontFamilySchema,
@@ -47,6 +48,7 @@ const fields = {
   mermaidEnabled: z.boolean(),
   mermaidPanZoom: z.boolean(),
   mermaidToolbar: z.boolean(),
+  codeLineNumbers: z.boolean(),
   keybindings: keybindingsSchema,
 };
 const recordSchema = z.object(fields).strict();
@@ -73,6 +75,7 @@ export const defaultPreferences: Preferences = {
   keyboardMode: 'standard',
   activeLine: true,
   spellcheck: true,
+  linkTitleFetch: false,
   showToolbar: true,
   toolbarPlacement: 'floating',
   previewFontFamily: '',
@@ -83,6 +86,7 @@ export const defaultPreferences: Preferences = {
   mermaidEnabled: true,
   mermaidPanZoom: true,
   mermaidToolbar: true,
+  codeLineNumbers: false,
   keybindings: [],
 };
 // Fill newly introduced settings on existing installations, preserving every

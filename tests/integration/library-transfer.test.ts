@@ -431,6 +431,7 @@ describe('portable editor exports', () => {
     expect(html).toContain('<mark>marked</mark>');
     expect(html).toContain('<sub>2</sub>');
     expect(html).toContain('<sup>2</sup>');
+    expect(html).not.toContain('codeblock-actions');
     expect(html).toContain('type="checkbox"');
     expect(html).toContain('data:image/png;base64,');
     expect(html).toContain('data:image/svg+xml;base64,');

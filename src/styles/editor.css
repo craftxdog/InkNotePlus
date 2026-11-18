@@ -195,6 +195,69 @@
   .editor-body > .pane {
     overflow: auto;
   }
+  .inknote-link-menu {
+    display: flex;
+    align-items: center;
+    gap: var(--4px);
+    max-inline-size: min(420px, 80vw);
+    padding: var(--4px);
+    font-family: var(--page-font);
+    font-size: var(--small);
+  }
+  .inknote-link-menu button {
+    flex: none;
+    max-inline-size: 240px;
+    overflow: hidden;
+    padding: var(--4px) var(--8px);
+    border: 0;
+    border-radius: var(--4px);
+    background: transparent;
+    color: inherit;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .inknote-link-menu button:hover:not(:disabled),
+  .inknote-link-menu button:focus-visible {
+    background: var(--note-list-view-item-selected-background);
+  }
+  .inknote-link-menu button:disabled {
+    color: var(--muted-text-color);
+    cursor: default;
+  }
+  .preview-find {
+    position: absolute;
+    z-index: 6;
+    inset-block-start: var(--8px);
+    inset-inline-end: var(--16px);
+    display: flex;
+    align-items: center;
+    gap: var(--4px);
+    max-inline-size: calc(100% - var(--32px, 32px));
+    padding: var(--4px);
+    border: 1px solid var(--border-color);
+    border-radius: var(--6px);
+    background: var(--input-background);
+    box-shadow: var(--floating-shadow);
+  }
+  .editor-body:has(.note-outline) .preview-find {
+    inset-inline-end: calc(min(280px, 70%) + var(--8px));
+  }
+  .preview-find input {
+    inline-size: 180px;
+    min-inline-size: 0;
+    padding: var(--4px) var(--6px);
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: var(--input-color);
+  }
+  .preview-find [role='status'] {
+    color: var(--muted-text-color);
+    font-size: var(--tiny);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
   .note-outline {
     position: absolute;
     z-index: 5;

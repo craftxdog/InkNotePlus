@@ -302,6 +302,11 @@ export function SettingsDialog() {
                   {toggle('activeLine', 'Resaltar línea activa')}
                   {toggle('readableLineLength', 'Limitar anchura de lectura')}
                   {toggle('spellcheck', 'Revisión ortográfica del sistema')}
+                  {toggle(
+                    'linkTitleFetch',
+                    'Buscar el título de los enlaces pegados',
+                    'InkNote consultará cada página al pegar su URL, y ese sitio verá tu dirección IP. Sin esta opción, sólo se consulta si lo pides en cada enlace.',
+                  )}
                   {toggle('showToolbar', 'Mostrar barra de formato')}
                   <label>
                     Posición de la barra de formato
@@ -358,6 +363,11 @@ export function SettingsDialog() {
                   )}
                 </SettingGroup>
                 <SettingGroup title="Mermaid" icon={<Workflow size={17} />}>
+                  {toggle(
+                    'codeLineNumbers',
+                    'Numerar siempre los bloques de código',
+                    'También se aplica al exportar a HTML y PDF.',
+                  )}
                   {toggle('mermaidEnabled', 'Renderizar diagramas Mermaid')}
                   {toggle(
                     'mermaidPanZoom',

@@ -75,6 +75,8 @@ export interface WorkspaceState {
   readonly commandPaletteOpen: boolean;
   readonly commandPaletteQuery: string;
   readonly outlineOpen: boolean;
+  readonly previewFindOpen: boolean;
+  readonly imageViewer: { readonly src: string; readonly alt: string } | null;
   readonly preferences: Preferences;
   readonly styleNonce: string | null;
   readonly platform: 'darwin' | 'win32' | 'linux';
@@ -118,6 +120,8 @@ export interface WorkspaceActions {
   setTemplatePickerOpen(open: boolean): void;
   setCommandPaletteOpen(open: boolean, query?: string): void;
   setOutlineOpen(open: boolean): void;
+  setPreviewFindOpen(open: boolean): void;
+  setImageViewer(image: { src: string; alt: string } | null): void;
   getTemplateNotes(
     query?: string,
     offset?: number,
@@ -129,6 +133,7 @@ export interface WorkspaceActions {
     source: Pick<NoteProjection, 'title' | 'body' | 'metadata'>,
   ): Promise<void>;
   openExternalLink(url: string): Promise<Result<boolean>>;
+  fetchLinkTitle(url: string): Promise<string | null>;
   openNoteLink(url: string): Promise<Result<boolean>>;
   searchLinkNotes(query: string): Promise<Result<NoteProjection[]>>;
   createLinkedNote(title: string): Promise<Result<NoteProjection>>;

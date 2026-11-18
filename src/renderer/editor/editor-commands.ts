@@ -1,3 +1,4 @@
+import { copyText } from './clipboard';
 import * as commands from '@codemirror/commands';
 import { insertNewlineContinueMarkup } from '@codemirror/lang-markdown';
 import {
@@ -206,8 +207,8 @@ export const editorCommands: Record<
   'core:redo': commands.redo,
   'editor:copy-link': (view) => {
     const url = linkAtCursor(view);
-    if (!url || !navigator.clipboard) return false;
-    void navigator.clipboard.writeText(url).catch(() => {});
+    if (!url) return false;
+    void copyText(url);
     return true;
   },
   'editor:resize-image-auto': resize(''),

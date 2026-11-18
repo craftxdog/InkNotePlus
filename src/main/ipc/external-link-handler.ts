@@ -1,6 +1,7 @@
 import type { IpcMain, WebContents } from 'electron';
 import {
   EXTERNAL_LINK_CHANNEL,
+  LINK_TITLE_CHANNEL,
   externalLinkSchema,
 } from '../../shared/external-link';
 import { failure, success } from '../../shared/ipc';
@@ -10,6 +11,7 @@ export function registerExternalLinkHandler(options: {
   ipc: Pick<IpcMain, 'handle' | 'removeHandler'>;
   getMainWebContents: () => WebContents | null;
   openExternal: (url: string) => Promise<void>;
+  fetchTitle: (url: string) => Promise<string | null>;
 }) {
   options.ipc.handle(EXTERNAL_LINK_CHANNEL, async (event, input: unknown) => {
     if (!isTrustedIpcEvent(event, options.getMainWebContents()))
@@ -23,8 +25,16 @@ export function registerExternalLinkHandler(options: {
       return failure('unavailable');
     }
   });
+  options.ipc.handle(LINK_TITLE_CHANNEL, async (event, input: unknown) => {
+    if (!isTrustedIpcEvent(event, options.getMainWebContents()))
+      return failure('unavailable');
+    const parsed = externalLinkSchema.safeParse(input);
+    if (!parsed.success) return failure('invalid_input');
+    return success(await options.fetchTitle(parsed.data.url));
+  });
   return {
     dispose() {
+      options.ipc.removeHandler(LINK_TITLE_CHANNEL);
       options.ipc.removeHandler(EXTERNAL_LINK_CHANNEL);
     },
   };

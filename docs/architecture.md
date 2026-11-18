@@ -65,7 +65,7 @@ los estilos de `@inkdropapp/css` 0.10.4. Electron aporta la plataforma de
 escritorio y SQLite viene de Node mediante node:sqlite. Vite, tipos React,
 Testing Library y jsdom son herramientas de desarrollo. El helper de temas y
 Puppeteer permanecen en los paquetes de desarrollo bajo `themes/`; no entran
-al bundle distribuido. No hay cliente HTTP, SDK cloud ni driver SQLite nativo
+al bundle distribuido. No hay librerías de cliente HTTP, SDK cloud ni driver SQLite nativo
 externo. Los lenguajes adicionales cargados son JavaScript/TypeScript y JSON.
 
 ## Flujo canónico
@@ -319,7 +319,14 @@ título y crea enlaces `inknote://note/` que se abren dentro de la app.
 Cmd/Ctrl+K abre la paleta, con fuentes de comandos (`>`), notebooks (`b`),
 etiquetas (`t`), esquema (`#`) y temas (`h`). El esquema sale del árbol Lezer, por
 lo que ignora el código. `<mark>`, `<sub>` y `<sup>` sólo se aceptan como pares
-exactos; el resto del HTML de las notas sigue sin renderizarse. En Preferencias → Edición se elige la
+exactos; el resto del HTML de las notas sigue sin renderizarse.
+La búsqueda del preview usa la CSS Custom Highlight API y no modifica su DOM. Pegar
+una URL sobre una selección crea el enlace sin acceder a la red.
+
+El título de un enlace pegado sólo se consulta con la preferencia
+`linkTitleFetch`, desactivada por defecto, o al pedirlo en ese enlace. La petición
+sale del proceso principal sin cookies ni referrer, valida cada redirección y cada
+dirección IP al conectar, y rechaza redes privadas y de loopback. En Preferencias → Edición se elige la
 barra flotante o fija, el teclado estándar o Vim y la anchura de lectura.
 La variable `--inknote-editor-readable-width` controla el límite de lectura,
 con 1024 px como valor inicial de InkNote.
@@ -654,6 +661,7 @@ Las ejecuciones manuales prueban artefactos y no publican una nueva versión.
 - Fuses desactivan RunAsNode, NODE_OPTIONS e inspect arguments; ASAR tiene
   validación de integridad.
 - Notas, rutas y SQL no se mandan a telemetría, APIs ni servicios externos.
+  La consulta opcional del título de un enlace sólo envía esa URL a su propio sitio.
 
 No se afirma cifrado extremo a extremo, autenticación ni
 sincronización remota hasta que existan claves, recuperación y pruebas reales.

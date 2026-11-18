@@ -9,17 +9,17 @@
 InkNote tiene una base sólida y todas sus pruebas pasan, pero esas pruebas no cubrían
 varias diferencias con Inkdrop. La auditoría registró **23 funciones implementadas de
 forma incorrecta o incompleta** y **31 funciones sin implementar**. Ya están resueltos
-INC-01 a INC-08, INC-11, INC-12, INC-13, FAL-03, FAL-04, FAL-05 y FAL-08, así que quedan **12 incorrectas y 27 faltantes**.
+INC-01 a INC-08, INC-11, INC-12, INC-13, INC-15, FAL-03, FAL-04, FAL-05, FAL-08, FAL-09, FAL-10 y FAL-11, así que quedan **11 incorrectas y 24 faltantes**.
 
 | Prioridad     | Significado                                       | Incorrectas | Faltantes |  Total |
 | ------------- | ------------------------------------------------- | ----------: | --------: | -----: |
 | P0            | Riesgo para el uso diario o los datos (resueltos) |           0 |         0 |      0 |
 | P1            | Función básica que el usuario espera              |           0 |         4 |      4 |
-| P2            | Paridad importante                                |           9 |        14 |     23 |
+| P2            | Paridad importante                                |           8 |        11 |     19 |
 | P3            | Ecosistema, integraciones y mejoras               |           3 |         9 |     12 |
-| **Pendiente** |                                                   |      **12** |    **27** | **39** |
+| **Pendiente** |                                                   |      **11** |    **24** | **35** |
 
-El siguiente bloque recomendado es completar escritura y lectura: **FAL-09**, **FAL-10**, **FAL-11** e **INC-15**.
+El siguiente bloque recomendado es cerrar escritura y lectura con **INC-16** y **FAL-21**.
 
 ## Resultados de las pruebas
 
@@ -52,11 +52,11 @@ La sonda manejó la app empaquetada con un perfil temporal y no tocó datos real
 
 Estas tres decisiones cambian el alcance del trabajo, así que conviene resolverlas antes de empezar las tareas afectadas.
 
-| ID  | Decisión                       | Opciones                                                                            | Recomendación                                                                                               | Afecta          |
-| --- | ------------------------------ | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------- |
-| D-1 | Imágenes remotas en el preview | Mantener el bloqueo actual, cargarlas siempre como Inkdrop, o cargarlas con permiso | Permiso por nota o preferencia global, desactivado por defecto. Evita que una nota revele tu IP a terceros. | Preview, FAL-11 |
-| D-2 | Protocolo de sincronización    | Compatible con CouchDB como Inkdrop, o propio sobre el `sync_outbox` existente      | CouchDB si quieres servidores autoalojados. Exige adaptar IDs y `_rev` (INC-23).                            | FAL-16, FAL-17  |
-| D-3 | Compatibilidad de plugins      | API compatible con plugins de Inkdrop, o API propia con permisos limitados          | API propia. `docs/architecture.md` ya descarta dar acceso directo a Electron y a la base de datos.          | FAL-18, FAL-19  |
+| ID  | Decisión                       | Opciones                                                                            | Recomendación                                                                                                                                                                                                       | Afecta         |
+| --- | ------------------------------ | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| D-1 | Imágenes remotas en el preview | Mantener el bloqueo actual, cargarlas siempre como Inkdrop, o cargarlas con permiso | Permiso por nota o preferencia global, desactivado por defecto. Evita que una nota revele tu IP a terceros. Los títulos de enlaces ya se resolvieron con permiso explícito; las imágenes remotas siguen bloqueadas. | Preview        |
+| D-2 | Protocolo de sincronización    | Compatible con CouchDB como Inkdrop, o propio sobre el `sync_outbox` existente      | CouchDB si quieres servidores autoalojados. Exige adaptar IDs y `_rev` (INC-23).                                                                                                                                    | FAL-16, FAL-17 |
+| D-3 | Compatibilidad de plugins      | API compatible con plugins de Inkdrop, o API propia con permisos limitados          | API propia. `docs/architecture.md` ya descarta dar acceso directo a Electron y a la base de datos.                                                                                                                  | FAL-18, FAL-19 |
 
 ## Diferencias técnicas
 
@@ -226,6 +226,8 @@ Estas tres decisiones cambian el alcance del trabajo, así que conviene resolver
 
 #### INC-15. Los bloques de código están incompletos
 
+**Estado: resuelto el 2026-11-18.** Hay botón de copiar, icono por familia de lenguaje y una preferencia para numerar siempre las líneas. Lucide no incluye logotipos de marca, así que los iconos representan familias y no cada lenguaje. Comprobado en la app empaquetada.
+
 - **Evidencia (Sonda y código):** no hay botón de copiar, el icono es genérico y los números de línea solo aparecen con `line=`. Ver [markdown-presentation.tsx:147](../src/renderer/editor/markdown-presentation.tsx:147).
 - **Inkdrop:** [copiar al pasar el puntero, iconos por lenguaje y números de línea](https://www.inkdrop.app/features).
 - **Cambio:** añadir el botón de copiar y los iconos, y una preferencia para mostrar siempre la numeración.
@@ -305,23 +307,23 @@ La ausencia de estas funciones se comprobó en el código fuente.
 
 ### P2: paridad importante
 
-| ID     | Función                        | Qué ofrece Inkdrop                                                         | Implementación propuesta                                                                |
-| ------ | ------------------------------ | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| FAL-08 | Esquema de la nota             | Encabezados y tareas con la posición actual resaltada                      | **Resuelto el 2026-11-18.** Panel con la posición actual y fuente `#` en la paleta.     |
-| FAL-09 | Buscar en el preview           | Búsqueda también dentro de bloques de código                               | Usar la CSS Custom Highlight API sin alterar el DOM.                                    |
-| FAL-10 | Visor de imágenes              | Se abre con doble clic                                                     | Crear un modal con zoom y teclado.                                                      |
-| FAL-11 | Pegado inteligente de enlaces  | Pegar URL sobre una selección crea un enlace, con título automático        | Crear el enlace primero. Obtener el título solo con permiso (D-1).                      |
-| FAL-12 | Tema automático claro y oscuro | Sigue la apariencia del sistema                                            | Añadir un tema claro y otro oscuro en preferencias y escuchar `nativeTheme`.            |
-| FAL-13 | Archivo `keymap.json`          | Selectores CSS, secuencias, `native!`, `unset!` y `abort!`                 | Cargar y vigilar el archivo, validar con Zod y mostrar los errores en Preferencias.     |
-| FAL-14 | Servidor HTTP local            | Puerto 19840, autenticación básica, notas, notebooks, etiquetas y archivos | Desactivado por defecto, solo en loopback y con credenciales en el llavero del sistema. |
-| FAL-15 | Servidor MCP                   | Agentes que buscan, leen, crean y actualizan notas                         | Construirlo sobre FAL-14 y conservar cursor e historial al editar la nota abierta.      |
-| FAL-16 | Sincronización                 | Servidor propio o CouchDB, con fusión automática de conflictos             | Implementar `SyncAdapter`, notebooks, etiquetas, adjuntos y conflictos. Requiere D-2.   |
-| FAL-17 | Cifrado de extremo a extremo   | AES-256-GCM con clave derivada por PBKDF2                                  | Cifrar antes de enviar, con la clave en el llavero. Debe llegar junto con FAL-16.       |
-| FAL-18 | Plugins                        | `activate`, `deactivate`, comandos, layouts e `ipm`                        | Crear el cargador sobre el manifiesto actual, con permisos limitados. Requiere D-3.     |
-| FAL-19 | Script `init.js`               | JavaScript del usuario al arrancar                                         | Ofrecerlo solo con la API de FAL-18, activación explícita y sin acceso a Node.          |
-| FAL-20 | Atajos globales y nota rápida  | Mostrar u ocultar la ventana, nota rápida, bandeja del sistema             | Usar `globalShortcut`, `Tray` y una segunda ventana con la misma seguridad.             |
-| FAL-21 | Muestras de color              | Muestra junto a `#hex`, `rgb()` y `hsl()` en código en línea               | Añadir un componente en el renderer del preview.                                        |
-| FAL-22 | Copiar ID y arrastrar enlaces  | Copiar ID de nota, notebook y etiqueta. Arrastrar una nota como enlace     | Añadir entradas al menú contextual y datos al arrastre.                                 |
+| ID     | Función                        | Qué ofrece Inkdrop                                                         | Implementación propuesta                                                                                                            |
+| ------ | ------------------------------ | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| FAL-08 | Esquema de la nota             | Encabezados y tareas con la posición actual resaltada                      | **Resuelto el 2026-11-18.** Panel con la posición actual y fuente `#` en la paleta.                                                 |
+| FAL-09 | Buscar en el preview           | Búsqueda también dentro de bloques de código                               | **Resuelto el 2026-11-18.** Cmd/Ctrl+F fuera del editor busca en el preview, también dentro del código.                             |
+| FAL-10 | Visor de imágenes              | Se abre con doble clic                                                     | **Resuelto el 2026-11-18.** Se abre con doble clic o Enter, con zoom por botones y teclado.                                         |
+| FAL-11 | Pegado inteligente de enlaces  | Pegar URL sobre una selección crea un enlace, con título automático        | **Resuelto el 2026-11-18.** Menú de formato al pegar. El título se pide sólo con la preferencia activa o a petición en cada enlace. |
+| FAL-12 | Tema automático claro y oscuro | Sigue la apariencia del sistema                                            | Añadir un tema claro y otro oscuro en preferencias y escuchar `nativeTheme`.                                                        |
+| FAL-13 | Archivo `keymap.json`          | Selectores CSS, secuencias, `native!`, `unset!` y `abort!`                 | Cargar y vigilar el archivo, validar con Zod y mostrar los errores en Preferencias.                                                 |
+| FAL-14 | Servidor HTTP local            | Puerto 19840, autenticación básica, notas, notebooks, etiquetas y archivos | Desactivado por defecto, solo en loopback y con credenciales en el llavero del sistema.                                             |
+| FAL-15 | Servidor MCP                   | Agentes que buscan, leen, crean y actualizan notas                         | Construirlo sobre FAL-14 y conservar cursor e historial al editar la nota abierta.                                                  |
+| FAL-16 | Sincronización                 | Servidor propio o CouchDB, con fusión automática de conflictos             | Implementar `SyncAdapter`, notebooks, etiquetas, adjuntos y conflictos. Requiere D-2.                                               |
+| FAL-17 | Cifrado de extremo a extremo   | AES-256-GCM con clave derivada por PBKDF2                                  | Cifrar antes de enviar, con la clave en el llavero. Debe llegar junto con FAL-16.                                                   |
+| FAL-18 | Plugins                        | `activate`, `deactivate`, comandos, layouts e `ipm`                        | Crear el cargador sobre el manifiesto actual, con permisos limitados. Requiere D-3.                                                 |
+| FAL-19 | Script `init.js`               | JavaScript del usuario al arrancar                                         | Ofrecerlo solo con la API de FAL-18, activación explícita y sin acceso a Node.                                                      |
+| FAL-20 | Atajos globales y nota rápida  | Mostrar u ocultar la ventana, nota rápida, bandeja del sistema             | Usar `globalShortcut`, `Tray` y una segunda ventana con la misma seguridad.                                                         |
+| FAL-21 | Muestras de color              | Muestra junto a `#hex`, `rgb()` y `hsl()` en código en línea               | Añadir un componente en el renderer del preview.                                                                                    |
+| FAL-22 | Copiar ID y arrastrar enlaces  | Copiar ID de nota, notebook y etiqueta. Arrastrar una nota como enlace     | Añadir entradas al menú contextual y datos al arrastre.                                                                             |
 
 ### P3: ecosistema
 
@@ -339,7 +341,7 @@ La ausencia de estas funciones se comprobó en el código fuente.
 
 ## Orden de trabajo recomendado
 
-1. **Escritura y lectura:** FAL-09, FAL-10, FAL-11, INC-15, INC-16 y FAL-21.
+1. **Escritura y lectura:** INC-16 y FAL-21.
 2. **Datos:** FAL-02, FAL-01, INC-19, INC-14 e INC-23.
 3. **Integración con el escritorio:** INC-09, INC-10, INC-17, FAL-06, FAL-07, FAL-12, FAL-13 y FAL-20.
 4. **Plataforma:** FAL-14, FAL-15, FAL-18, FAL-19, FAL-16 y FAL-17, según D-2 y D-3.

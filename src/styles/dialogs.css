@@ -39,6 +39,28 @@
     display: block;
     color: var(--muted-text-color);
   }
+  .image-viewer {
+    inline-size: min(1100px, calc(100vw - 32px));
+  }
+  .image-viewer-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--8px);
+    padding: var(--8px);
+    color: var(--muted-text-color);
+    font-size: var(--small);
+    font-variant-numeric: tabular-nums;
+  }
+  .image-viewer-stage {
+    max-block-size: calc(100vh - 180px);
+    overflow: auto;
+    padding: 0 var(--16px) var(--16px);
+    text-align: center;
+  }
+  .image-viewer-stage img {
+    max-inline-size: none;
+  }
   .command-palette-hints {
     display: flex;
     flex-wrap: wrap;

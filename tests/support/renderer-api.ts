@@ -72,7 +72,10 @@ export function createApi(overrides: Partial<InkNoteApi['notes']> = {}) {
     onBeforeClose: () => () => {},
     setWindowBackground: async () => success(true),
     reloadWindow: async () => success(true),
-    links: { openExternal: async () => success(true) },
+    links: {
+      openExternal: async () => success(true),
+      fetchTitle: async () => success(null),
+    },
     library: {
       get: async () => success(emptyLibrary),
       createNotebook: async () => failure('unavailable'),

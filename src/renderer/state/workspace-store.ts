@@ -309,6 +309,10 @@ export function createWorkspaceStore(
       saveDraft: persistence.saveDraft,
       flushDrafts: persistence.flushDrafts,
       openExternalLink: (url) => api.links.openExternal(url),
+      async fetchLinkTitle(url) {
+        const result = await api.links.fetchTitle(url);
+        return result.ok ? result.data : null;
+      },
       async openNoteLink(url) {
         const id = linkedNoteId(url);
         if (!id) return failure('invalid_input');
@@ -469,6 +473,14 @@ export function createWorkspaceStore(
       commandPaletteQuery: '',
       setCommandPaletteOpen(commandPaletteOpen, commandPaletteQuery = '') {
         set({ commandPaletteOpen, commandPaletteQuery });
+      },
+      previewFindOpen: false,
+      setPreviewFindOpen(previewFindOpen) {
+        set({ previewFindOpen });
+      },
+      imageViewer: null,
+      setImageViewer(imageViewer) {
+        set({ imageViewer });
       },
       outlineOpen: false,
       setOutlineOpen(outlineOpen) {

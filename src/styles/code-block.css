@@ -1,4 +1,48 @@
 @layer theme.preview {
+  .mde-preview .codeblock {
+    position: relative;
+  }
+
+  .mde-preview .codeblock-actions {
+    position: absolute;
+    z-index: 1;
+    inset-block-start: 0.35em;
+    inset-inline-end: 0.35em;
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    color: var(--mde-preview-codeblock-meta-text-color);
+    font-size: 0.8em;
+    opacity: 0;
+    user-select: none;
+    transition: opacity 120ms ease;
+  }
+
+  .mde-preview .codeblock:hover .codeblock-actions,
+  .mde-preview .codeblock-actions:focus-within {
+    opacity: 1;
+  }
+
+  .mde-preview .codeblock-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+  }
+
+  .mde-preview .codeblock-copy {
+    display: inline-flex;
+    padding: 0.35em;
+    border: 1px solid var(--internal-border-color);
+    border-radius: 4px;
+    background: var(--editor-background-color);
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .mde-preview img[tabindex] {
+    cursor: zoom-in;
+  }
+
   .mde-preview .codeblock-meta-body {
     min-width: 0;
     overflow-wrap: anywhere;
@@ -35,4 +79,12 @@
     flex: 1;
     min-width: 0;
   }
+}
+
+::highlight(inknote-preview-find) {
+  background-color: var(--editor-search-match-background-color);
+}
+
+::highlight(inknote-preview-find-current) {
+  background-color: var(--editor-search-match-selected-background-color);
 }

@@ -25,9 +25,18 @@
   con los prefijos `>`, `b`, `t`, `#` y `h`.
 - El panel Esquema lista encabezados y tareas y resalta la posición actual.
 - El preview, HTML y PDF muestran subíndices y superíndices con `<sub>` y `<sup>`.
+- Cmd/Ctrl+F fuera del editor busca en la vista previa, incluido el código.
+- Las imágenes del preview se amplían con doble clic o Enter.
+- Pegar una URL sobre texto seleccionado crea un enlace Markdown.
+- Pegar una URL en el cursor ofrece mantenerla, crear un enlace o usar el título
+  de la página. El título sólo se consulta con permiso y nunca en redes internas.
+- Los bloques de código ofrecen botón de copiar, icono de su familia de lenguaje
+  y una preferencia para numerar siempre sus líneas.
 
 ### Corregido
 
+- Copiar el enlace de una nota o del cursor funciona aunque el sistema deniegue
+  el acceso directo al portapapeles.
 - Detail aparece al pasar el puntero o navegar con teclado, sin quedarse
   visible en un notebook previamente seleccionado. Su diseño conserva el
   contorno compacto y evita solaparse con nombres largos.
@@ -45,7 +54,7 @@
 
 ### Pruebas
 
-- 561 pruebas automatizadas, lint y TypeScript aprobados.
+- 648 pruebas automatizadas, lint y TypeScript aprobados.
 - QA nativo local completo en macOS Apple Silicon: edición, autoguardado,
   sincronización, respaldos, HTML/PDF, papelera, temas y búsqueda con 3.000 notas.
 - Doce lenguajes comprobados en siete temas; 972 mediciones de contraste por

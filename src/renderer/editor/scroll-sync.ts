@@ -253,6 +253,12 @@ export function createScrollSync(
         sync();
       } else schedule();
     },
+    // App-driven preview jumps have no pointer event to claim the scroll.
+    previewNavigated() {
+      delete expected.preview;
+      owner = 'preview';
+      followCursor = false;
+    },
     editorChanged(selectionChanged = false, changes?: ChangeDesc) {
       dirty = true;
       if (lastSourcePosition !== null && changes)

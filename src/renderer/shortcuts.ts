@@ -15,6 +15,7 @@ import {
 } from '../shared/keybindings';
 import { editorCommands } from './editor/editor-commands';
 import { linkAtCursor } from './editor/text-commands';
+import { copyText } from './editor/clipboard';
 import { linkedNoteId, noteMarkdownLink } from '../shared/note-link';
 import { markdownTabKeys } from '../shared/editor-keybindings';
 
@@ -86,6 +87,12 @@ export function executeShortcut(
     case 'telescope-themes:show':
       state.setCommandPaletteOpen(true, 'h ');
       return true;
+    case 'preview:find':
+      if (!state.document.noteId || state.preferences.editorMode === 'edit')
+        return false;
+      state.setPreviewFindOpen(true);
+      document.querySelector<HTMLInputElement>('.preview-find input')?.select();
+      return true;
     case 'view:toggle-outline':
       state.setOutlineOpen(!state.outlineOpen);
       return true;
@@ -147,11 +154,8 @@ export function executeShortcut(
       return true;
     case 'core:copy-note-link': {
       const { noteId, title } = state.document;
-      if (!noteId || !navigator.clipboard || state.navigation.type === 'trash')
-        return false;
-      void navigator.clipboard
-        .writeText(noteMarkdownLink({ id: noteId, title }))
-        .catch(() => {});
+      if (!noteId || state.navigation.type === 'trash') return false;
+      void copyText(noteMarkdownLink({ id: noteId, title }));
       return true;
     }
     case 'core:focus-search':
@@ -355,6 +359,7 @@ export function installShortcuts(
         ((!state.settingsOpen &&
           !state.templatePickerOpen &&
           !state.commandPaletteOpen &&
+          !state.imageViewer &&
           !state.libraryDialog &&
           !state.notebookDialogOpen) ||
           (state.settingsOpen &&

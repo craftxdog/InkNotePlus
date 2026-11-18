@@ -181,6 +181,7 @@ function PreviewImage({
   title,
   ...props
 }: ComponentProps<'img'> & ExtraProps) {
+  const openViewer = useWorkspace((state) => state.setImageViewer);
   const { width, height, caption } = parseImageDimensions(alt ?? '');
   if (typeof src !== 'string' || !managedImageUrlPattern.test(src))
     return (
@@ -193,10 +194,15 @@ function PreviewImage({
       {...props}
       src={src}
       alt={caption}
-      title={title}
+      title={title ?? 'Doble clic para ampliar'}
       style={{ width, height }}
       decoding="async"
       loading="lazy"
+      tabIndex={0}
+      onDoubleClick={() => openViewer({ src, alt: caption })}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') openViewer({ src, alt: caption });
+      }}
     />
   );
 }
@@ -216,6 +222,9 @@ function PreviewBlock({ node }: ComponentProps<'pre'> & ExtraProps) {
   const { element, language, text, metadata } = readMarkdownFence(node);
   const math = useWorkspace((state) => state.preferences.mathEnabled);
   const mermaid = useWorkspace((state) => state.preferences.mermaidEnabled);
+  const lineNumbers = useWorkspace(
+    (state) => state.preferences.codeLineNumbers,
+  );
   const context = useContext(PreviewContext);
   // Code fences own their source positions; react-markdown puts them on code.
   const source = element
@@ -254,6 +263,8 @@ function PreviewBlock({ node }: ComponentProps<'pre'> & ExtraProps) {
       metadata={metadata}
       source={source}
       onOpenLink={context?.openLink}
+      lineNumbers={lineNumbers}
+      copyable
     />
   );
 }

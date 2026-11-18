@@ -1,5 +1,5 @@
 import { z } from './validation';
-import { appErrorSchema } from './ipc';
+import { appErrorSchema, noteSortSchema } from './ipc';
 import { keybindingsSchema } from './keybindings';
 
 export const themeIdSchema = z
@@ -27,7 +27,7 @@ const fields = {
   notebookScopeId: z.uuid().nullable(),
   expandedNotebookIds: z.array(z.uuid()).max(1000),
   showNoteCounts: z.boolean(),
-  noteSort: z.enum(['updated', 'title']),
+  noteSort: noteSortSchema,
   editorFontFamily: fontFamilySchema,
   editorFontSize: z.number().int().min(10).max(40),
   editorLineHeight: z.number().min(1).max(3),
@@ -37,6 +37,7 @@ const fields = {
   keyboardMode: z.enum(['standard', 'vim']),
   activeLine: z.boolean(),
   spellcheck: z.boolean(),
+  linkTitleFetch: z.boolean(),
   showToolbar: z.boolean(),
   toolbarPlacement: z.enum(['fixed', 'floating']),
   previewFontFamily: fontFamilySchema,
@@ -47,6 +48,7 @@ const fields = {
   mermaidEnabled: z.boolean(),
   mermaidPanZoom: z.boolean(),
   mermaidToolbar: z.boolean(),
+  codeLineNumbers: z.boolean(),
   keybindings: keybindingsSchema,
 };
 const recordSchema = z.object(fields).strict();
@@ -62,7 +64,7 @@ export const defaultPreferences: Preferences = {
   notebookScopeId: null,
   expandedNotebookIds: [],
   showNoteCounts: true,
-  noteSort: 'updated',
+  noteSort: 'updated-desc',
   // Empty families inherit the theme/platform stack instead of downloading fonts.
   editorFontFamily: '',
   editorFontSize: 14,
@@ -73,6 +75,7 @@ export const defaultPreferences: Preferences = {
   keyboardMode: 'standard',
   activeLine: true,
   spellcheck: true,
+  linkTitleFetch: false,
   showToolbar: true,
   toolbarPlacement: 'floating',
   previewFontFamily: '',
@@ -83,6 +86,7 @@ export const defaultPreferences: Preferences = {
   mermaidEnabled: true,
   mermaidPanZoom: true,
   mermaidToolbar: true,
+  codeLineNumbers: false,
   keybindings: [],
 };
 // Fill newly introduced settings on existing installations, preserving every

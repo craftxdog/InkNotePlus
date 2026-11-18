@@ -74,7 +74,7 @@ export function createDraftPersistence(
               notes:
                 state.noteList.hasMore ||
                 state.noteList.notes.length >= 50 ||
-                state.preferences.noteSort === 'title'
+                state.preferences.noteSort !== 'updated-desc'
                   ? state.noteList.notes.map((note) =>
                       note.id === result.data.id ? result.data : note,
                     )
@@ -89,7 +89,8 @@ export function createDraftPersistence(
           get().searchQuery ||
           get().navigation.type !== 'all' ||
           get().preferences.notebookScopeId ||
-          get().preferences.noteSort === 'title' ||
+          get().preferences.noteSort !== 'updated-desc' ||
+          get().tagFilter.length > 0 ||
           get().noteList.hasMore ||
           get().noteList.notes.length >= 50
         )

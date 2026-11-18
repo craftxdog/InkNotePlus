@@ -188,8 +188,20 @@ export function SettingsDialog() {
                         void refresh();
                       }}
                     >
-                      <option value="updated">Última modificación</option>
-                      <option value="title">Título</option>
+                      <option value="updated-desc">
+                        Última modificación, recientes primero
+                      </option>
+                      <option value="updated-asc">
+                        Última modificación, antiguas primero
+                      </option>
+                      <option value="created-desc">
+                        Fecha de creación, recientes primero
+                      </option>
+                      <option value="created-asc">
+                        Fecha de creación, antiguas primero
+                      </option>
+                      <option value="title-asc">Título, de la A a la Z</option>
+                      <option value="title-desc">Título, de la Z a la A</option>
                     </select>
                   </label>
                   {toggle(
@@ -290,6 +302,11 @@ export function SettingsDialog() {
                   {toggle('activeLine', 'Resaltar línea activa')}
                   {toggle('readableLineLength', 'Limitar anchura de lectura')}
                   {toggle('spellcheck', 'Revisión ortográfica del sistema')}
+                  {toggle(
+                    'linkTitleFetch',
+                    'Buscar el título de los enlaces pegados',
+                    'InkNote consultará cada página al pegar su URL, y ese sitio verá tu dirección IP. Sin esta opción, sólo se consulta si lo pides en cada enlace.',
+                  )}
                   {toggle('showToolbar', 'Mostrar barra de formato')}
                   <label>
                     Posición de la barra de formato
@@ -346,6 +363,11 @@ export function SettingsDialog() {
                   )}
                 </SettingGroup>
                 <SettingGroup title="Mermaid" icon={<Workflow size={17} />}>
+                  {toggle(
+                    'codeLineNumbers',
+                    'Numerar siempre los bloques de código',
+                    'También se aplica al exportar a HTML y PDF.',
+                  )}
                   {toggle('mermaidEnabled', 'Renderizar diagramas Mermaid')}
                   {toggle(
                     'mermaidPanZoom',

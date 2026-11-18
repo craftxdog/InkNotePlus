@@ -1,0 +1,100 @@
+@layer theme.preview {
+  .mde-preview .codeblock {
+    position: relative;
+  }
+
+  .mde-preview .codeblock-actions {
+    position: absolute;
+    z-index: 1;
+    inset-block-start: 0.35em;
+    inset-inline-end: 0.35em;
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    color: var(--mde-preview-codeblock-meta-text-color);
+    font-size: 0.8em;
+    opacity: 0;
+    user-select: none;
+    transition: opacity 120ms ease;
+  }
+
+  .mde-preview .codeblock:hover .codeblock-actions,
+  .mde-preview .codeblock-actions:focus-within {
+    opacity: 1;
+  }
+
+  .mde-preview .codeblock-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+  }
+
+  .mde-preview .codeblock-copy {
+    display: inline-flex;
+    padding: 0.35em;
+    border: 1px solid var(--internal-border-color);
+    border-radius: 4px;
+    background: var(--editor-background-color);
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .mde-preview .color-swatch {
+    display: inline-block;
+    inline-size: 0.75em;
+    block-size: 0.75em;
+    margin-inline-start: 0.35em;
+    border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+    border-radius: 50%;
+    vertical-align: -0.05em;
+  }
+
+  .mde-preview img[tabindex] {
+    cursor: zoom-in;
+  }
+
+  .mde-preview .codeblock-meta-body {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .mde-preview .codeblock-meta-icon {
+    flex-direction: column;
+    gap: 0.15em;
+    flex-shrink: 0;
+  }
+
+  .mde-preview .codeblock-language {
+    font-size: 0.65em;
+    font-weight: 600;
+    line-height: 1;
+    text-transform: uppercase;
+    max-width: 6em;
+    overflow-wrap: anywhere;
+  }
+
+  .mde-preview .codeblock-info a {
+    display: inline-flex;
+    gap: 0.25em;
+    align-items: center;
+  }
+
+  .mde-preview .mde-preview-code-line-number {
+    color: var(--mde-preview-codeblock-meta-text-color);
+    white-space: pre;
+    flex-shrink: 0;
+  }
+
+  .mde-preview code.mde-preview-code-body {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+::highlight(inknote-preview-find) {
+  background-color: var(--editor-search-match-background-color);
+}
+
+::highlight(inknote-preview-find-current) {
+  background-color: var(--editor-search-match-selected-background-color);
+}

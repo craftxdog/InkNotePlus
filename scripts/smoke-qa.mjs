@@ -41,6 +41,16 @@ const checks = [
   ['Backup, restore and native PDF', 'smoke-transfer.mjs'],
   ['Library and Trash flows', 'smoke-library-qa.mjs', `--binary=${binary}`],
   [
+    'Notebook Detail hover and keyboard access',
+    'smoke-notebook-detail.mjs',
+    `--binary=${binary}`,
+  ],
+  [
+    'Code grammars, metadata, completion and theme contrast',
+    'smoke-code-blocks.mjs',
+    `--binary=${binary}`,
+  ],
+  [
     '3000-note load, search and reload',
     'smoke-scale.mjs',
     `--binary=${binary}`,

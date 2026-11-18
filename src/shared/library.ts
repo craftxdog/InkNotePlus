@@ -51,6 +51,18 @@ export const librarySchema = z
     matching: z.number().int().nonnegative().default(0),
   })
   .strict();
+export const renameNotebookSchema = z
+  .object({ id: z.uuid(), name: z.string().trim().min(1).max(80) })
+  .strict();
+export type RenameNotebookInput = z.output<typeof renameNotebookSchema>;
+export const moveNotebookSchema = z
+  .object({
+    id: z.uuid(),
+    parentId: z.uuid().nullable(),
+    beforeId: z.uuid().nullable(),
+  })
+  .strict();
+export type MoveNotebookInput = z.output<typeof moveNotebookSchema>;
 export type LibrarySnapshot = z.output<typeof librarySchema>;
 export type Notebook = z.output<typeof notebookSchema>;
 export type CreateNotebookInput = z.input<typeof createNotebookSchema>;
@@ -67,6 +79,8 @@ export const LIBRARY_CHANNELS = {
   get: 'library:get',
   createNotebook: 'library:create-notebook',
   setNotebookIcon: 'library:set-notebook-icon',
+  renameNotebook: 'library:rename-notebook',
+  moveNotebook: 'library:move-notebook',
   deleteNotebook: 'library:delete-notebook',
   updateTag: 'library:update-tag',
   deleteTag: 'library:delete-tag',
@@ -74,6 +88,10 @@ export const LIBRARY_CHANNELS = {
 export const deleteNotebookSchema = z.object({ id: z.uuid() }).strict();
 export const deletedNotebooksResultSchema = z.discriminatedUnion('ok', [
   z.object({ ok: z.literal(true), data: z.array(z.uuid()) }).strict(),
+  z.object({ ok: z.literal(false), error: appErrorSchema }).strict(),
+]);
+export const notebookMutationResultSchema = z.discriminatedUnion('ok', [
+  z.object({ ok: z.literal(true), data: z.boolean() }).strict(),
   z.object({ ok: z.literal(false), error: appErrorSchema }).strict(),
 ]);
 export const tagMutationResultSchema = z.discriminatedUnion('ok', [

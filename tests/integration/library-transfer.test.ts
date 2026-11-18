@@ -286,6 +286,26 @@ describe('local library backups', () => {
 });
 
 describe('portable editor exports', () => {
+  it('exports rich fence metadata, numbered lines and lazily loaded grammars', async () => {
+    const source = await profile('source');
+    const note = source.notes.create({
+      title: 'Code export',
+      body: '```python filename="src/greet.py" line=18 title="Safe <title>"\ndef greet(name):\n    return "Hi " + name\n```',
+    });
+    const { html } = await renderNoteExport(
+      note,
+      { mathEnabled: true, mermaidEnabled: true },
+      source.images,
+    );
+    expect(html).toContain('class="codeblock-title">Safe &lt;title&gt;');
+    expect(html).toContain('class="codeblock-filename">src/greet.py');
+    expect(html).toContain('aria-hidden="true">18\n19</span>');
+    expect(html).toContain('tok-definition-keyword');
+    expect(html).toContain('tok-control-keyword');
+    expect(html).not.toContain('<title>Safe');
+    expect(html).not.toContain('codeblock-copy');
+  });
+
   it('exports the library and reports missing attachments while preserving their references', async () => {
     const source = await profile('source');
     const body = `A note with ![Image](inknote-asset://images/${'a'.repeat(64)}.png)`;
@@ -383,7 +403,7 @@ describe('portable editor exports', () => {
       '| --- | --- |',
       '| Notes | 2 |',
       '',
-      'Inline $x^2$ and <mark>marked</mark>.',
+      'Inline $x^2$ and <mark>marked</mark> H<sub>2</sub>O x<sup>2</sup> `#ff0000`.',
       '',
       '~~~mermaid',
       'flowchart LR',
@@ -409,6 +429,10 @@ describe('portable editor exports', () => {
     expect(html).toContain('<table>');
     expect(html).toContain('gfm-alert-type-note');
     expect(html).toContain('<mark>marked</mark>');
+    expect(html).toContain('<sub>2</sub>');
+    expect(html).toContain('<sup>2</sup>');
+    expect(html).not.toContain('codeblock-actions');
+    expect(html).toContain('class="color-swatch"');
     expect(html).toContain('type="checkbox"');
     expect(html).toContain('data:image/png;base64,');
     expect(html).toContain('data:image/svg+xml;base64,');

@@ -8,12 +8,14 @@ import {
 } from '@codemirror/search';
 import type { WorkspaceStoreApi } from './state/workspace-store';
 import {
+  noteSortCommands,
   shortcutCommands,
   shortcutFor,
   type ShortcutCommand,
 } from '../shared/keybindings';
 import { editorCommands } from './editor/editor-commands';
 import { linkAtCursor } from './editor/text-commands';
+import { copyText } from './editor/clipboard';
 import { linkedNoteId, noteMarkdownLink } from '../shared/note-link';
 import { markdownTabKeys } from '../shared/editor-keybindings';
 
@@ -42,6 +44,17 @@ export function keystrokeMatches(
   );
 }
 
+// Cmd+Arrow moves the caret to the line boundary in every macOS text field.
+function keepsNativeCaretMovement(
+  command: ShortcutCommand,
+  target: Element | null,
+) {
+  return (
+    (command === 'core:navigate-back' || command === 'core:navigate-forward') &&
+    !!target?.closest('.cm-content, input, textarea, [contenteditable="true"]')
+  );
+}
+
 export function executeShortcut(
   store: WorkspaceStoreApi,
   command: ShortcutCommand,
@@ -58,6 +71,35 @@ export function executeShortcut(
       return true;
     case 'core:toggle-telescope':
       state.setCommandPaletteOpen(!state.commandPaletteOpen);
+      return true;
+    case 'core:telescope-commands':
+      state.setCommandPaletteOpen(true, '> ');
+      return true;
+    case 'core:telescope-notebooks':
+      state.setCommandPaletteOpen(true, 'b ');
+      return true;
+    case 'core:telescope-tags':
+      state.setCommandPaletteOpen(true, 't ');
+      return true;
+    case 'telescope-toc:show':
+      state.setCommandPaletteOpen(true, '# ');
+      return true;
+    case 'telescope-themes:show':
+      state.setCommandPaletteOpen(true, 'h ');
+      return true;
+    case 'core:show-note-revisions':
+      if (!state.document.noteId || state.navigation.type === 'trash')
+        return false;
+      state.setRevisionsOpen(true);
+      return true;
+    case 'preview:find':
+      if (!state.document.noteId || state.preferences.editorMode === 'edit')
+        return false;
+      state.setPreviewFindOpen(true);
+      document.querySelector<HTMLInputElement>('.preview-find input')?.select();
+      return true;
+    case 'view:toggle-outline':
+      state.setOutlineOpen(!state.outlineOpen);
       return true;
     case 'application:open-preferences':
       if (state.settingsOpen && document.activeElement instanceof HTMLElement)
@@ -80,8 +122,24 @@ export function executeShortcut(
       state.selectNote(next.id);
       return true;
     }
+    case 'view:sort-by-title-in-asc':
+    case 'view:sort-by-title-in-desc':
+    case 'view:sort-by-date-created-in-asc':
+    case 'view:sort-by-date-created-in-desc':
+    case 'view:sort-by-date-updated-in-asc':
+    case 'view:sort-by-date-updated-in-desc':
+      void state.setNoteSort(noteSortCommands[command]);
+      return true;
     case 'core:save-note':
       void state.flushDrafts();
+      return true;
+    case 'core:duplicate-note':
+      if (
+        state.navigation.type === 'trash' ||
+        (!state.activeNoteId && !state.selectedNoteIds.length)
+      )
+        return false;
+      void state.duplicateNotes();
       return true;
     case 'editor:toggle-line-wrapping':
       void state.updatePreferences({
@@ -101,11 +159,8 @@ export function executeShortcut(
       return true;
     case 'core:copy-note-link': {
       const { noteId, title } = state.document;
-      if (!noteId || !navigator.clipboard || state.navigation.type === 'trash')
-        return false;
-      void navigator.clipboard
-        .writeText(noteMarkdownLink({ id: noteId, title }))
-        .catch(() => {});
+      if (!noteId || state.navigation.type === 'trash') return false;
+      void copyText(noteMarkdownLink({ id: noteId, title }));
       return true;
     }
     case 'core:focus-search':
@@ -302,10 +357,15 @@ export function installShortcuts(
         );
     }
     let matches = shortcuts.filter(
-      ({ command, keys }) =>
+      ({ command, keys, custom }) =>
+        (custom ||
+          state.platform !== 'darwin' ||
+          !keepsNativeCaretMovement(command.id, element)) &&
         ((!state.settingsOpen &&
           !state.templatePickerOpen &&
           !state.commandPaletteOpen &&
+          !state.imageViewer &&
+          !state.revisionsOpen &&
           !state.libraryDialog &&
           !state.notebookDialogOpen) ||
           (state.settingsOpen &&
@@ -349,6 +409,7 @@ export function installShortcuts(
       const repeatedFormat =
         event.repeat &&
         (id.startsWith('core:toggle-') ||
+          id === 'core:duplicate-note' ||
           id === 'core:strong' ||
           id === 'core:emphasize' ||
           id === 'core:strikethrough');

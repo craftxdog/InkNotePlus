@@ -25,15 +25,18 @@ import { linkedNoteId } from '../../shared/note-link';
 import { remarkGithubAlerts } from './github-alerts';
 import {
   HighlightedCode,
+  FencedCodeBlock,
   MarkdownAlert,
   readMarkdownFence,
 } from './markdown-presentation';
+import { remarkCodeFenceMeta } from './code-fence';
 
 const gfm = [
   remarkGfm,
   remarkMath,
   remarkGithubAlerts,
   remarkHighlights,
+  remarkCodeFenceMeta,
   remarkSourceMap,
 ];
 const sourceText = [rehypeSourceText];
@@ -131,15 +134,29 @@ function PreviewCheckbox() {
     />
   );
 }
-function PreviewLink({ href, children }: ComponentProps<'a'>) {
+function PreviewLink({
+  node: _node,
+  href,
+  children,
+  ...props
+}: ComponentProps<'a'> & ExtraProps) {
   const context = useContext(PreviewContext)!;
   return (
     <a
+      {...props}
       href={href}
       title={href}
       onClick={(event) => {
         event.preventDefault();
-        if (href && linkedNoteId(href)) void context.openNoteLink(href);
+        if (href?.startsWith('#')) {
+          const id = href.slice(1);
+          const anchors = event.currentTarget
+            .closest('.mde-preview')
+            ?.querySelectorAll('[id]');
+          [...(anchors ?? [])]
+            .find((anchor) => anchor.id === id)
+            ?.scrollIntoView({ block: 'center' });
+        } else if (href && linkedNoteId(href)) void context.openNoteLink(href);
         else if (href) void context.openLink(href);
       }}
     >
@@ -164,6 +181,7 @@ function PreviewImage({
   title,
   ...props
 }: ComponentProps<'img'> & ExtraProps) {
+  const openViewer = useWorkspace((state) => state.setImageViewer);
   const { width, height, caption } = parseImageDimensions(alt ?? '');
   if (typeof src !== 'string' || !managedImageUrlPattern.test(src))
     return (
@@ -176,10 +194,15 @@ function PreviewImage({
       {...props}
       src={src}
       alt={caption}
-      title={title}
+      title={title ?? 'Doble clic para ampliar'}
       style={{ width, height }}
       decoding="async"
       loading="lazy"
+      tabIndex={0}
+      onDoubleClick={() => openViewer({ src, alt: caption })}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') openViewer({ src, alt: caption });
+      }}
     />
   );
 }
@@ -195,10 +218,14 @@ function PreviewCode({ children, className }: ComponentProps<'code'>) {
   );
 }
 
-function PreviewBlock({ node, children }: ComponentProps<'pre'> & ExtraProps) {
-  const { element, language, text } = readMarkdownFence(node);
+function PreviewBlock({ node }: ComponentProps<'pre'> & ExtraProps) {
+  const { element, language, text, metadata } = readMarkdownFence(node);
   const math = useWorkspace((state) => state.preferences.mathEnabled);
   const mermaid = useWorkspace((state) => state.preferences.mermaidEnabled);
+  const lineNumbers = useWorkspace(
+    (state) => state.preferences.codeLineNumbers,
+  );
+  const context = useContext(PreviewContext);
   // Code fences own their source positions; react-markdown puts them on code.
   const source = element
     ? Object.fromEntries(
@@ -229,5 +256,15 @@ function PreviewBlock({ node, children }: ComponentProps<'pre'> & ExtraProps) {
         </Suspense>
       </div>
     );
-  return <pre {...source}>{children}</pre>;
+  return (
+    <FencedCodeBlock
+      language={language}
+      text={text}
+      metadata={metadata}
+      source={source}
+      onOpenLink={context?.openLink}
+      lineNumbers={lineNumbers}
+      copyable
+    />
+  );
 }

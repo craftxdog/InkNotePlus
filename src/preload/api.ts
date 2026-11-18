@@ -30,10 +30,18 @@ import {
 } from '../shared/window-lifecycle';
 import {
   EXTERNAL_LINK_CHANNEL,
+  LINK_TITLE_CHANNEL,
   externalLinkSchema,
   externalLinkResultSchema,
+  linkTitleResultSchema,
 } from '../shared/external-link';
 import {
+  exportNotesSchema,
+  importNotesSchema,
+  importResultSchema,
+  type ExportNotesInput,
+  type ImportNotesInput,
+  type ImportSummary,
   TRANSFER_CHANNELS,
   backupDirectoryResultSchema,
   backupStatusResultSchema,
@@ -55,8 +63,13 @@ import {
   deleteNotebookSchema,
   deletedNotebooksResultSchema,
   tagMutationResultSchema,
+  moveNotebookSchema,
+  notebookMutationResultSchema,
+  renameNotebookSchema,
   type LibraryInput,
   type CreateNotebookInput,
+  type MoveNotebookInput,
+  type RenameNotebookInput,
   type LibrarySnapshot,
   type Notebook,
 } from '../shared/library';
@@ -85,6 +98,12 @@ import {
   manageTrashSchema,
   noteChangedEventSchema,
   noteIdInputSchema,
+  noteRevisionInputSchema,
+  noteRevisionListResultSchema,
+  noteRevisionResultSchema,
+  type NoteRevision,
+  type NoteRevisionInput,
+  type NoteRevisionSummary,
   noteListResultSchema,
   noteResultSchema,
   searchNotesInputSchema,
@@ -116,6 +135,8 @@ export interface InkNoteApi {
     restoreBackup(): Promise<Result<RestoreSummary | null>>;
     exportNote(input: ExportNoteInput): Promise<Result<ExportSummary | null>>;
     exportLibrary(): Promise<Result<ExportSummary | null>>;
+    importNotes(input: ImportNotesInput): Promise<Result<ImportSummary | null>>;
+    exportNotes(input: ExportNotesInput): Promise<Result<ExportSummary | null>>;
     onBackupChanged(listener: (status: BackupStatus) => void): () => void;
   };
   images: {
@@ -135,11 +156,16 @@ export interface InkNoteApi {
   onBeforeClose(listener: () => Promise<boolean>): () => void;
   setWindowBackground(color: string): Promise<Result<boolean>>;
   reloadWindow(): Promise<Result<boolean>>;
-  links: { openExternal(url: string): Promise<Result<boolean>> };
+  links: {
+    openExternal(url: string): Promise<Result<boolean>>;
+    fetchTitle(url: string): Promise<Result<string | null>>;
+  };
   library: {
     get(input?: LibraryInput): Promise<Result<LibrarySnapshot>>;
     createNotebook(input: CreateNotebookInput): Promise<Result<Notebook>>;
     setNotebookIcon(input: SetNotebookIconInput): Promise<Result<Notebook>>;
+    renameNotebook(input: RenameNotebookInput): Promise<Result<boolean>>;
+    moveNotebook(input: MoveNotebookInput): Promise<Result<boolean>>;
     deleteNotebook(id: string): Promise<Result<string[]>>;
     updateTag(input: UpdateTagInput): Promise<Result<boolean>>;
     deleteTag(name: string): Promise<Result<boolean>>;
@@ -156,6 +182,8 @@ export interface InkNoteApi {
     moveToTrash(input: NoteIdInput): Promise<Result<NoteProjection>>;
     restore(input: NoteIdInput): Promise<Result<NoteProjection>>;
     manageTrash(input: ManageTrashInput): Promise<Result<number>>;
+    listRevisions(input: NoteIdInput): Promise<Result<NoteRevisionSummary[]>>;
+    getRevision(input: NoteRevisionInput): Promise<Result<NoteRevision>>;
   };
   onNoteChanged(listener: (event: NoteChangedEvent) => void): () => void;
 }
@@ -206,6 +234,22 @@ export function createInkNoteApi(
         ),
       exportLibrary: () =>
         transferCall(TRANSFER_CHANNELS.exportLibrary, exportResultSchema),
+      exportNotes: (input) =>
+        invoke(
+          ipcRenderer,
+          TRANSFER_CHANNELS.exportNotes,
+          input,
+          exportNotesSchema,
+          exportResultSchema,
+        ),
+      importNotes: (input) =>
+        invoke(
+          ipcRenderer,
+          TRANSFER_CHANNELS.importNotes,
+          input,
+          importNotesSchema,
+          importResultSchema,
+        ),
       onBackupChanged(listener) {
         const handler = (_event: unknown, value: unknown) => {
           const parsed = backupStatusSchema.safeParse(value);
@@ -339,6 +383,14 @@ export function createInkNoteApi(
           externalLinkSchema,
           externalLinkResultSchema,
         ),
+      fetchTitle: (url) =>
+        invoke(
+          ipcRenderer,
+          LINK_TITLE_CHANNEL,
+          { url },
+          externalLinkSchema,
+          linkTitleResultSchema,
+        ),
     },
     library: {
       get: (input = {}) =>
@@ -364,6 +416,22 @@ export function createInkNoteApi(
           input,
           setNotebookIconSchema,
           notebookResultSchema,
+        ),
+      renameNotebook: (input) =>
+        invoke(
+          ipcRenderer,
+          LIBRARY_CHANNELS.renameNotebook,
+          input,
+          renameNotebookSchema,
+          notebookMutationResultSchema,
+        ),
+      moveNotebook: (input) =>
+        invoke(
+          ipcRenderer,
+          LIBRARY_CHANNELS.moveNotebook,
+          input,
+          moveNotebookSchema,
+          notebookMutationResultSchema,
         ),
       deleteNotebook: (id) =>
         invoke(
@@ -424,6 +492,22 @@ export function createInkNoteApi(
           input,
           updateNoteInputSchema,
           noteResultSchema,
+        ),
+      listRevisions: (input) =>
+        invoke(
+          ipcRenderer,
+          IPC_CHANNELS.notes.listRevisions,
+          input,
+          noteIdInputSchema,
+          noteRevisionListResultSchema,
+        ),
+      getRevision: (input) =>
+        invoke(
+          ipcRenderer,
+          IPC_CHANNELS.notes.getRevision,
+          input,
+          noteRevisionInputSchema,
+          noteRevisionResultSchema,
         ),
       list: (input = {}) =>
         invoke(

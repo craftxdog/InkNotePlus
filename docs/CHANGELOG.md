@@ -1,5 +1,79 @@
 # Historial de versiones
 
+## 1.4.0 — Preparada para revisión
+
+### Añadido
+
+- El editor, el preview y la exportación comparten 143 gramáticas del catálogo
+  oficial de CodeMirror. El autocompletado incluye sus alias y extensiones, con
+  carga bajo demanda para Bash, Python, C/C++, Go, Rust, Java y otros lenguajes.
+- Los bloques `diff`/`patch` resaltan cambios de Git; `github-actions` utiliza
+  YAML. Los lenguajes desconocidos conservan su contenido como texto legible.
+- Los bloques de código admiten título, nombre de archivo, línea inicial,
+  referencia de commit y enlace HTTP(S) de origen. HTML y PDF conservan las
+  cabeceras, la numeración y el resaltado.
+
+- Los notebooks se pueden renombrar, mover a otro notebook y ordenar a mano, con
+  arrastre o desde su menú contextual. El orden se conserva en los respaldos.
+- Las notas se mueven arrastrándolas a un notebook o a «Sin notebook», también
+  con varias seleccionadas.
+- Cmd/Ctrl+D duplica la nota. Borrar línea queda disponible sin atajo por defecto.
+- Las notas seleccionadas se pueden mover, etiquetar y cambiar de estado en lote.
+- Pulsar etiquetas en la lista acumula filtros, y Alt+clic deja solo la pulsada.
+- Las notas se ordenan por título, creación o modificación, en ambos sentidos.
+- Cmd/Ctrl+K busca comandos, notebooks, etiquetas, encabezados, tareas y temas,
+  con los prefijos `>`, `b`, `t`, `#` y `h`.
+- El panel Esquema lista encabezados y tareas y resalta la posición actual.
+- El preview, HTML y PDF muestran subíndices y superíndices con `<sub>` y `<sup>`.
+- Cmd/Ctrl+F fuera del editor busca en la vista previa, incluido el código.
+- Las imágenes del preview se amplían con doble clic o Enter.
+- Pegar una URL sobre texto seleccionado crea un enlace Markdown.
+- Pegar una URL en el cursor ofrece mantenerla, crear un enlace o usar el título
+  de la página. El título sólo se consulta con permiso y nunca en redes internas.
+- El clic derecho en el editor ofrece sugerencias ortográficas, añadir palabras al
+  diccionario, cortar, copiar y pegar.
+- Los colores `#hex`, `rgb()` y `hsl()` en código en línea muestran una muestra.
+- El historial de revisiones compara versiones, las restaura y permite deshacer
+  la restauración.
+- Se importan archivos y carpetas Markdown o HTML con sus imágenes, exportaciones
+  de Evernote (.enex) y las de Notion y Bear. Las subcarpetas crean notebooks.
+- También se importan respaldos de Inkdrop con su jerarquía, etiquetas, estados y
+  enlaces internos.
+- Notebooks y selecciones de notas se exportan a Markdown o HTML.
+- Las imágenes admiten hasta 10 MB y los formatos SVG, HEIC y HEIF. Las etiquetas
+  llegan a 64 caracteres y cada nota admite hasta 1000.
+- Los bloques de código ofrecen botón de copiar, icono de su familia de lenguaje
+  y una preferencia para numerar siempre sus líneas.
+
+### Corregido
+
+- Copiar el enlace de una nota o del cursor funciona aunque el sistema deniegue
+  el acceso directo al portapapeles.
+- Detail aparece al pasar el puntero o navegar con teclado, sin quedarse
+  visible en un notebook previamente seleccionado. Su diseño conserva el
+  contorno compacto y evita solaparse con nombres largos.
+- El resaltado conserva las etiquetas semánticas de cada gramática, incluidos
+  funciones, definiciones, comentarios y cambios diff, con los colores del tema.
+- Los bloques TSX utilizan su gramática correspondiente en el preview.
+- Cmd+← y Cmd+→ mueven el cursor dentro del editor y de los campos de texto en
+  macOS, en lugar de cambiar de nota.
+- Abrir InkNote de nuevo con el mismo perfil activa la ventana existente, sin
+  iniciar un segundo proceso sobre la misma base de datos.
+- Las notas completadas y descartadas se ocultan en Todas las notas, etiquetas y
+  notebooks, y sus contadores coinciden. La búsqueda las sigue encontrando.
+- Un guion suelto o una comilla sin cerrar ya no vacían los resultados de búsqueda.
+- Las notas al pie del preview llevan a su definición y permiten volver al texto.
+
+### Pruebas
+
+- 766 pruebas automatizadas, lint y TypeScript aprobados.
+- QA nativo local completo en macOS Apple Silicon: edición, autoguardado,
+  sincronización, respaldos, HTML/PDF, papelera, temas y búsqueda con 3.000 notas.
+- Doce lenguajes comprobados en siete temas; 972 mediciones de contraste por
+  tema, con un mínimo de 5,03:1 en los bloques evaluados.
+- Los paquetes de esta versión se construyen y comprueban en los cuatro
+  destinos nativos antes de ofrecer sus artefactos en GitHub Actions.
+
 ## 1.3.2 — 2026-11-16
 
 ### Corregido

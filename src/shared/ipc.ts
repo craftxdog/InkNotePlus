@@ -1,6 +1,6 @@
 import { z } from './validation';
 import { noteMetadataSchema, noteStatusSchema } from './note-metadata';
-import { tagNameSchema } from './tags';
+import { maxNoteTags, tagNameSchema } from './tags';
 
 export const maxTitleLength = 512;
 export const maxBodyLength = 1_000_000;
@@ -9,6 +9,27 @@ const maxSearchQueryLength = 512;
 const noteIdSchema = z.uuid();
 const limitSchema = z.number().int().min(1).max(100);
 const timestampSchema = z.string().datetime({ offset: true });
+
+export const noteSortValues = [
+  'updated-desc',
+  'updated-asc',
+  'created-desc',
+  'created-asc',
+  'title-asc',
+  'title-desc',
+] as const;
+// Earlier versions stored only the field, each with one implicit direction.
+export const noteSortSchema = z.preprocess(
+  (value) =>
+    value === 'updated'
+      ? 'updated-desc'
+      : value === 'title'
+        ? 'title-asc'
+        : value,
+  z.enum(noteSortValues),
+);
+export type NoteSort = (typeof noteSortValues)[number];
+export const maxTagFilters = 8;
 
 export const IPC_CHANNELS = {
   notes: {
@@ -19,6 +40,8 @@ export const IPC_CHANNELS = {
     moveToTrash: 'notes:move-to-trash',
     restore: 'notes:restore',
     manageTrash: 'notes:manage-trash',
+    listRevisions: 'notes:list-revisions',
+    getRevision: 'notes:get-revision',
   },
   events: {
     noteChanged: 'notes:changed',
@@ -41,11 +64,12 @@ export const listNotesInputSchema = z
     offset: z.number().int().min(0).max(1_000_000).optional(),
     scopeId: z.uuid().optional(),
     includeDescendants: z.boolean().optional(),
-    sort: z.enum(['updated', 'title']).optional(),
+    sort: noteSortSchema.optional(),
     trashed: z.boolean().optional(),
     notebookId: z.uuid().nullable().optional(),
     status: noteStatusSchema.optional(),
     tag: tagNameSchema.optional(),
+    tags: z.array(tagNameSchema).min(1).max(maxTagFilters).optional(),
     templates: z.boolean().optional(),
     excludeFinished: z.boolean().optional(),
   })
@@ -84,6 +108,28 @@ export const manageTrashSchema = z.discriminatedUnion('action', [
       notebookId: z.uuid().nullable(),
     })
     .strict(),
+  z
+    .object({
+      action: z.literal('move'),
+      ids: selectedNoteIds,
+      notebookId: z.uuid().nullable(),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal('status'),
+      ids: selectedNoteIds,
+      status: noteStatusSchema,
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal('tag'),
+      ids: selectedNoteIds,
+      add: z.array(tagNameSchema).max(maxNoteTags),
+      remove: z.array(tagNameSchema).max(1000),
+    })
+    .strict(),
   z.object({ action: z.literal('delete'), ids: selectedNoteIds }).strict(),
   z.object({ action: z.literal('empty') }).strict(),
 ]);
@@ -105,6 +151,30 @@ export const noteSchema = z
 
 export const noteListSchema = z.array(noteSchema);
 
+export const noteRevisionInputSchema = z
+  .object({ id: noteIdSchema, revision: z.number().int().positive() })
+  .strict();
+export const noteRevisionSummarySchema = z
+  .object({
+    revision: z.number().int().positive(),
+    title: z.string(),
+    createdAt: timestampSchema,
+    current: z.boolean(),
+  })
+  .strict();
+export const noteRevisionSchema = z
+  .object({
+    revision: z.number().int().positive(),
+    title: z.string(),
+    body: z.string(),
+    createdAt: timestampSchema,
+  })
+  .strict();
+export const noteRevisionListSchema = z.array(noteRevisionSummarySchema);
+export type NoteRevisionInput = z.output<typeof noteRevisionInputSchema>;
+export type NoteRevisionSummary = z.output<typeof noteRevisionSummarySchema>;
+export type NoteRevision = z.output<typeof noteRevisionSchema>;
+
 export const noteChangedEventSchema = z
   .object({
     type: z.enum(['created', 'updated', 'trashed', 'restored']),
@@ -125,6 +195,15 @@ export const affectedCountResultSchema = z.discriminatedUnion('ok', [
 
 export const noteResultSchema = z.discriminatedUnion('ok', [
   z.object({ ok: z.literal(true), data: noteSchema }).strict(),
+  z.object({ ok: z.literal(false), error: appErrorSchema }).strict(),
+]);
+
+export const noteRevisionListResultSchema = z.discriminatedUnion('ok', [
+  z.object({ ok: z.literal(true), data: noteRevisionListSchema }).strict(),
+  z.object({ ok: z.literal(false), error: appErrorSchema }).strict(),
+]);
+export const noteRevisionResultSchema = z.discriminatedUnion('ok', [
+  z.object({ ok: z.literal(true), data: noteRevisionSchema }).strict(),
   z.object({ ok: z.literal(false), error: appErrorSchema }).strict(),
 ]);
 

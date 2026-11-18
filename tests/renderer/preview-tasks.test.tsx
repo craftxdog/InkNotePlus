@@ -59,6 +59,24 @@ it('ignores a checkbox callback from an older rendered document', async () => {
   expect(store.getState().document.body).toBe('- [ ] newer text');
 });
 
+it('renders exact subscript and superscript pairs without enabling raw HTML', async () => {
+  const body =
+    'H<sub>2</sub>O x<sup>**2**</sup> <sub><mark>mix</mark></sub> <sub class="x">no</sub> <sup>open';
+  const { api } = createApi({
+    list: async () => success([{ ...firstNote, body }]),
+  });
+  const { container } = render(<App store={createWorkspaceStore(api)} />);
+  await waitFor(() =>
+    expect(container.querySelector('.mde-preview sub')?.textContent).toBe('2'),
+  );
+  const preview = container.querySelector('.mde-preview')!;
+  expect(preview.querySelector('sup strong')?.textContent).toBe('2');
+  expect(preview.querySelector('sub mark')?.textContent).toBe('mix');
+  expect(preview.querySelector('[class="x"]')).toBeNull();
+  expect(preview.querySelectorAll('sub')).toHaveLength(2);
+  expect(preview.querySelectorAll('sup')).toHaveLength(1);
+});
+
 it('renders only safe highlight tags and follows internal note links inside the app', async () => {
   const body = `A <mark>**highlight**</mark>. <img src="bad" onerror="alert(1)">\n\n[Open second](inknote://note/${secondNote.id})`;
   const { api } = createApi({

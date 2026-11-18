@@ -1,6 +1,10 @@
 import { z } from './validation';
 
-export const tagNameSchema = z.string().trim().min(1).max(40);
+// Inkdrop's documented tag name length; notes have no announced tag limit, so
+// this cap only protects the interface from malformed data.
+export const maxTagLength = 64;
+export const maxNoteTags = 1000;
+export const tagNameSchema = z.string().trim().min(1).max(maxTagLength);
 export const tagColorSchema = z.enum([
   'default',
   'red',

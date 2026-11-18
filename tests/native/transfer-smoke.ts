@@ -2,17 +2,21 @@ import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, nativeImage } from 'electron';
 import { openDatabase } from '../../src/infrastructure/sqlite/database';
 import { SqliteNoteRepository } from '../../src/infrastructure/sqlite/sqlite-note-repository';
 import { SqliteLibraryRepository } from '../../src/infrastructure/sqlite/sqlite-library-repository';
 import { SqliteLibraryTransfer } from '../../src/infrastructure/sqlite/sqlite-library-transfer';
 import { SqliteSyncOutbox } from '../../src/infrastructure/sqlite/sqlite-sync-outbox';
 import { BackupFiles } from '../../src/main/backup-files';
-import { exportMarkdown } from '../../src/main/markdown-export';
+import {
+  exportCollection,
+  exportMarkdown,
+} from '../../src/main/markdown-export';
 import { renderNoteExport } from '../../src/main/render-note-export';
 import { printNote } from '../../src/main/print-note';
 import { storeImage } from '../../src/main/image-store';
+import { readImportSources } from '../../src/main/note-import';
 import { defaultNoteMetadata } from '../../src/shared/note-metadata';
 
 const output = path.dirname(fileURLToPath(import.meta.url));
@@ -48,9 +52,11 @@ void app.whenReady().then(async () => {
       sourceDirectory,
       () => true,
     );
+    const codeFence =
+      '```python filename="src/greet.py" line=18 title="Native code export"\ndef greet(name):\n    return "Hello " + name\n```';
     const note = source.notes.create({
       title: 'QA español 日本語 <export>',
-      body: `## Native export\n\nInline $x^2$ and **bold**.\n\n> [!NOTE]\n> Export alert.\n\n- [x] Finished\n\n| Name | Count |\n| --- | --- |\n| Notes | 2 |\n\n~~~mermaid\nflowchart LR\n  A[Start] --> B[Done]\n~~~\n\n![Managed image](${image.url})\n\n<script>throw new Error('must not execute')</script>`,
+      body: `## Native export\n\nInline $x^2$ and **bold**.\n\n> [!NOTE]\n> Export alert.\n\n- [x] Finished\n\n| Name | Count |\n| --- | --- |\n| Notes | 2 |\n\n~~~mermaid\nflowchart LR\n  A[Start] --> B[Done]\n~~~\n\n${codeFence}\n\n![Managed image](${image.url})\n\n<script>throw new Error('must not execute')</script>`,
       metadata: {
         ...defaultNoteMetadata,
         notebookId: book.id,
@@ -104,6 +110,9 @@ void app.whenReady().then(async () => {
     assert.equal(exported.missingAttachments, 0);
     assert.match(exported.html, /<math/);
     assert.match(exported.html, /data:image\/svg\+xml;base64,/);
+    assert.match(exported.html, /class="codeblock-title">Native code export/);
+    assert.match(exported.html, /tok-definition-keyword/);
+    assert.match(exported.html, /aria-hidden="true">18\n19<\/span>/);
     assert(!exported.html.includes('<script>'));
     const html = path.join(output, 'native-export.html');
     await writeFile(html, exported.html);
@@ -123,6 +132,76 @@ void app.whenReady().then(async () => {
     const pages = [...bytes.toString('latin1').matchAll(/\/Type\s*\/Page\b/g)]
       .length;
     assert(pages >= 1);
+    const collection = await exportCollection(
+      new SqliteLibraryTransfer(source.db, source.notes),
+      output,
+      path.join(sourceDirectory, 'images'),
+      {
+        format: 'html',
+        scope: { kind: 'notes', ids: [note.id] },
+        renderHtml: (item) =>
+          renderNoteExport(
+            item,
+            { mathEnabled: true, mermaidEnabled: true },
+            path.join(sourceDirectory, 'images'),
+          ),
+      },
+    );
+    assert.equal(collection?.notes, 1);
+    // The import parsers must load and decode real images inside Electron.
+    const imports = path.join(output, 'import-source', 'Proyecto', 'Sub');
+    await mkdir(imports, { recursive: true });
+    const picture = nativeImage
+      .createFromDataURL(
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+      )
+      .toPNG();
+    await writeFile(path.join(imports, 'foto.png'), picture);
+    await writeFile(
+      path.join(imports, 'nota.md'),
+      '# Importada\n\n![Foto](foto.png)\n',
+    );
+    await writeFile(
+      path.join(imports, 'pagina.html'),
+      '<title>Página</title><p>Hola <b>HTML</b></p>',
+    );
+    await writeFile(
+      path.join(imports, 'libreta.enex'),
+      '<en-export><note><title>Evernote</title><content><![CDATA[<en-note><en-todo checked="true"/>Hecha</en-note>]]></content></note></en-export>',
+    );
+    const importDirectory = path.join(output, 'import-target');
+    await mkdir(importDirectory);
+    const importTarget = profile(importDirectory);
+    const importSource = await readImportSources(
+      [path.join(output, 'import-source', 'Proyecto')],
+      {
+        storeImage: async (bytes) =>
+          (
+            await storeImage(
+              bytes,
+              importDirectory,
+              (value) => !nativeImage.createFromBuffer(value).isEmpty(),
+            )
+          ).url,
+      },
+    );
+    assert.equal(importSource.skipped, 0);
+    assert.equal(importSource.images, 1);
+    assert.deepEqual(
+      new SqliteLibraryTransfer(
+        importTarget.db,
+        importTarget.notes,
+      ).importNotes(importSource.notes, null),
+      { notes: 3, notebooks: 3 },
+    );
+    const imported = importTarget.notes.list({ sort: 'title-asc' });
+    assert.deepEqual(
+      imported.map(({ title }) => title),
+      ['Evernote', 'Importada', 'Página'],
+    );
+    assert.match(imported[0].body, /- \[x\] Hecha/);
+    assert.match(imported[1].body, /!\[Foto\]\(inknote-asset:\/\/images\//);
+    assert.match(imported[2].body, /Hola \*\*HTML\*\*/);
     for (const db of databases) {
       assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(), []);
       assert.equal(

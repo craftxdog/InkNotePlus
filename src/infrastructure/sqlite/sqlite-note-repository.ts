@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { noteFilter } from './note-query';
+import { noteFilter, noteSortSql } from './note-query';
 import { compileNoteSearch } from './search-query';
 import type { DatabaseSync } from 'node:sqlite';
 
@@ -17,9 +17,14 @@ import type {
   UpdateNoteInput,
 } from '../../domain/note';
 import type { NoteSyncOutbox } from '../../domain/sync';
+import { maxNoteTags } from '../../shared/tags';
 import { SqliteSyncOutbox } from './sqlite-sync-outbox';
 import { withSqliteWrite } from './database';
-import type { ManageTrashInput } from '../../shared/ipc';
+import type {
+  ManageTrashInput,
+  NoteRevision,
+  NoteRevisionSummary,
+} from '../../shared/ipc';
 import {
   noteMetadataSchema,
   defaultNoteMetadata,
@@ -141,7 +146,7 @@ export class SqliteNoteRepository implements NoteRepository {
         SELECT ${noteColumns}
         FROM notes
         WHERE ${filter.sql}
-        ORDER BY is_pinned DESC, ${input.sort === 'title' ? 'title COLLATE NOCASE,' : ''} updated_at DESC, id DESC
+        ORDER BY notes.is_pinned DESC, ${noteSortSql(input.sort)} notes.updated_at DESC, notes.id DESC
         LIMIT ? OFFSET ?
       `)
       .all(...filter.params, limit, input.offset ?? 0)
@@ -167,7 +172,7 @@ export class SqliteNoteRepository implements NoteRepository {
         SELECT ${noteColumns}
         FROM notes ${search.join}
         WHERE ${search.sql}
-        ORDER BY notes.is_pinned DESC, ${input.sort === 'title' ? 'notes.title COLLATE NOCASE,' : search.fts ? 'bm25(notes_fts),' : ''} notes.updated_at DESC, notes.id DESC
+        ORDER BY notes.is_pinned DESC, ${(input.sort ?? 'updated-desc') !== 'updated-desc' ? noteSortSql(input.sort) : search.fts ? 'bm25(notes_fts),' : ''} notes.updated_at DESC, notes.id DESC
         LIMIT ? OFFSET ?
       `)
       .all(...search.params, normalizeLimit(input.limit), input.offset ?? 0)
@@ -200,7 +205,8 @@ export class SqliteNoteRepository implements NoteRepository {
 
   manageTrash(input: ManageTrashInput): number {
     return withSqliteWrite(this.database, () => {
-      if (input.action === 'restore') this.requireNotebook(input.notebookId);
+      if (input.action === 'restore' || input.action === 'move')
+        this.requireNotebook(input.notebookId);
       const ids =
         input.action === 'empty'
           ? this.database
@@ -224,6 +230,37 @@ export class SqliteNoteRepository implements NoteRepository {
             { ...metadata, notebookId: input.notebookId },
             null,
           );
+        } else if (input.action === 'move') {
+          if (
+            note.deletedAt !== null ||
+            metadata.notebookId === input.notebookId
+          )
+            continue;
+          this.writePlacement(
+            note,
+            { ...metadata, notebookId: input.notebookId },
+            null,
+          );
+        } else if (input.action === 'status') {
+          if (note.deletedAt !== null || metadata.status === input.status)
+            continue;
+          this.writePlacement(
+            note,
+            { ...metadata, status: input.status },
+            null,
+          );
+        } else if (input.action === 'tag') {
+          if (note.deletedAt !== null) continue;
+          const tags = [
+            ...new Set([
+              ...metadata.tags.filter((tag) => !input.remove.includes(tag)),
+              ...input.add,
+            ]),
+          ];
+          if (JSON.stringify(tags) === JSON.stringify(metadata.tags)) continue;
+          // Rejecting here rolls back the notes already changed in this batch.
+          if (tags.length > maxNoteTags) throw new NoteConflictError(id);
+          this.writePlacement(note, { ...metadata, tags }, null);
         } else {
           if (note.deletedAt === null) throw new NoteConflictError(id);
           this.purge(note, now);
@@ -232,6 +269,48 @@ export class SqliteNoteRepository implements NoteRepository {
       }
       return affected;
     });
+  }
+
+  // Metadata-only writes also create revisions; history shows content changes.
+  listRevisions(id: NoteId): NoteRevisionSummary[] {
+    this.requireNote(id);
+    return this.database
+      .prepare(`
+        SELECT revision, title, createdAt FROM (
+          SELECT revision, title, body, created_at AS createdAt,
+            LAG(revision) OVER versions AS previous,
+            LAG(title) OVER versions AS previousTitle,
+            LAG(body) OVER versions AS previousBody
+          FROM note_revisions WHERE note_id = ?
+          WINDOW versions AS (ORDER BY revision)
+        )
+        WHERE previous IS NULL OR title <> previousTitle OR body <> previousBody
+        ORDER BY revision DESC
+        LIMIT 200
+      `)
+      .all(id)
+      .map((row, index) => ({
+        revision: readInteger(row, 'revision'),
+        title: readString(row, 'title'),
+        createdAt: readString(row, 'createdAt'),
+        current: index === 0,
+      }));
+  }
+
+  getRevision(id: NoteId, revision: number): NoteRevision {
+    const row = this.database
+      .prepare(`
+        SELECT revision, title, body, created_at AS createdAt
+        FROM note_revisions WHERE note_id = ? AND revision = ?
+      `)
+      .get(id, revision);
+    if (!row) throw new NoteNotFoundError(id);
+    return {
+      revision: readInteger(row, 'revision'),
+      title: readString(row, 'title'),
+      body: readString(row, 'body'),
+      createdAt: readString(row, 'createdAt'),
+    };
   }
 
   // The caller owns the transaction when changing notes together with notebooks or tags.

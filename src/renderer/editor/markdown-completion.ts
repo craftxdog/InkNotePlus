@@ -12,6 +12,7 @@ import { syntaxTree } from '@codemirror/language';
 import { Facet } from '@codemirror/state';
 import type { Command, EditorView } from '@codemirror/view';
 import { alertLabels } from './github-alerts';
+import { codeLanguageCompletions } from './code-languages';
 import {
   completionPresentation,
   completionSectionHeader,
@@ -183,17 +184,6 @@ const slashOptions: Completion[] = [
   ),
 ];
 
-const codeLanguages = [
-  'javascript',
-  'typescript',
-  'jsx',
-  'tsx',
-  'json',
-  'markdown',
-  'mermaid',
-  'text',
-];
-
 const completeEmoji: CompletionSource = async (context) => {
   const { state, pos } = context;
   const match = context.matchBefore(/(?:^|[^\p{L}\p{N}_/:]):[a-z0-9_+-]{2,}/iu);
@@ -240,7 +230,7 @@ export function markdownCompletion(options: {
     if (state.selection.ranges.length !== 1 || state.readOnly) return null;
     const line = state.doc.lineAt(pos);
     const before = state.sliceDoc(line.from, pos);
-    const fence = /^ {0,3}(?:`{3,}|~{3,})([a-z]*)$/i.exec(before);
+    const fence = /^ {0,3}(?:`{3,}|~{3,})([\w+#.-]*)$/.exec(before);
     const tree = syntaxTree(state);
     for (
       let node: ReturnType<typeof tree.resolve> | null = tree.resolve(pos, -1);
@@ -255,8 +245,8 @@ export function markdownCompletion(options: {
       ) {
         return {
           from: pos - fence[1].length,
-          options: codeLanguages.map((label) => ({ label, type: 'type' })),
-          validFor: /^[a-z]*$/i,
+          options: codeLanguageCompletions,
+          validFor: /^[\w+#.-]*$/,
         };
       }
       return null;

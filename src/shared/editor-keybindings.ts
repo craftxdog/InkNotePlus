@@ -43,7 +43,7 @@ const editorBindings = [
   ['editor:copy-line-down', 'Duplicar línea abajo'],
   ['editor:move-line-up', 'Mover línea arriba'],
   ['editor:move-line-down', 'Mover línea abajo'],
-  ['editor:delete-line', 'Borrar línea', 'Mod-d'],
+  ['editor:delete-line', 'Borrar línea'],
   ['editor:join-lines', 'Unir líneas', 'Ctrl-Shift-j', 'Ctrl-j'],
   ['editor:insert-line-before', 'Insertar línea encima', 'Mod-Shift-Enter'],
   ['editor:insert-blank-line', 'Insertar línea debajo'],

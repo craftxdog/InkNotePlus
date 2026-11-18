@@ -25,9 +25,21 @@ export const shortcutCommands = [
   },
   { id: 'core:save-note', label: 'Guardar nota', scope: 'app', key: 'Mod-s' },
   {
+    id: 'core:duplicate-note',
+    label: 'Duplicar nota',
+    scope: 'app',
+    key: 'Mod-d',
+  },
+  {
     id: 'editor:find',
     label: 'Buscar en la nota',
     scope: 'editor',
+    key: 'Mod-f',
+  },
+  {
+    id: 'preview:find',
+    label: 'Buscar en la vista previa',
+    scope: 'app',
     key: 'Mod-f',
   },
   {
@@ -239,6 +251,27 @@ export const shortcutCommands = [
     scope: 'app',
     key: '',
   },
+  ...(
+    [
+      ['view:sort-by-title-in-asc', 'Ordenar por título (A-Z)'],
+      ['view:sort-by-title-in-desc', 'Ordenar por título (Z-A)'],
+      ['view:sort-by-date-created-in-asc', 'Ordenar por creación (antiguas)'],
+      ['view:sort-by-date-created-in-desc', 'Ordenar por creación (recientes)'],
+      ['view:sort-by-date-updated-in-asc', 'Ordenar por cambios (antiguas)'],
+      ['view:sort-by-date-updated-in-desc', 'Ordenar por cambios (recientes)'],
+    ] as const
+  ).map(([id, label]) => ({ id, label, scope: 'app' as const, key: '' })),
+  ...(
+    [
+      ['core:telescope-commands', 'Buscar sólo comandos'],
+      ['core:telescope-notebooks', 'Ir a un notebook'],
+      ['core:telescope-tags', 'Ir a una etiqueta'],
+      ['telescope-toc:show', 'Buscar en el esquema de la nota'],
+      ['telescope-themes:show', 'Cambiar de tema'],
+      ['view:toggle-outline', 'Mostrar u ocultar esquema de la nota'],
+      ['core:show-note-revisions', 'Ver historial de revisiones'],
+    ] as const
+  ).map(([id, label]) => ({ id, label, scope: 'app' as const, key: '' })),
   { id: 'view:show-editor', label: 'Sólo editor', scope: 'app', key: '' },
   {
     id: 'view:show-side-by-side',
@@ -255,6 +288,14 @@ export const shortcutCommands = [
   ...editorShortcutCommands,
 ] as const;
 export type ShortcutCommand = (typeof shortcutCommands)[number]['id'];
+export const noteSortCommands = {
+  'view:sort-by-title-in-asc': 'title-asc',
+  'view:sort-by-title-in-desc': 'title-desc',
+  'view:sort-by-date-created-in-asc': 'created-asc',
+  'view:sort-by-date-created-in-desc': 'created-desc',
+  'view:sort-by-date-updated-in-asc': 'updated-asc',
+  'view:sort-by-date-updated-in-desc': 'updated-desc',
+} as const;
 const legacyCommandIds: Readonly<Record<string, ShortcutCommand>> = {
   'editor:toggle-bold': 'core:strong',
   'editor:toggle-italic': 'core:emphasize',
@@ -336,6 +377,12 @@ export function shortcutConflict(
   const selected = normalize(keystroke);
   return shortcutCommands.find((candidate) => {
     if (candidate.id === command) return false;
+    // The same key searches whichever pane has the focus.
+    if (
+      [candidate.id, command].includes('editor:find') &&
+      [candidate.id, command].includes('preview:find')
+    )
+      return false;
     const scope = shortcutCommands.find((item) => item.id === command)?.scope;
     if (
       scope !== 'app' &&

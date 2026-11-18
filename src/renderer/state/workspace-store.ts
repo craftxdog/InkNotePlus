@@ -12,6 +12,7 @@ import { failure, success } from '../../shared/ipc';
 import { linkedNoteId } from '../../shared/note-link';
 import {
   emptyDocument,
+  duplicateTitle,
   mergeNote,
   selectDocument,
   toDocument,
@@ -23,8 +24,8 @@ import {
 } from '../../shared/preferences';
 import { emptyLibrary, defaultNoteMetadata } from '../../shared/library';
 import {
+  activeListFilter,
   createLibraryActions,
-  navigationFilter,
   metadataForNewNote,
   matchesNavigation,
 } from './library-actions';
@@ -85,11 +86,7 @@ export function createWorkspaceStore(
       const currentRequest = ++requestId;
       const query = get().searchQuery;
       const offset = append ? get().noteList.notes.length : 0;
-      const filter = {
-        ...(get().searchGlobal
-          ? { sort: get().preferences.noteSort }
-          : navigationFilter(get().navigation, get().preferences)),
-      };
+      const filter = activeListFilter(get());
       // Persistence refreshes the current query in the background. Keep the
       // visible list in place instead of flashing its loading row on every save.
       if (!preserveLoaded || get().noteList.status !== 'ready')
@@ -174,6 +171,9 @@ export function createWorkspaceStore(
           const preserveDraft =
             (preserveLoaded || state.noteList.isCreating) &&
             !state.searchQuery &&
+            state.tagFilter.every((tag) =>
+              state.document.metadata.tags.includes(tag),
+            ) &&
             matchesNavigation(
               state.document.metadata,
               state.navigation,
@@ -238,7 +238,8 @@ export function createWorkspaceStore(
         get().noteList.status === 'loading' ||
         get().noteList.hasMore ||
         get().noteList.notes.length >= 50 ||
-        get().preferences.noteSort === 'title'
+        get().tagFilter.length > 0 ||
+        get().preferences.noteSort !== 'updated-desc'
       ) {
         void refreshNotes(false, true);
       } else {
@@ -301,6 +302,16 @@ export function createWorkspaceStore(
           if (!(await get().flushDrafts())) return failure('conflict');
           return api.transfer.exportLibrary();
         },
+        async exportNotes(input) {
+          if (!(await get().flushDrafts())) return failure('conflict');
+          return api.transfer.exportNotes(input);
+        },
+        async importNotes(input) {
+          if (!(await get().flushDrafts())) return failure('conflict');
+          const result = await api.transfer.importNotes(input);
+          if (result.ok && result.data) await refreshNotes();
+          return result;
+        },
       },
       importImage: (base64) =>
         base64 ? api.images.write(base64) : api.images.importFile(),
@@ -308,6 +319,10 @@ export function createWorkspaceStore(
       saveDraft: persistence.saveDraft,
       flushDrafts: persistence.flushDrafts,
       openExternalLink: (url) => api.links.openExternal(url),
+      async fetchLinkTitle(url) {
+        const result = await api.links.fetchTitle(url);
+        return result.ok ? result.data : null;
+      },
       async openNoteLink(url) {
         const id = linkedNoteId(url);
         if (!id) return failure('invalid_input');
@@ -428,6 +443,7 @@ export function createWorkspaceStore(
       },
       activeNoteId: initialSession?.activeNoteId ?? null,
       selectedNoteIds: [],
+      tagFilter: [],
       libraryDialog: null,
       setLibraryDialog(libraryDialog) {
         set({ libraryDialog });
@@ -464,8 +480,66 @@ export function createWorkspaceStore(
       parkedDrafts: {},
       templatePickerOpen: false,
       commandPaletteOpen: false,
-      setCommandPaletteOpen(commandPaletteOpen) {
-        set({ commandPaletteOpen });
+      commandPaletteQuery: '',
+      setCommandPaletteOpen(commandPaletteOpen, commandPaletteQuery = '') {
+        set({ commandPaletteOpen, commandPaletteQuery });
+      },
+      revisionsOpen: false,
+      setRevisionsOpen(revisionsOpen) {
+        set({ revisionsOpen });
+      },
+      listNoteRevisions: (id) => api.notes.listRevisions({ id }),
+      getNoteRevision: (id, revision) =>
+        api.notes.getRevision({ id, revision }),
+      async restoreNoteVersion({ title, body }) {
+        const id = get().document.noteId;
+        if (!id || !(await get().flushDrafts())) return failure('unavailable');
+        const current = await api.notes.list({ id, limit: 1 });
+        if (!current.ok) return current;
+        const note = current.data.find((item) => item.id === id);
+        if (!note) return failure('not_found');
+        const result = await api.notes.update({
+          id,
+          title,
+          body,
+          expectedRevision: note.revision,
+          metadata: note.metadata,
+          isPinned: note.isPinned,
+        });
+        if (result.ok) await refreshNotes(false, true);
+        return result;
+      },
+      async exportNotes(input) {
+        const result = await get().transfer.exportNotes(input);
+        if (!result.ok || result.data)
+          set({
+            libraryDialog: {
+              kind: 'export-result',
+              summary: result.ok ? result.data : null,
+            },
+          });
+      },
+      async importNotes(kind, notebookId = null) {
+        const result = await get().transfer.importNotes({ kind, notebookId });
+        if (!result.ok || result.data)
+          set({
+            libraryDialog: {
+              kind: 'import-result',
+              summary: result.ok ? result.data : null,
+            },
+          });
+      },
+      previewFindOpen: false,
+      setPreviewFindOpen(previewFindOpen) {
+        set({ previewFindOpen });
+      },
+      imageViewer: null,
+      setImageViewer(imageViewer) {
+        set({ imageViewer });
+      },
+      outlineOpen: false,
+      setOutlineOpen(outlineOpen) {
+        set({ outlineOpen });
       },
       setTemplatePickerOpen(templatePickerOpen) {
         if (
@@ -720,7 +794,11 @@ export function createWorkspaceStore(
           const result = await api.notes.create({
             title: 'Nota sin título',
             body: '',
-            metadata: metadataForNewNote(get().navigation, get().preferences),
+            metadata: metadataForNewNote(
+              get().navigation,
+              get().preferences,
+              get().tagFilter,
+            ),
           });
           if (currentGeneration !== generation) return;
           if (!result.ok) {
@@ -755,6 +833,81 @@ export function createWorkspaceStore(
           if (currentGeneration === generation)
             set((state) => ({
               noteList: { ...state.noteList, isCreating: false },
+            }));
+        }
+      },
+      async duplicateNotes(ids) {
+        const state = get();
+        const targets =
+          ids ??
+          (state.selectedNoteIds.length
+            ? state.selectedNoteIds
+            : state.activeNoteId
+              ? [state.activeNoteId]
+              : []);
+        if (
+          !targets.length ||
+          state.navigation.type === 'trash' ||
+          state.noteList.isCreating
+        )
+          return false;
+        const currentGeneration = generation;
+        set((current) => ({
+          noteList: { ...current.noteList, isCreating: true, errorCode: null },
+        }));
+        try {
+          if (!(await get().flushDrafts())) return false;
+          let copy: NoteProjection | undefined;
+          for (const id of targets) {
+            const source = await api.notes.list({ id, limit: 1 });
+            if (currentGeneration !== generation) return false;
+            if (!source.ok) {
+              reportFailure(source.error.code);
+              break;
+            }
+            const note = source.data[0];
+            if (!note) continue;
+            const result = await api.notes.create({
+              title: duplicateTitle(note.title),
+              body: note.body,
+              ...(note.metadata ? { metadata: note.metadata } : {}),
+            });
+            if (currentGeneration !== generation) return false;
+            if (!result.ok) {
+              reportFailure(result.error.code);
+              break;
+            }
+            copy = result.data;
+          }
+          if (!copy) return false;
+          const opened = copy;
+          requestId += 1;
+          set((current) => {
+            const notes = mergeNote(
+              current.searchQuery ? [] : current.noteList.notes,
+              opened,
+            );
+            return {
+              ...selectDocument(current, opened.id, notes),
+              searchQuery: '',
+              selectedNoteIds: [],
+              noteList: {
+                ...current.noteList,
+                notes,
+                status: 'ready',
+                errorCode: null,
+              },
+            };
+          });
+          await refreshNotes();
+          return true;
+        } catch {
+          if (currentGeneration === generation) reportFailure('unavailable');
+          return false;
+        } finally {
+          if (currentGeneration === generation)
+            set((current) => ({
+              noteList: { ...current.noteList, isCreating: false },
             }));
         }
       },

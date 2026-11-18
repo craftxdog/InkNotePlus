@@ -54,6 +54,48 @@ async function complete(doc: string) {
   return view;
 }
 
+it('offers the shared language catalog with canonical names and no duplicate labels', async () => {
+  const view = await complete('```');
+  const options = currentCompletions(view.state);
+  for (const label of [
+    'bash',
+    'py',
+    'c++',
+    'cpp',
+    'go',
+    'rs',
+    'java',
+    'json',
+    'tsx',
+    'github-actions',
+    'diff',
+    'patch',
+    'text',
+    'mermaid',
+  ]) {
+    expect(
+      options.find((option) => option.label === label)?.detail,
+    ).toBeTruthy();
+  }
+  expect(new Set(options.map(({ label }) => label.toLowerCase())).size).toBe(
+    options.length,
+  );
+});
+
+it.each(['```c++', '~~~c++'])(
+  'completes punctuated fence identifiers in %s',
+  async (doc) => {
+    const view = await complete(doc);
+    const index = currentCompletions(view.state).findIndex(
+      ({ label }) => label === 'c++',
+    );
+    expect(index).toBeGreaterThanOrEqual(0);
+    view.dispatch({ effects: setSelectedCompletion(index) });
+    await vi.waitFor(() => expect(acceptCompletion(view)).toBe(true));
+    expect(view.state.doc.toString()).toBe(doc);
+  },
+);
+
 it('groups slash commands, preserves reference order, and provides icons and syntax hints', async () => {
   const view = await complete('/');
   const options = currentCompletions(view.state);

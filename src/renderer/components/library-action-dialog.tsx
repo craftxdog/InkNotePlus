@@ -1,10 +1,22 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { AppErrorCode, Result } from '../../shared/ipc';
-import { tagColorSchema, type TagColor } from '../../shared/tags';
+import type { NoteStatus } from '../../shared/note-metadata';
+import {
+  tagColorSchema,
+  maxNoteTags,
+  maxTagLength,
+  tagNameSchema,
+  type TagColor,
+} from '../../shared/tags';
+import { statusLabels } from './note-status';
 import type { LibraryDialogRequest } from '../state/workspace-types';
 import { useWorkspace, useWorkspaceStore } from '../state/workspace-context';
 import { Modal } from './modal';
 import { NotebookPicker } from './notebook-picker';
+import {
+  notebookSubtreeIds,
+  notebookTree,
+} from '../notebooks/notebook-hierarchy';
 import { TagBadge, tagColor } from './tag-badge';
 
 const colorLabels: Record<TagColor, string> = {
@@ -31,26 +43,65 @@ export function LibraryActionDialog({
 }) {
   const store = useWorkspaceStore();
   const notebooks = useWorkspace((state) => state.library.notebooks);
+  const tags = useWorkspace((state) => state.library.tags);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<AppErrorCode | null>(null);
   const [name, setName] = useState(
-    request.kind === 'edit-tag' ? request.name : '',
+    request.kind === 'edit-tag' || request.kind === 'rename-notebook'
+      ? request.name
+      : '',
   );
+  const currentParent =
+    request.kind === 'move-notebook'
+      ? (notebooks.find(({ id }) => id === request.id)?.parentId ?? '')
+      : '';
+  const [parent, setParent] = useState(currentParent);
   const [color, setColor] = useState<TagColor>(() => {
     const colors = store.getState().library.tagColors;
     return colors.find((tag) => tag.name === name)?.color ?? tagColor(name);
   });
   const [destination, setDestination] = useState<string | null>(() => {
-    if (request.kind !== 'restore') return null;
+    if (request.kind !== 'restore' && request.kind !== 'move-notes')
+      return null;
     const state = store.getState();
     const original =
       request.ids.length === 1
         ? state.noteList.notes.find((note) => note.id === request.ids[0])
             ?.metadata?.notebookId
         : null;
-    const preferred = original ?? state.preferences.defaultNotebookId;
+    const preferred =
+      original ??
+      (request.kind === 'restore' ? state.preferences.defaultNotebookId : null);
     return notebooks.some(({ id }) => id === preferred) ? preferred : null;
   });
+  const selectedNotes =
+    'ids' in request
+      ? store
+          .getState()
+          .noteList.notes.filter((note) => request.ids.includes(note.id))
+      : [];
+  const [status, setStatus] = useState<NoteStatus>(
+    selectedNotes.length === 1
+      ? (selectedNotes[0].metadata?.status ?? 'none')
+      : 'active',
+  );
+  const tagListId = useId();
+  const [tagInput, setTagInput] = useState('');
+  const [removedTags, setRemovedTags] = useState<readonly string[]>([]);
+  const addedTags = [
+    ...new Set(
+      tagInput
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+    ),
+  ];
+  const validTags =
+    addedTags.length <= maxNoteTags &&
+    addedTags.every((tag) => tagNameSchema.safeParse(tag).success);
+  const currentTags = [
+    ...new Set(selectedNotes.flatMap((note) => note.metadata?.tags ?? [])),
+  ].sort((a, b) => a.localeCompare(b));
   const count = 'ids' in request ? request.ids.length : 0;
   const notes =
     count === 1 ? 'la nota seleccionada' : `las ${count} notas seleccionadas`;
@@ -63,11 +114,37 @@ export function LibraryActionDialog({
     setError(null);
     let result: Result<unknown>;
     switch (request.kind) {
+      case 'import-result':
+      case 'export-result':
+        close();
+        return;
       case 'restore':
         result = await state.manageTrash({
           action: 'restore',
           ids: [...request.ids],
           notebookId: destination,
+        });
+        break;
+      case 'move-notes':
+        result = await state.updateNotes({
+          action: 'move',
+          ids: [...request.ids],
+          notebookId: destination,
+        });
+        break;
+      case 'status-notes':
+        result = await state.updateNotes({
+          action: 'status',
+          ids: [...request.ids],
+          status,
+        });
+        break;
+      case 'tag-notes':
+        result = await state.updateNotes({
+          action: 'tag',
+          ids: [...request.ids],
+          add: addedTags,
+          remove: [...removedTags],
         });
         break;
       case 'trash':
@@ -82,6 +159,16 @@ export function LibraryActionDialog({
         break;
       case 'delete-notebook':
         result = await state.deleteNotebook(request.id);
+        break;
+      case 'rename-notebook':
+        result = await state.renameNotebook(request.id, name.trim());
+        break;
+      case 'move-notebook':
+        result = await state.moveNotebook({
+          id: request.id,
+          parentId: parent || null,
+          beforeId: null,
+        });
         break;
       case 'edit-tag':
         result = await state.updateTag({
@@ -116,7 +203,65 @@ export function LibraryActionDialog({
         }}
       >
         {action.message && <p>{action.message}</p>}
-        {request.kind === 'restore' && (
+        {request.kind === 'status-notes' && (
+          <label>
+            Estado
+            <select
+              autoFocus
+              value={status}
+              disabled={busy}
+              onChange={(event) => setStatus(event.target.value as NoteStatus)}
+            >
+              {(Object.entries(statusLabels) as [NoteStatus, string][]).map(
+                ([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+        )}
+        {request.kind === 'tag-notes' && (
+          <>
+            <label>
+              Añadir etiquetas
+              <input
+                autoFocus
+                type="text"
+                list={tagListId}
+                placeholder="Separadas por comas"
+                value={tagInput}
+                disabled={busy}
+                aria-invalid={!validTags}
+                onChange={(event) => setTagInput(event.target.value)}
+              />
+              <datalist id={tagListId}>
+                {tags.map(({ name: tag }) => (
+                  <option key={tag} value={tag} />
+                ))}
+              </datalist>
+            </label>
+            {currentTags.map((tag) => (
+              <label className="dialog-checkbox" key={tag}>
+                <input
+                  type="checkbox"
+                  checked={removedTags.includes(tag)}
+                  disabled={busy}
+                  onChange={(event) =>
+                    setRemovedTags((values) =>
+                      event.target.checked
+                        ? [...values, tag]
+                        : values.filter((value) => value !== tag),
+                    )
+                  }
+                />
+                Quitar <TagBadge name={tag} />
+              </label>
+            ))}
+          </>
+        )}
+        {(request.kind === 'restore' || request.kind === 'move-notes') && (
           <NotebookPicker
             notebooks={notebooks}
             value={destination}
@@ -124,6 +269,43 @@ export function LibraryActionDialog({
             disabled={busy}
             label="Notebook de destino"
           />
+        )}
+        {request.kind === 'rename-notebook' && (
+          <label>
+            Nombre
+            <input
+              autoFocus
+              type="text"
+              value={name}
+              maxLength={80}
+              required
+              disabled={busy}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+        )}
+        {request.kind === 'move-notebook' && (
+          <label>
+            Dentro de
+            <select
+              autoFocus
+              value={parent}
+              disabled={busy}
+              onChange={(event) => setParent(event.target.value)}
+            >
+              <option value="">Biblioteca</option>
+              {notebookTree(notebooks)
+                .filter(
+                  ({ notebook }) =>
+                    !notebookSubtreeIds(notebooks, request.id).has(notebook.id),
+                )
+                .map(({ notebook, path }) => (
+                  <option key={notebook.id} value={notebook.id}>
+                    {path.join(' / ')}
+                  </option>
+                ))}
+            </select>
+          </label>
         )}
         {request.kind === 'edit-tag' && (
           <>
@@ -133,7 +315,7 @@ export function LibraryActionDialog({
                 autoFocus
                 type="text"
                 value={name}
-                maxLength={40}
+                maxLength={maxTagLength}
                 required
                 disabled={busy}
                 onChange={(event) => setName(event.target.value)}
@@ -164,9 +346,11 @@ export function LibraryActionDialog({
           <p role="alert" className="list-error">
             {error === 'conflict' && request.kind === 'edit-tag'
               ? 'Ya existe una etiqueta con ese nombre.'
-              : error === 'not_found'
-                ? 'El elemento ya no está disponible.'
-                : 'No se pudo completar la operación. Revisa los cambios pendientes.'}
+              : error === 'conflict' && request.kind === 'tag-notes'
+                ? `Alguna nota superaría el límite de ${maxNoteTags} etiquetas.`
+                : error === 'not_found'
+                  ? 'El elemento ya no está disponible.'
+                  : 'No se pudo completar la operación. Revisa los cambios pendientes.'}
           </p>
         )}
         <footer className="dialog-actions">
@@ -181,7 +365,15 @@ export function LibraryActionDialog({
           <button
             className={`button ${action.danger ? 'button--danger' : 'button--primary'}`}
             type="submit"
-            disabled={busy || (request.kind === 'edit-tag' && !name.trim())}
+            disabled={
+              busy ||
+              ((request.kind === 'edit-tag' ||
+                request.kind === 'rename-notebook') &&
+                !name.trim()) ||
+              (request.kind === 'move-notebook' && parent === currentParent) ||
+              (request.kind === 'tag-notes' &&
+                (!validTags || (!addedTags.length && !removedTags.length)))
+            }
           >
             {action.confirm}
           </button>
@@ -198,6 +390,72 @@ function describeAction(request: LibraryDialogRequest, notes: string) {
         title: 'Mover a papelera',
         confirm: 'Mover a papelera',
         message: `Puedes recuperar ${notes} desde Papelera.`,
+        danger: false,
+      };
+    case 'export-result': {
+      const summary = request.summary;
+      if (!summary)
+        return {
+          title: 'No se pudo exportar',
+          confirm: 'Aceptar',
+          message: 'Comprueba la carpeta de destino e inténtalo de nuevo.',
+          danger: false,
+        };
+      const missing = summary.missingAttachments
+        ? ` · ${summary.missingAttachments} adjuntos sin recuperar`
+        : '';
+      return {
+        title: 'Exportación completada',
+        confirm: 'Aceptar',
+        message: `${summary.notes} ${summary.notes === 1 ? 'nota exportada' : 'notas exportadas'} en ${summary.path}${missing}`,
+        danger: false,
+      };
+    }
+    case 'import-result': {
+      const summary = request.summary;
+      if (!summary)
+        return {
+          title: 'No se pudo importar',
+          confirm: 'Aceptar',
+          message:
+            'No se guardó ninguna nota. Comprueba los archivos e inténtalo de nuevo.',
+          danger: false,
+        };
+      const details = [
+        `${summary.notes} ${summary.notes === 1 ? 'nota' : 'notas'}`,
+        `${summary.notebooks} ${summary.notebooks === 1 ? 'notebook nuevo' : 'notebooks nuevos'}`,
+        `${summary.images} ${summary.images === 1 ? 'imagen' : 'imágenes'}`,
+        ...(summary.missingImages
+          ? [`${summary.missingImages} adjuntos sin importar`]
+          : []),
+        ...(summary.skipped ? [`${summary.skipped} archivos omitidos`] : []),
+      ];
+      return {
+        title: 'Importación completada',
+        confirm: 'Aceptar',
+        message: details.join(' · '),
+        danger: false,
+      };
+    }
+    case 'move-notes':
+      return {
+        title: 'Mover a notebook',
+        confirm: 'Mover',
+        message: `Elige dónde colocar ${notes}.`,
+        danger: false,
+      };
+    case 'tag-notes':
+      return {
+        title: 'Etiquetar notas',
+        confirm: 'Aplicar',
+        message: `Cambia las etiquetas de ${notes}.`,
+        danger: false,
+      };
+    case 'status-notes':
+      return {
+        title: 'Cambiar estado',
+        confirm: 'Aplicar',
+        message: `Elige el estado de ${notes}.`,
         danger: false,
       };
     case 'restore':
@@ -228,6 +486,20 @@ function describeAction(request: LibraryDialogRequest, notes: string) {
         confirm: 'Eliminar notebook',
         message: `Se eliminará «${request.name}» con sus subnotebooks. Sus notas pasarán a Papelera.`,
         danger: true,
+      };
+    case 'rename-notebook':
+      return {
+        title: 'Renombrar notebook',
+        confirm: 'Guardar cambios',
+        message: null,
+        danger: false,
+      };
+    case 'move-notebook':
+      return {
+        title: 'Mover notebook',
+        confirm: 'Mover notebook',
+        message: `Elige dónde colocar «${request.name}» y sus subnotebooks.`,
+        danger: false,
       };
     case 'edit-tag':
       return {

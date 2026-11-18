@@ -10,11 +10,14 @@ import {
   Menu,
 } from 'electron';
 import { registerExternalLinkHandler } from './main/ipc/external-link-handler';
+import { fetchPageTitle } from './main/link-title';
+import { contextMenuTemplate } from './main/context-menu';
 import type { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import started from 'electron-squirrel-startup';
 import { installCloseGuard } from './main/close-guard';
+import { claimSingleInstance, revealWindow } from './main/single-instance';
 
 import { Configuration } from './application/config';
 import { coreConfigDefinitions } from './application/core-config';
@@ -85,6 +88,12 @@ let configuration: Configuration | null = null;
 let quitting = false;
 let drainingBackup = false;
 
+const isPrimaryInstance = claimSingleInstance(app, () => {
+  if (mainWindow) revealWindow(mainWindow);
+  else if (app.isReady() && configuration)
+    mainWindow = createWindow(configuration);
+});
+
 function installSessionSecurity() {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
@@ -119,13 +128,19 @@ function createWindow(activeConfiguration: Configuration): BrowserWindow {
 
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('context-menu', (_event, params) => {
-    if (!activeConfiguration.get(coreConfig.appearance).developmentMode) return;
-    Menu.buildFromTemplate([
+    const template = contextMenuTemplate(
+      params,
       {
-        label: 'Inspeccionar elemento',
-        click: () => window.webContents.inspectElement(params.x, params.y),
+        replaceMisspelling: (word) =>
+          window.webContents.replaceMisspelling(word),
+        addToDictionary: (word) => {
+          window.webContents.session.addWordToSpellCheckerDictionary(word);
+        },
+        inspect: (x, y) => window.webContents.inspectElement(x, y),
       },
-    ]).popup({ window });
+      activeConfiguration.get(coreConfig.appearance).developmentMode,
+    );
+    if (template.length) Menu.buildFromTemplate(template).popup({ window });
   });
   const lifecycle = installCloseGuard(window, ipcMain);
   window.webContents.on('will-prevent-unload', () => lifecycle.reload());
@@ -245,7 +260,16 @@ function initializeCoreModules(): Configuration {
             filters: [
               {
                 name: 'Imágenes',
-                extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'],
+                extensions: [
+                  'png',
+                  'jpg',
+                  'jpeg',
+                  'gif',
+                  'webp',
+                  'svg',
+                  'heic',
+                  'heif',
+                ],
               },
             ],
           });
@@ -265,6 +289,7 @@ function initializeCoreModules(): Configuration {
         ipc: ipcMain,
         getMainWebContents: () => mainWindow?.webContents ?? null,
         openExternal: (url) => shell.openExternal(url),
+        fetchTitle: (url) => fetchPageTitle(url),
       });
     },
     deactivate() {
@@ -350,6 +375,9 @@ function initializeCoreModules(): Configuration {
           backup,
           library,
           userData,
+          isDecodableImage: (bytes) =>
+            !nativeImage.createFromBuffer(bytes).isEmpty(),
+          onImported: () => backup?.schedule(),
         });
         database = localDatabase;
         noteCommands = commandRegistration;
@@ -393,6 +421,7 @@ function initializeCoreModules(): Configuration {
 }
 
 app.whenReady().then(() => {
+  if (!isPrimaryInstance) return;
   configureAppIcon();
   installSessionSecurity();
   protocol.handle('inknote-asset', (request) =>

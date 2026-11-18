@@ -189,8 +189,16 @@ describe('persistent shell library', () => {
       expectedRevision: 1,
       isPinned: true,
     });
-    const first = notes.search({ query: 'needle', sort: 'title', limit: 50 });
-    const second = notes.search({ query: 'needle', sort: 'title', offset: 50 });
+    const first = notes.search({
+      query: 'needle',
+      sort: 'title-asc',
+      limit: 50,
+    });
+    const second = notes.search({
+      query: 'needle',
+      sort: 'title-asc',
+      offset: 50,
+    });
     expect(first[0].title).toBe('Z pinned');
     expect([...first, ...second].slice(1).map((note) => note.title)).toEqual(
       Array.from(
@@ -294,15 +302,15 @@ describe('persistent shell library', () => {
         filter: { status: 'completed' },
       }),
     ).toMatchObject({
-      total: 53,
+      total: 0,
       matching: 53,
       unfiled: 0,
       statuses: { active: 0, completed: 53 },
-      tags: [{ name: 'inside', count: 53 }],
+      tags: [{ name: 'inside', count: 0 }],
     });
     expect(
       library.getSnapshot().notebooks.find((book) => book.id === parent.id),
-    ).toMatchObject({ count: 0, descendantCount: 53 });
+    ).toMatchObject({ count: 0, descendantCount: 0 });
     expect(
       notes.search({ query: 'needle', scopeId: parent.id, status: 'active' }),
     ).toEqual([]);

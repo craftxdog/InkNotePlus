@@ -1,6 +1,6 @@
 import { StateEffect, StateField } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import type { ManagedImage } from '../../shared/images';
+import { maxImageBytes, type ManagedImage } from '../../shared/images';
 import type { Result } from '../../shared/ipc';
 
 type Target = { from: number; to: number };
@@ -82,7 +82,7 @@ export async function insertManagedImages(
     for (const file of files?.slice(0, 8) ?? [undefined]) {
       let base64: string | undefined;
       if (file) {
-        if (file.size > 5_000_000) {
+        if (file.size > maxImageBytes) {
           error = 'invalid';
           continue;
         }

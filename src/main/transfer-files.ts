@@ -10,9 +10,10 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import path from 'node:path';
+import { maxImageBytes } from '../shared/images';
 import { inspectImage } from './image-store';
 
-export const imageFileName = /^[a-f0-9]{64}\.(png|jpg|gif|webp)$/;
+export const imageFileName = /^[a-f0-9]{64}\.(png|jpg|gif|webp|svg)$/;
 
 export function digest(bytes: string | Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
@@ -46,7 +47,10 @@ export async function readManagedImage(
   name: string,
 ): Promise<Buffer> {
   if (!imageFileName.test(name)) throw new Error('Invalid attachment name.');
-  const bytes = await readRegularFile(path.join(directory, name), 5_000_000);
+  const bytes = await readRegularFile(
+    path.join(directory, name),
+    maxImageBytes,
+  );
   if (`${digest(bytes)}.${inspectImage(bytes).extension}` !== name)
     throw new Error('Attachment content does not match its name.');
   return bytes;

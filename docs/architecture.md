@@ -65,7 +65,7 @@ los estilos de `@inkdropapp/css` 0.10.4. Electron aporta la plataforma de
 escritorio y SQLite viene de Node mediante node:sqlite. Vite, tipos React,
 Testing Library y jsdom son herramientas de desarrollo. El helper de temas y
 Puppeteer permanecen en los paquetes de desarrollo bajo `themes/`; no entran
-al bundle distribuido. No hay cliente HTTP, SDK cloud ni driver SQLite nativo
+al bundle distribuido. No hay librerías de cliente HTTP, SDK cloud ni driver SQLite nativo
 externo. Los lenguajes adicionales cargados son JavaScript/TypeScript y JSON.
 
 ## Flujo canónico
@@ -164,6 +164,13 @@ expandido filtra notas directas; uno contraído incluye descendientes. Los
 filtros y la ordenación se aplican antes de paginar. Los eventos vuelven a
 consultar la ventana cargada para evitar omisiones al fijar/desfijar notas.
 La migración 4 añade iconos persistentes a notebooks sin modificar notas.
+La migración 7 añade `position` para ordenar notebooks entre hermanos y conserva
+el orden alfabético de las bibliotecas existentes. Mover un notebook valida ciclos
+en SQLite y reordena sus hermanos en una transacción. El arrastre de notas y
+notebooks vive dentro de la ventana y no interpreta datos externos.
+El filtro de etiquetas se aplica sobre la vista actual con lógica AND, no se
+guarda en la sesión y admite hasta ocho etiquetas. Las acciones en lote usan una
+sola transacción: si una nota superaría 32 etiquetas, no cambia ninguna.
 
 El selector del editor y la búsqueda lateral comparten la jerarquía de notebooks.
 La búsqueda conserva padres como contexto y no modifica la expansión guardada.
@@ -234,6 +241,35 @@ teclado), no por un evento `scroll` de reflow o de una corrección anterior.
 Los bloques de código normalizan CRLF/LF para conservar los diagramas cuando
 CodeMirror normaliza una nota al editarla por primera vez.
 
+Editor, preview y exportación comparten el catálogo oficial
+`@codemirror/language-data` (6.5.2). El autocompletado se genera de sus nombres,
+alias y extensiones; las gramáticas adicionales se cargan bajo demanda y se
+reutilizan entre bloques. `bash`/`sh` usan Shell, `diff`/`patch` usan diff y
+`github-actions` usa YAML. Git y GitHub no se presentan como lenguajes propios.
+JavaScript, JSX, TypeScript, TSX, JSON y Markdown conservan soporte inmediato.
+Un lenguaje desconocido conserva el código como texto, sin detección heurística.
+
+El resaltado sigue usando `highlightTree` de `@lezer/highlight`, con las etiquetas
+semánticas de cada gramática. El adaptador genera las clases públicas `.tok-*`
+de `@inkdropapp/css/syntax.css`, incluidos comentarios, funciones, definiciones y
+cambios diff. Los colores proceden de las variables del tema. El paquete antiguo
+`@codemirror/highlight` está deprecado; no se añade como dependencia.
+
+Las cabeceras interpretan `title`, `filename`, `line`, `commit` y `url`, conforme
+a los [atributos documentados por Inkdrop](https://docs.inkdrop.app/reference/agent-skills)
+y sus [ejemplos oficiales](https://github.com/inkdropapp/note-driven-agentic-coding-workflow/blob/main/commands/plan.md).
+Reutilizan los estilos `codeblock-meta` y `mde-preview-code` del paquete CSS.
+La numeración aparece al indicar una línea inicial positiva; título y archivo
+son texto escapado. Sólo las URL HTTP(S) sin credenciales pueden abrirse mediante
+la acción externa de la app. HTML/PDF precargan las gramáticas antes del render
+estático y conservan esos metadatos. Mermaid y matemáticas mantienen su renderer.
+
+El botón Detail del notebook se muestra al pasar el puntero o usar foco visible
+de teclado; el foco que deja un clic no lo mantiene abierto en otra fila.
+`smoke-notebook-detail.mjs` verifica ambos casos y la navegación en tres temas.
+`smoke-code-blocks.mjs` prueba doce lenguajes, metadatos, autocompletado y contraste
+en los siete temas usando la aplicación empaquetada y un perfil temporal.
+
 `scripts/smoke-preview-stability.mjs` compara coordenadas DOM en cada fotograma
 mientras se escribe y se confirma el autoguardado, incluyendo celdas de tablas
 y texto posterior a diagramas en los cuatro modos de wrap. Incluye cambio de
@@ -280,7 +316,17 @@ Markdown, con historial de deshacer y autoguardado.
 
 En una línea vacía, `/` abre las inserciones Markdown. `[[` busca notas por
 título y crea enlaces `inknote://note/` que se abren dentro de la app.
-Cmd/Ctrl+K abre la paleta de comandos. En Preferencias → Edición se elige la
+Cmd/Ctrl+K abre la paleta, con fuentes de comandos (`>`), notebooks (`b`),
+etiquetas (`t`), esquema (`#`) y temas (`h`). El esquema sale del árbol Lezer, por
+lo que ignora el código. `<mark>`, `<sub>` y `<sup>` sólo se aceptan como pares
+exactos; el resto del HTML de las notas sigue sin renderizarse.
+La búsqueda del preview usa la CSS Custom Highlight API y no modifica su DOM. Pegar
+una URL sobre una selección crea el enlace sin acceder a la red.
+
+El título de un enlace pegado sólo se consulta con la preferencia
+`linkTitleFetch`, desactivada por defecto, o al pedirlo en ese enlace. La petición
+sale del proceso principal sin cookies ni referrer, valida cada redirección y cada
+dirección IP al conectar, y rechaza redes privadas y de loopback. En Preferencias → Edición se elige la
 barra flotante o fija, el teclado estándar o Vim y la anchura de lectura.
 La variable `--inknote-editor-readable-width` controla el límite de lectura,
 con 1024 px como valor inicial de InkNote.
@@ -530,9 +576,9 @@ archivos JavaScript descargados del catálogo de temas.
 ## Organización, búsqueda, plantillas e imágenes
 
 Las notas nuevas empiezan en `none` (Sin estado); los estados ya guardados se
-conservan. Dentro de un notebook se ocultan `completed` y `dropped`, salvo que
-una consulta incluya explícitamente un estado. Los estados siguen accesibles
-en la biblioteca. El menú contextual permite crear subnotebooks, abrir Detail
+conservan. Todas las notas, los notebooks y las etiquetas ocultan `completed` y
+`dropped`, también en sus contadores. Las búsquedas sí las encuentran y cada
+estado sigue accesible en la biblioteca. El menú contextual permite crear subnotebooks, abrir Detail
 y cambiar iconos. Las notas se fijan desde el menú contextual o con P cuando
 la fila tiene foco; Mod-J abre las acciones del editor.
 
@@ -556,8 +602,10 @@ Se incluye el ejemplo Daily Report publicado en la guía, adaptado sin notebook
 fijo; el resto de la biblioteca privada de plantillas de Inkdrop no se inventa.
 Personalizar el ejemplo crea una plantilla propia y conserva el original.
 
-El editor importa, pega o recibe por arrastre PNG, JPEG, GIF y WebP. Se limitan
-a 5 MB y 16 megapíxeles antes de decodificar; se validan en main y se almacenan
+El editor importa, pega o recibe por arrastre PNG, JPEG, GIF, WebP, SVG, HEIC y
+HEIF. Los SVG se reconstruyen sin contenido activo y HEIC se convierte a JPEG con
+`sips`, por lo que sólo se admite en macOS. Se limitan a 10 MiB y 16 megapíxeles
+antes de decodificar; se validan en main y se almacenan
 por hash bajo `<userData>/images`. Markdown sólo renderiza estas URLs gestionadas;
 las imágenes remotas siguen sin solicitarse. Los archivos se guardan junto al
 perfil y todavía no tienen transporte de sincronización remota.
@@ -598,6 +646,10 @@ contraste de los siete temas, preferencias y tamaños de ventana. El workflow
 de instaladores ejecuta estas comprobaciones después de instalar cada paquete.
 Las ejecuciones manuales prueban artefactos y no publican una nueva versión.
 
+La importación se ejecuta en main y guarda todo en una sola transacción SQLite.
+Sólo lee imágenes dentro de la carpeta elegida, incluso a través de enlaces
+simbólicos, y convierte HTML y ENML a Markdown sin ejecutar su contenido.
+
 ## Seguridad
 
 - contextIsolation, sandbox y webSecurity activados; nodeIntegration desactivado.
@@ -615,6 +667,7 @@ Las ejecuciones manuales prueban artefactos y no publican una nueva versión.
 - Fuses desactivan RunAsNode, NODE_OPTIONS e inspect arguments; ASAR tiene
   validación de integridad.
 - Notas, rutas y SQL no se mandan a telemetría, APIs ni servicios externos.
+  La consulta opcional del título de un enlace sólo envía esa URL a su propio sitio.
 
 No se afirma cifrado extremo a extremo, autenticación ni
 sincronización remota hasta que existan claves, recuperación y pruebas reales.

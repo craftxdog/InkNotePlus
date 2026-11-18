@@ -50,6 +50,7 @@ function setup() {
     ipc,
     getMainWebContents: () => webContents,
     openExternal,
+    fetchTitle: async () => null,
   });
   const invoke = (channel: string, input: unknown, sender = event) =>
     handlers.get(channel)!(sender, input);

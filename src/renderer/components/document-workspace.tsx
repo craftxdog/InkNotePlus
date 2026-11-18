@@ -36,6 +36,9 @@ import {
   Trash2,
   RotateCcw,
   Files,
+  History,
+  ListTree,
+  Copy,
   ImagePlus,
   Highlighter,
   ListChecks,
@@ -67,7 +70,11 @@ import { connectEditorSession } from '../editor/editor-session';
 import { NotebookPicker } from './notebook-picker';
 import { UiSlot } from '../extensions/ui-slots';
 import { NoteTrashActions } from './note-trash-actions';
+import { NoteOutlinePanel } from './note-outline-panel';
+import { PreviewFindBar } from './preview-find-bar';
+import { jumpToNoteLine, previewLineAtTop } from '../editor/note-navigation';
 import type { ExportNoteInput } from '../../shared/transfer';
+import { maxNoteTags, maxTagLength } from '../../shared/tags';
 
 const exportActions = [
   { format: 'markdown', label: 'Exportar Markdown…', icon: FileText },
@@ -106,6 +113,13 @@ export function DocumentWorkspace({
   );
   const navigation = useWorkspace((state) => state.navigation);
   const openNoteAction = useWorkspace((state) => state.openNoteAction);
+  const duplicateNotes = useWorkspace((state) => state.duplicateNotes);
+  const outlineOpen = useWorkspace((state) => state.outlineOpen);
+  const setOutlineOpen = useWorkspace((state) => state.setOutlineOpen);
+  const previewFindOpen = useWorkspace((state) => state.previewFindOpen);
+  const setPreviewFindOpen = useWorkspace((state) => state.setPreviewFindOpen);
+  const setRevisionsOpen = useWorkspace((state) => state.setRevisionsOpen);
+  const [outlineLine, setOutlineLine] = useState(1);
   const importImage = useWorkspace((state) => state.importImage);
   const exportNote = useWorkspace((state) => state.transfer.exportNote);
   const view = useRef<EditorView | null>(null);
@@ -218,6 +232,34 @@ export function DocumentWorkspace({
   useEffect(() => {
     view.current?.requestMeasure();
   }, [mode, splitRatio]);
+  const followEditorLine = useCallback(() => {
+    const instance = view.current;
+    if (instance)
+      setOutlineLine(
+        instance.state.doc.lineAt(instance.state.selection.main.head).number,
+      );
+  }, []);
+  useEffect(() => {
+    if (!outlineOpen) return;
+    const pane = preview.current;
+    if (mode !== 'preview' || !pane) {
+      followEditorLine();
+      return;
+    }
+    let frame = 0;
+    const follow = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() =>
+        setOutlineLine(previewLineAtTop(pane)),
+      );
+    };
+    follow();
+    pane.addEventListener('scroll', follow, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      pane.removeEventListener('scroll', follow);
+    };
+  }, [outlineOpen, mode, draft.noteId, followEditorLine]);
   const setMetadata = (patch: Partial<typeof draft.metadata>) => {
     updateDraft({ metadata: { ...draft.metadata, ...patch } });
   };
@@ -301,6 +343,13 @@ export function DocumentWorkspace({
                 : ''}
           </span>
           <IconButton
+            icon={ListTree}
+            label="Esquema de la nota"
+            active={outlineOpen}
+            disabled={!draft.noteId}
+            onClick={() => setOutlineOpen(!outlineOpen)}
+          />
+          <IconButton
             icon={Save}
             label="Guardar"
             disabled={!draft.isDirty || isSaving || inTrash}
@@ -324,6 +373,30 @@ export function DocumentWorkspace({
               >
                 <Pin size={16} />
                 {draft.isPinned ? 'Desfijar nota' : 'Fijar nota'}
+              </button>
+              <button
+                type="button"
+                disabled={!draft.noteId || inTrash}
+                onClick={(event) => {
+                  const menu = event.currentTarget.closest('details');
+                  if (menu) menu.open = false;
+                  if (draft.noteId) void duplicateNotes([draft.noteId]);
+                }}
+              >
+                <Copy size={16} />
+                Duplicar nota
+              </button>
+              <button
+                type="button"
+                disabled={!draft.noteId || inTrash}
+                onClick={(event) => {
+                  const menu = event.currentTarget.closest('details');
+                  if (menu) menu.open = false;
+                  setRevisionsOpen(true);
+                }}
+              >
+                <History size={16} />
+                Historial de revisiones
               </button>
               <button
                 type="button"
@@ -534,6 +607,7 @@ export function DocumentWorkspace({
                   onInsertImage={() => void insertImage()}
                   onFloatingToolbar={setFloatingToolbar}
                   noteLinks={noteLinks}
+                  fetchLinkTitle={store.getState().fetchLinkTitle}
                   onVimAction={(action, argument) => {
                     const aliases = {
                       write: 'core:save-note',
@@ -599,6 +673,8 @@ export function DocumentWorkspace({
                     if (view.current) {
                       setImageSelected(!!imageAtCursor(view.current));
                       setTableSelected(!!tableAtCursor(view.current.state));
+                      if (store.getState().outlineOpen && mode !== 'preview')
+                        followEditorLine();
                     }
                   }}
                 />
@@ -622,6 +698,24 @@ export function DocumentWorkspace({
                 onRendered={previewRendered}
               />
             </aside>
+            {previewFindOpen && mode !== 'edit' && preview.current && (
+              <PreviewFindBar
+                pane={preview.current}
+                onReveal={() => sync.current?.previewNavigated()}
+                onClose={() => {
+                  setPreviewFindOpen(false);
+                  preview.current?.focus();
+                }}
+              />
+            )}
+            {outlineOpen && (
+              <NoteOutlinePanel
+                body={draft.body}
+                currentLine={outlineLine}
+                onJump={jumpToNoteLine}
+                onClose={() => setOutlineOpen(false)}
+              />
+            )}
           </div>
           {floatingToolbar &&
             mode !== 'preview' &&
@@ -672,7 +766,11 @@ function EditorMetadata({ disabled }: { disabled: boolean }) {
   const [tag, setTag] = useState('');
   const commitTag = () => {
     const value = tag.trim();
-    if (value && !metadata.tags.includes(value) && metadata.tags.length < 32)
+    if (
+      value &&
+      !metadata.tags.includes(value) &&
+      metadata.tags.length < maxNoteTags
+    )
       update({ metadata: { ...metadata, tags: [...metadata.tags, value] } });
     setTag('');
   };
@@ -716,8 +814,8 @@ function EditorMetadata({ disabled }: { disabled: boolean }) {
         <input
           aria-label="Añadir etiqueta"
           placeholder="Añadir etiquetas"
-          disabled={disabled || metadata.tags.length >= 32}
-          maxLength={40}
+          disabled={disabled || metadata.tags.length >= maxNoteTags}
+          maxLength={maxTagLength}
           value={tag}
           onChange={(event) => setTag(event.target.value)}
           onBlur={commitTag}

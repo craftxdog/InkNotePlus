@@ -1,6 +1,10 @@
 import type { IpcMain, WebContents } from 'electron';
 import { readFile, stat } from 'node:fs/promises';
-import { IMAGE_CHANNELS, imageWriteSchema } from '../../shared/images';
+import {
+  IMAGE_CHANNELS,
+  imageWriteSchema,
+  maxImageBytes,
+} from '../../shared/images';
 import { failure, success } from '../../shared/ipc';
 import { storeImage } from '../image-store';
 import { isTrustedIpcEvent } from './note-handlers';
@@ -17,7 +21,8 @@ export function registerImageHandlers(options: {
     try {
       const file = await options.chooseFile();
       if (!file) return success(null);
-      if ((await stat(file)).size > 5_000_000) return failure('invalid_input');
+      if ((await stat(file)).size > maxImageBytes)
+        return failure('invalid_input');
       return success(
         await storeImage(
           await readFile(file),

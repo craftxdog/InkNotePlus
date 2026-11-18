@@ -3,14 +3,21 @@ import path from 'node:path';
 import type { SqliteLibraryTransfer } from '../../infrastructure/sqlite/sqlite-library-transfer';
 import { failure, success, type Result } from '../../shared/ipc';
 import type { Preferences } from '../../shared/preferences';
-import { TRANSFER_CHANNELS, exportNoteSchema } from '../../shared/transfer';
+import {
+  TRANSFER_CHANNELS,
+  exportNoteSchema,
+  exportNotesSchema,
+  importNotesSchema,
+} from '../../shared/transfer';
 import { z } from '../../shared/validation';
 import type { BackupService } from '../backup-service';
 import {
+  exportCollection,
   exportLibraryMarkdown,
   exportMarkdown,
   exportName,
 } from '../markdown-export';
+import { storeImage } from '../image-store';
 import { writeAtomic } from '../transfer-files';
 import { isTrustedIpcEvent } from './note-handlers';
 
@@ -24,6 +31,8 @@ export function registerTransferHandlers(options: {
   library: SqliteLibraryTransfer;
   userData: string;
   getPreferences: () => Preferences;
+  isDecodableImage: (bytes: Buffer) => boolean;
+  onImported: () => void;
 }) {
   const { ipc, backup, library } = options;
   const channels: string[] = [];
@@ -174,6 +183,81 @@ export function registerTransferHandlers(options: {
           : null,
       );
     }),
+  );
+  handle(
+    TRANSFER_CHANNELS.exportNotes,
+    exportNotesSchema,
+    (window, { format, scope }) =>
+      exportOnce(async () => {
+        const directory = await chooseDirectory(
+          window,
+          format === 'html' ? 'Exportar como HTML' : 'Exportar como Markdown',
+        );
+        if (!directory) return success(null);
+        const { renderNoteExport } = await import('../render-note-export');
+        return success(
+          await exportCollection(library, directory, images, {
+            format,
+            scope,
+            renderHtml: (note) =>
+              renderNoteExport(note, options.getPreferences(), images),
+          }),
+        );
+      }),
+  );
+  handle(
+    TRANSFER_CHANNELS.importNotes,
+    importNotesSchema,
+    (window, { kind, notebookId }) =>
+      exportOnce(async () => {
+        const selection = await dialog.showOpenDialog(window, {
+          title:
+            kind === 'folder' ? 'Importar carpeta de notas' : 'Importar notas',
+          properties:
+            kind === 'folder'
+              ? ['openDirectory', 'multiSelections']
+              : ['openFile', 'multiSelections'],
+          filters:
+            kind === 'folder'
+              ? undefined
+              : [
+                  {
+                    name: 'Notas',
+                    extensions: [
+                      'md',
+                      'markdown',
+                      'mdown',
+                      'mkd',
+                      'txt',
+                      'html',
+                      'htm',
+                      'enex',
+                    ],
+                  },
+                ],
+        });
+        if (selection.canceled || !selection.filePaths.length)
+          return success(null);
+        const { readImportSources } = await import('../note-import');
+        const source = await readImportSources(selection.filePaths, {
+          storeImage: async (bytes) =>
+            (
+              await storeImage(
+                bytes,
+                options.userData,
+                options.isDecodableImage,
+              )
+            ).url,
+        });
+        const saved = library.importNotes(source.notes, notebookId);
+        options.onImported();
+        return success({
+          ...saved,
+          images: source.images,
+          missingImages: source.missingImages,
+          skipped: source.skipped,
+        });
+      }),
   );
   return {
     dispose: () => channels.forEach((channel) => ipc.removeHandler(channel)),

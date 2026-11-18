@@ -7,6 +7,7 @@ import {
   type SqliteLibraryTransfer,
 } from '../infrastructure/sqlite/sqlite-library-transfer';
 import { managedImageUrlPattern } from '../shared/images';
+import type { ExportNotesInput, ExportScope } from '../shared/transfer';
 import {
   makeUniqueDirectory,
   readAvailableImage,
@@ -100,48 +101,93 @@ export async function exportMarkdown(
   }
 }
 
-export async function exportLibraryMarkdown(
+export function exportLibraryMarkdown(
   library: SqliteLibraryTransfer,
   parent: string,
   imageSource: string,
 ) {
+  return exportCollection(library, parent, imageSource, {
+    format: 'markdown',
+    scope: { kind: 'all' },
+  });
+}
+
+export async function exportCollection(
+  library: SqliteLibraryTransfer,
+  parent: string,
+  imageSource: string,
+  {
+    format,
+    scope,
+    renderHtml,
+  }: {
+    format: ExportNotesInput['format'];
+    scope: ExportScope;
+    renderHtml?: (
+      note: Note,
+    ) => Promise<{ html: string; missingAttachments: number }>;
+  },
+) {
+  const books = orderNotebooks(library.listNotebooks());
+  const book =
+    scope.kind === 'notebook'
+      ? books.find(({ id }) => id === scope.id)
+      : undefined;
+  if (scope.kind === 'notebook' && !book) return null;
   const root = await makeUniqueDirectory(
     await realpath(parent),
-    'InkNote Markdown',
+    book
+      ? exportName(book.name, 'Notebook')
+      : `InkNote ${format === 'html' ? 'HTML' : 'Markdown'}`,
   );
-  const folders = new Map<string | null, string>([[null, root]]);
+  const folders = new Map<string | null, string>([[book?.id ?? null, root]]);
+  const selected = scope.kind === 'notes' ? new Set(scope.ids) : null;
+  let missingHtml = 0;
   const usedNames = new Map<string, Set<string>>();
   const written = new Set<string>();
   const missing = new Set<string>();
   const assets = path.join(root, 'Attachments');
   usedNames.set(root, new Set(['attachments']));
   try {
-    for (const book of orderNotebooks(library.listNotebooks())) {
-      const directory = folders.get(book.parentId)!;
+    for (const entry of selected ? [] : books) {
+      const directory = folders.get(entry.parentId);
+      if (!directory || folders.has(entry.id)) continue;
       const child = path.join(
         directory,
         reserveName(
           directory,
-          exportName(book.name, 'Notebook'),
+          exportName(entry.name, 'Notebook'),
           '',
           usedNames,
         ),
       );
       await mkdir(child, { mode: 0o700 });
-      folders.set(book.id, child);
+      folders.set(entry.id, child);
     }
     let notes = 0;
     for (const { id, trashed } of library.listVersions()) {
-      if (trashed) continue;
+      if (trashed || (selected && !selected.has(id))) continue;
       const note = library.readNote(id);
       if (!note || note.deletedAt !== null) continue;
-      const directory = folders.get(note.metadata?.notebookId ?? null) ?? root;
+      const directory = selected
+        ? root
+        : (folders.get(note.metadata?.notebookId ?? null) ??
+          (book ? undefined : root));
+      if (!directory) continue;
       const file = reserveName(
         directory,
         exportName(note.title),
-        '.md',
+        format === 'html' ? '.html' : '.md',
         usedNames,
       );
+      if (format === 'html') {
+        if (!renderHtml) throw new Error('HTML renderer is required.');
+        const rendered = await renderHtml(note);
+        missingHtml += rendered.missingAttachments;
+        await writeAtomic(path.join(directory, file), rendered.html);
+        notes++;
+        continue;
+      }
       const { body } = await rewriteAttachments(note.body, async (name) => {
         if (missing.has(name)) return;
         const target = path.join(assets, name);
@@ -160,7 +206,12 @@ export async function exportLibraryMarkdown(
       await writeAtomic(path.join(directory, file), body);
       notes++;
     }
-    if (notes) return { path: root, notes, missingAttachments: missing.size };
+    if (notes)
+      return {
+        path: root,
+        notes,
+        missingAttachments: missing.size + missingHtml,
+      };
     await rm(root, { recursive: true });
     return null;
   } catch (error) {

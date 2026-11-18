@@ -53,6 +53,8 @@ export function createApi(overrides: Partial<InkNoteApi['notes']> = {}) {
       restoreBackup: async () => success(null),
       exportNote: async () => success(null),
       exportLibrary: async () => success(null),
+      importNotes: async () => success(null),
+      exportNotes: async () => success(null),
       onBackupChanged: () => () => {},
     },
     images: {
@@ -72,11 +74,16 @@ export function createApi(overrides: Partial<InkNoteApi['notes']> = {}) {
     onBeforeClose: () => () => {},
     setWindowBackground: async () => success(true),
     reloadWindow: async () => success(true),
-    links: { openExternal: async () => success(true) },
+    links: {
+      openExternal: async () => success(true),
+      fetchTitle: async () => success(null),
+    },
     library: {
       get: async () => success(emptyLibrary),
       createNotebook: async () => failure('unavailable'),
       setNotebookIcon: async () => failure('unavailable'),
+      renameNotebook: async () => failure('unavailable'),
+      moveNotebook: async () => failure('unavailable'),
       deleteNotebook: async () => failure('unavailable'),
       updateTag: async () => failure('unavailable'),
       deleteTag: async () => failure('unavailable'),
@@ -101,6 +108,8 @@ export function createApi(overrides: Partial<InkNoteApi['notes']> = {}) {
       moveToTrash: async () => failure('unavailable'),
       restore: async () => failure('unavailable'),
       manageTrash: async () => failure('unavailable'),
+      listRevisions: async () => failure('unavailable'),
+      getRevision: async () => failure('unavailable'),
       ...overrides,
     },
     onNoteChanged(listener) {

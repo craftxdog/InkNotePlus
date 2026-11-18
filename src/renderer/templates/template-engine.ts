@@ -6,11 +6,15 @@ import {
   type NoteMetadata,
 } from '../../shared/note-metadata';
 import type { Notebook } from '../../shared/library';
+import { maxNoteTags, maxTagLength } from '../../shared/tags';
 
 const configurationSchema = z.object({
   title: z.string().max(512).optional(),
   description: z.string().max(2000).optional(),
-  tags: z.array(z.string().trim().min(1).max(40)).max(32).optional(),
+  tags: z
+    .array(z.string().trim().min(1).max(maxTagLength))
+    .max(maxNoteTags)
+    .optional(),
   notebook: z.string().max(100).optional(),
   status: z
     .enum(['none', 'active', 'onHold', 'onhold', 'completed', 'dropped'])

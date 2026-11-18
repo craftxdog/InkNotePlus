@@ -1,5 +1,6 @@
 import { lstat, readFile, realpath } from 'node:fs/promises';
 import path from 'node:path';
+import { maxImageBytes } from '../shared/images';
 
 const mimeTypes: Record<string, string> = {
   '.css': 'text/css',
@@ -9,6 +10,7 @@ const mimeTypes: Record<string, string> = {
   '.gif': 'image/gif',
   '.webp': 'image/webp',
   '.avif': 'image/avif',
+  '.svg': 'image/svg+xml',
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
   '.ttf': 'font/ttf',
@@ -49,7 +51,7 @@ export async function readAsset(
     if (!file.startsWith(base + path.sep))
       return new Response(null, { status: 404 });
     const stat = await lstat(file);
-    if (!stat.isFile() || stat.size > 5_000_000)
+    if (!stat.isFile() || stat.size > maxImageBytes)
       return new Response(null, { status: 404 });
     return new Response(await readFile(file), {
       headers: {

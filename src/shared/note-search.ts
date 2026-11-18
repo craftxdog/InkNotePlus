@@ -19,6 +19,9 @@ export function parseNoteSearch(query: string): {
     if (offset === query.length) break;
     const exclude = query[offset] === '-';
     if (exclude) offset++;
+    // A hyphen surrounded by spaces is punctuation, not an exclusion.
+    if (exclude && (offset === query.length || /\s/u.test(query[offset])))
+      continue;
     const qualifier = /^([a-z]+):/i.exec(query.slice(offset));
     let field: SearchField = 'text';
     if (qualifier && fields.has(qualifier[1].toLowerCase())) {
@@ -39,8 +42,10 @@ export function parseNoteSearch(query: string): {
           value += query[offset++];
         else value += char;
       }
-      if (!closed || (offset < query.length && !/\s/.test(query[offset])))
+      if (closed && offset < query.length && !/\s/.test(query[offset]))
         return { terms, valid: false };
+      // An open quote is a phrase in progress; alone, it has no content yet.
+      if (!closed && !value) continue;
     } else {
       while (offset < query.length && !/\s/u.test(query[offset]))
         value += query[offset++];

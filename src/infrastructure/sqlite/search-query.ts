@@ -10,12 +10,9 @@ function ftsTerm(term: SearchTerm) {
 
 export function compileNoteSearch(input: ListNotesInput, query: string) {
   const parsed = parseNoteSearch(query);
-  const filter = noteFilter({
-    ...input,
-    excludeFinished:
-      input.excludeFinished &&
-      !parsed.terms.some((term) => term.field === 'status' && !term.exclude),
-  });
+  // Finished notes are hidden while browsing, but searches still find them.
+  // https://docs.inkdrop.app/start-guide/how-to-organize-notes
+  const filter = noteFilter({ ...input, excludeFinished: false });
   const clauses = [filter.sql];
   const params = [...filter.params];
   const positive: string[] = [];

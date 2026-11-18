@@ -1,4 +1,10 @@
-import { memo, useEffect, useState, type MouseEventHandler } from 'react';
+import {
+  memo,
+  useEffect,
+  useState,
+  type DragEventHandler,
+  type MouseEventHandler,
+} from 'react';
 import {
   PanelLeft,
   SquarePen,
@@ -8,6 +14,7 @@ import {
   ClipboardCheck,
   Filter,
   Trash2,
+  X,
 } from 'lucide-react';
 import {
   parseNoteSearch,
@@ -17,11 +24,56 @@ import { HighlightedText } from './highlighted-text';
 import { ContextMenu } from './context-menu';
 import { builtinTemplates } from '../templates/builtin-templates';
 import { UiSlot } from '../extensions/ui-slots';
-import type { AppErrorCode, NoteProjection } from '../../shared/ipc';
+import type { AppErrorCode, NoteProjection, NoteSort } from '../../shared/ipc';
 import { useWorkspace } from '../state/workspace-context';
 import { IconButton } from './icon-button';
 import { TagBadge } from './tag-badge';
 import { statusLabels, statusIcons } from './note-status';
+import { endLibraryDrag, startLibraryDrag } from '../notebooks/library-drag';
+
+const sortFields = [
+  ['updated', 'Última modificación'],
+  ['created', 'Fecha de creación'],
+  ['title', 'Título'],
+] as const;
+const sortDirections = [
+  ['asc', 'Ascendente'],
+  ['desc', 'Descendente'],
+] as const;
+
+function TagFilterBar() {
+  const tags = useWorkspace((state) => state.tagFilter);
+  const toggle = useWorkspace((state) => state.toggleTagFilter);
+  const setFilter = useWorkspace((state) => state.setTagFilter);
+  if (!tags.length) return null;
+  return (
+    <div
+      className="note-tag-filter"
+      role="group"
+      aria-label="Filtro de etiquetas"
+    >
+      {tags.map((tag) => (
+        <button
+          type="button"
+          key={tag}
+          aria-label={`Quitar filtro ${tag}`}
+          title={`Quitar filtro ${tag}`}
+          onClick={() => void toggle(tag)}
+        >
+          <TagBadge name={tag} />
+          <X size={12} aria-hidden="true" />
+        </button>
+      ))}
+      <button
+        type="button"
+        className="note-tag-filter-clear"
+        onClick={() => void setFilter([])}
+      >
+        Limpiar filtro
+      </button>
+    </div>
+  );
+}
 
 export function NoteList({
   onToggleSidebar,
@@ -43,6 +95,10 @@ export function NoteList({
   const setLibraryDialog = useWorkspace((state) => state.setLibraryDialog);
   const trashCount = useWorkspace((state) => state.library.trash);
   const pin = useWorkspace((state) => state.togglePin);
+  const toggleTagFilter = useWorkspace((state) => state.toggleTagFilter);
+  const setTagFilter = useWorkspace((state) => state.setTagFilter);
+  const duplicate = useWorkspace((state) => state.duplicateNotes);
+  const exportNotes = useWorkspace((state) => state.exportNotes);
   const query = useWorkspace((state) => state.searchQuery);
   const terms = searchHighlightTerms(query);
   const customize = useWorkspace((state) => state.customizeTemplate);
@@ -74,12 +130,8 @@ export function NoteList({
               ? statusLabels[navigation.status]
               : navigation.name;
   const sort = useWorkspace((state) => state.preferences.noteSort);
-  const updatePreferences = useWorkspace((state) => state.updatePreferences);
-  const refresh = useWorkspace((state) => state.refreshNotes);
-  const setSort = (noteSort: 'updated' | 'title') => {
-    void updatePreferences({ noteSort });
-    void refresh();
-  };
+  const setSort = useWorkspace((state) => state.setNoteSort);
+  const [sortField, sortDirection] = sort.split('-');
   return (
     <section className="pane pane--note-list" aria-labelledby="note-list-title">
       <header className="note-list-header window-drag-region">
@@ -116,23 +168,37 @@ export function NoteList({
             <ListFilter size={17} />
           </summary>
           <div className="popover">
-            <button
-              type="button"
-              onClick={() => setSort('updated')}
-              aria-pressed={sort === 'updated'}
-            >
-              Última modificación
-            </button>
-            <button
-              type="button"
-              onClick={() => setSort('title')}
-              aria-pressed={sort === 'title'}
-            >
-              Título
-            </button>
+            {sortFields.map(([field, label]) => (
+              <button
+                type="button"
+                key={field}
+                aria-pressed={sortField === field}
+                onClick={() =>
+                  void setSort(
+                    `${field}-${field === 'title' ? 'asc' : 'desc'}` as NoteSort,
+                  )
+                }
+              >
+                {label}
+              </button>
+            ))}
+            <hr />
+            {sortDirections.map(([direction, label]) => (
+              <button
+                type="button"
+                key={direction}
+                aria-pressed={sortDirection === direction}
+                onClick={() =>
+                  void setSort(`${sortField}-${direction}` as NoteSort)
+                }
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </details>
       </div>
+      <TagFilterBar />
       <UiSlot
         name={
           navigation.type === 'trash' ? 'note-list-bar:trash' : 'note-list-bar'
@@ -175,6 +241,14 @@ export function NoteList({
             active={note.id === activeId}
             selected={selectedIds.includes(note.id)}
             terms={terms}
+            showCreated={sortField === 'created'}
+            draggable={!inTrash}
+            onDragStart={(event) =>
+              startLibraryDrag(event, {
+                kind: 'notes',
+                ids: selectedIds.includes(note.id) ? selectedIds : [note.id],
+              })
+            }
             onContextMenu={(event) => {
               event.preventDefault();
               event.currentTarget.focus();
@@ -191,7 +265,19 @@ export function NoteList({
               });
             }}
             onSelect={(event) => {
-              if (platform === 'darwin' ? event.metaKey : event.ctrlKey) {
+              const multiSelect =
+                platform === 'darwin' ? event.metaKey : event.ctrlKey;
+              const tag =
+                event.target instanceof Element
+                  ? event.target
+                      .closest('[data-filter-tag]')
+                      ?.getAttribute('data-filter-tag')
+                  : null;
+              if (tag && !multiSelect) {
+                void (event.altKey
+                  ? setTagFilter([tag])
+                  : toggleTagFilter(tag));
+              } else if (multiSelect) {
                 toggleSelection(note.id);
               } else {
                 select(note.id);
@@ -258,6 +344,33 @@ export function NoteList({
                         },
                       ]
                     : []),
+                  {
+                    label: 'Mover a notebook…',
+                    run: () => openNoteAction('move-notes', menu.ids),
+                  },
+                  {
+                    label: 'Etiquetar…',
+                    run: () => openNoteAction('tag-notes', menu.ids),
+                  },
+                  {
+                    label: 'Cambiar estado…',
+                    run: () => openNoteAction('status-notes', menu.ids),
+                  },
+                  {
+                    label:
+                      menu.ids.length === 1
+                        ? 'Duplicar nota'
+                        : `Duplicar ${menu.ids.length} notas`,
+                    run: () => void duplicate(menu.ids),
+                  },
+                  ...(['markdown', 'html'] as const).map((format) => ({
+                    label: `Exportar a ${format === 'html' ? 'HTML' : 'Markdown'}…`,
+                    run: () =>
+                      void exportNotes({
+                        format,
+                        scope: { kind: 'notes', ids: [...menu.ids] },
+                      }),
+                  })),
                   {
                     label: 'Mover a papelera',
                     run: () => openNoteAction('trash', menu.ids),
@@ -344,6 +457,9 @@ const NoteListItem = memo(function NoteListItem({
   selected,
   onSelect,
   terms,
+  showCreated,
+  draggable,
+  onDragStart,
   onContextMenu,
 }: {
   note: NoteProjection;
@@ -351,6 +467,9 @@ const NoteListItem = memo(function NoteListItem({
   selected: boolean;
   onSelect: MouseEventHandler<HTMLButtonElement>;
   terms: string[];
+  showCreated: boolean;
+  draggable: boolean;
+  onDragStart: DragEventHandler<HTMLButtonElement>;
   onContextMenu: React.MouseEventHandler<HTMLButtonElement>;
 }) {
   const noteStatus = note.metadata?.status ?? 'none';
@@ -358,6 +477,7 @@ const NoteListItem = memo(function NoteListItem({
   const excerpt = note.body.replaceAll(/\s+/g, ' ').trim();
   const tasks = [...note.body.matchAll(/^\s*[-*+] \[([ xX])\]/gm)];
   const completed = tasks.filter((task) => task[1] !== ' ').length;
+  const date = showCreated ? note.createdAt : note.updatedAt;
   return (
     <li>
       <button
@@ -366,6 +486,9 @@ const NoteListItem = memo(function NoteListItem({
         data-active={active || selected}
         aria-pressed={selected || undefined}
         aria-current={active ? 'true' : undefined}
+        draggable={draggable}
+        onDragStart={onDragStart}
+        onDragEnd={endLibraryDrag}
         onClick={onSelect}
         onContextMenu={onContextMenu}
       >
@@ -386,11 +509,8 @@ const NoteListItem = memo(function NoteListItem({
           />
         </strong>
         <span className="note-row-metadata">
-          <time
-            dateTime={note.updatedAt}
-            title={new Date(note.updatedAt).toLocaleString()}
-          >
-            {relativeDate(note.updatedAt)}
+          <time dateTime={date} title={new Date(date).toLocaleString()}>
+            {relativeDate(date)}
           </time>
           {tasks.length > 0 && (
             <span className="task-summary">
@@ -404,7 +524,9 @@ const NoteListItem = memo(function NoteListItem({
             </span>
           )}
           {note.metadata?.tags.map((tag) => (
-            <TagBadge key={tag} name={tag} />
+            <span key={tag} data-filter-tag={tag} title={`Filtrar por ${tag}`}>
+              <TagBadge name={tag} />
+            </span>
           ))}
         </span>
         <span className="note-list-item-excerpt">

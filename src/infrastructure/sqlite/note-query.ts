@@ -1,10 +1,28 @@
 import type { ListNotesInput } from '../../domain/note';
+import type { NoteSort } from '../../shared/ipc';
 
 // UNION deduplicates even malformed cyclic hierarchies; all IDs stay bound.
 export const subtreeSql = `WITH RECURSIVE subtree(id) AS (
   SELECT id FROM notebooks WHERE id = ?
   UNION SELECT b.id FROM notebooks b JOIN subtree p ON b.parent_id = p.id
 ) SELECT id FROM subtree`;
+
+export const unfinishedSql = (table: string) =>
+  `json_extract(${table}.metadata_json,'$.status') NOT IN ('completed','dropped')`;
+
+const sortColumns = {
+  updated: 'notes.updated_at',
+  created: 'notes.created_at',
+  title: 'notes.title COLLATE NOCASE',
+} as const;
+
+export function noteSortSql(sort: NoteSort = 'updated-desc') {
+  const [field, direction] = sort.split('-') as [
+    keyof typeof sortColumns,
+    'asc' | 'desc',
+  ];
+  return `${sortColumns[field]} ${direction.toUpperCase()},`;
+}
 
 export function noteFilter(input: ListNotesInput): {
   sql: string;
@@ -41,9 +59,7 @@ export function noteFilter(input: ListNotesInput): {
     params.push(input.status);
   }
   if (input.excludeFinished && !input.status)
-    clauses.push(
-      "json_extract(notes.metadata_json,'$.status') NOT IN ('completed','dropped')",
-    );
+    clauses.push(unfinishedSql('notes'));
   if (input.templates)
     clauses.push("json_extract(notes.metadata_json,'$.isTemplate') = 1");
   if (input.tag) {
@@ -51,6 +67,12 @@ export function noteFilter(input: ListNotesInput): {
       "EXISTS(SELECT 1 FROM json_each(notes.metadata_json,'$.tags') WHERE value = ?)",
     );
     params.push(input.tag);
+  }
+  for (const tag of input.tags ?? []) {
+    clauses.push(
+      "EXISTS(SELECT 1 FROM json_each(notes.metadata_json,'$.tags') WHERE value = ?)",
+    );
+    params.push(tag);
   }
   return { sql: clauses.join(' AND '), params };
 }

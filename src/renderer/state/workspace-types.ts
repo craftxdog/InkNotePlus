@@ -2,6 +2,9 @@ import type {
   AppErrorCode,
   ManageTrashInput,
   NoteProjection,
+  NoteRevision,
+  NoteRevisionSummary,
+  NoteSort,
   Result,
 } from '../../shared/ipc';
 import type { MainLayoutState } from '../layout/inkdrop-main-layout';
@@ -12,7 +15,14 @@ import type { InstalledTheme } from '../../shared/themes';
 import type { ManagedImage } from '../../shared/images';
 import type { UpdateTagInput } from '../../shared/tags';
 import type {
+  ExportNotesInput,
+  ExportSummary,
+  ImportNotesInput,
+  ImportSummary,
+} from '../../shared/transfer';
+import type {
   LibrarySnapshot,
+  MoveNotebookInput,
   NoteMetadata,
   NoteStatus,
 } from '../../shared/library';
@@ -25,11 +35,25 @@ export type Navigation =
   | { type: 'status'; status: NoteStatus }
   | { type: 'tag'; name: string };
 
+export type NoteActionKind =
+  | 'trash'
+  | 'restore'
+  | 'delete'
+  | 'move-notes'
+  | 'tag-notes'
+  | 'status-notes';
+
 export type LibraryDialogRequest =
-  | { kind: 'trash' | 'restore' | 'delete'; ids: readonly string[] }
+  | { kind: NoteActionKind; ids: readonly string[] }
   | { kind: 'empty' }
-  | { kind: 'delete-notebook'; id: string; name: string }
-  | { kind: 'edit-tag' | 'delete-tag'; name: string };
+  | {
+      kind: 'delete-notebook' | 'rename-notebook' | 'move-notebook';
+      id: string;
+      name: string;
+    }
+  | { kind: 'edit-tag' | 'delete-tag'; name: string }
+  | { kind: 'import-result'; summary: ImportSummary | null }
+  | { kind: 'export-result'; summary: ExportSummary | null };
 
 export interface DocumentState {
   readonly noteId: string | null;
@@ -59,6 +83,11 @@ export interface WorkspaceState {
   readonly themeRevision: number;
   readonly templatePickerOpen: boolean;
   readonly commandPaletteOpen: boolean;
+  readonly commandPaletteQuery: string;
+  readonly outlineOpen: boolean;
+  readonly previewFindOpen: boolean;
+  readonly revisionsOpen: boolean;
+  readonly imageViewer: { readonly src: string; readonly alt: string } | null;
   readonly preferences: Preferences;
   readonly styleNonce: string | null;
   readonly platform: 'darwin' | 'win32' | 'linux';
@@ -69,6 +98,7 @@ export interface WorkspaceState {
   readonly notebookDialogOpen: boolean;
   readonly activeNoteId: string | null;
   readonly selectedNoteIds: readonly string[];
+  readonly tagFilter: readonly string[];
   readonly libraryDialog: LibraryDialogRequest | null;
   readonly searchQuery: string;
   readonly searchGlobal: boolean;
@@ -99,7 +129,22 @@ export interface WorkspaceActions {
   themeDidLoad(): void;
   themeDidFail(): void;
   setTemplatePickerOpen(open: boolean): void;
-  setCommandPaletteOpen(open: boolean): void;
+  setCommandPaletteOpen(open: boolean, query?: string): void;
+  setOutlineOpen(open: boolean): void;
+  setPreviewFindOpen(open: boolean): void;
+  setRevisionsOpen(open: boolean): void;
+  listNoteRevisions(id: string): Promise<Result<NoteRevisionSummary[]>>;
+  getNoteRevision(id: string, revision: number): Promise<Result<NoteRevision>>;
+  restoreNoteVersion(version: {
+    title: string;
+    body: string;
+  }): Promise<Result<NoteProjection>>;
+  exportNotes(input: ExportNotesInput): Promise<void>;
+  importNotes(
+    kind: ImportNotesInput['kind'],
+    notebookId?: string | null,
+  ): Promise<void>;
+  setImageViewer(image: { src: string; alt: string } | null): void;
   getTemplateNotes(
     query?: string,
     offset?: number,
@@ -111,6 +156,7 @@ export interface WorkspaceActions {
     source: Pick<NoteProjection, 'title' | 'body' | 'metadata'>,
   ): Promise<void>;
   openExternalLink(url: string): Promise<Result<boolean>>;
+  fetchLinkTitle(url: string): Promise<string | null>;
   openNoteLink(url: string): Promise<Result<boolean>>;
   searchLinkNotes(query: string): Promise<Result<NoteProjection[]>>;
   createLinkedNote(title: string): Promise<Result<NoteProjection>>;
@@ -124,14 +170,20 @@ export interface WorkspaceActions {
   createNotebook(name: string, parentId?: string | null): Promise<void>;
   setNotebookIcon(id: string, icon: NotebookIconName): Promise<void>;
   manageTrash(input: ManageTrashInput): Promise<Result<number>>;
+  renameNotebook(id: string, name: string): Promise<Result<boolean>>;
+  moveNotebook(input: MoveNotebookInput): Promise<Result<boolean>>;
+  reorderNotebook(input: MoveNotebookInput): Promise<void>;
+  moveNotes(ids: readonly string[], notebookId: string | null): Promise<void>;
   deleteNotebook(id: string): Promise<Result<string[]>>;
   updateTag(input: UpdateTagInput): Promise<Result<boolean>>;
   deleteTag(name: string): Promise<Result<boolean>>;
   setLibraryDialog(request: LibraryDialogRequest | null): void;
-  openNoteAction(
-    kind: 'trash' | 'restore' | 'delete',
-    ids?: readonly string[],
-  ): boolean;
+  openNoteAction(kind: NoteActionKind, ids?: readonly string[]): boolean;
+  updateNotes(input: ManageTrashInput): Promise<Result<number>>;
+  setNoteSort(sort: NoteSort): Promise<void>;
+  setTagFilter(names: readonly string[]): Promise<void>;
+  toggleTagFilter(name: string): Promise<void>;
+  renameTagFilter(name: string, next: string | null): void;
   connect(beforeFlush?: () => void): () => void;
   refreshNotes(preserveLoaded?: boolean): Promise<void>;
   loadMoreNotes(): Promise<void>;
@@ -146,6 +198,7 @@ export interface WorkspaceActions {
   setSidebarDrawerOpen(open: boolean): void;
   setDistractionFreeEnabled(enabled: boolean): void;
   createNote(): Promise<void>;
+  duplicateNotes(ids?: readonly string[]): Promise<boolean>;
   updateDraft(
     changes: Partial<
       Pick<DocumentState, 'title' | 'body' | 'metadata' | 'isPinned'>

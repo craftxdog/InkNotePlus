@@ -66,7 +66,9 @@ describe('note IPC handlers', () => {
 
     expect([...handlers.keys()].sort()).toEqual([
       IPC_CHANNELS.notes.create,
+      IPC_CHANNELS.notes.getRevision,
       IPC_CHANNELS.notes.list,
+      IPC_CHANNELS.notes.listRevisions,
       IPC_CHANNELS.notes.manageTrash,
       IPC_CHANNELS.notes.moveToTrash,
       IPC_CHANNELS.notes.restore,

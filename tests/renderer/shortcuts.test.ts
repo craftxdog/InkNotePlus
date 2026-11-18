@@ -1,17 +1,21 @@
 // @vitest-environment jsdom
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   installShortcuts,
   keystrokeMatches,
   executeShortcut,
 } from '../../src/renderer/shortcuts';
 import { createWorkspaceStore } from '../../src/renderer/state/workspace-store';
-import { createApi } from '../support/renderer-api';
+import { createApi, firstNote } from '../support/renderer-api';
 import {
   preferencesSchema,
   preferencesPatchSchema,
 } from '../../src/shared/preferences';
-import { shortcutConflict } from '../../src/shared/keybindings';
+import {
+  shortcutCommands,
+  shortcutConflict,
+  shortcutFor,
+} from '../../src/shared/keybindings';
 
 afterEach(() => vi.useRealTimers());
 it('uses the documented sidebar shortcut for both a narrow drawer and docked desktop panels', () => {
@@ -171,4 +175,133 @@ it('keeps stored shortcut overrides when Inkdrop command IDs replace old aliases
   expect(preferences.keybindings).toEqual([
     { command: 'core:strong', keystroke: 'Mod-Shift-b' },
   ]);
+});
+
+describe('note history shortcuts on macOS', () => {
+  const pressOn = (target: Element, key = 'ArrowLeft') => {
+    const event = new KeyboardEvent('keydown', {
+      key,
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    target.dispatchEvent(event);
+    return event;
+  };
+  const setup = (keybindings: { command: never; keystroke: string }[] = []) => {
+    const store = createWorkspaceStore(createApi().api);
+    const navigateHistory = vi.fn(async () => true);
+    store.setState({
+      platform: 'darwin',
+      navigateHistory,
+      preferences: { ...store.getState().preferences, keybindings },
+    });
+    return { store, navigateHistory, stop: installShortcuts(store) };
+  };
+  const mount = (html: string) => {
+    const host = document.createElement('div');
+    host.innerHTML = html;
+    document.body.append(host);
+    return host;
+  };
+
+  it.each([
+    [
+      'the Markdown editor',
+      '<div class="cm-content" contenteditable="true"></div>',
+    ],
+    ['a text input', '<input class="document-title-input" />'],
+    ['a text area', '<textarea></textarea>'],
+  ])('leaves Cmd+Arrow to native caret movement in %s', (_name, html) => {
+    const { navigateHistory, stop } = setup();
+    const host = mount(html);
+    try {
+      for (const key of ['ArrowLeft', 'ArrowRight']) {
+        const event = pressOn(host.firstElementChild!, key);
+        expect(event.defaultPrevented).toBe(false);
+      }
+      expect(navigateHistory).not.toHaveBeenCalled();
+    } finally {
+      stop();
+      host.remove();
+    }
+  });
+
+  it('navigates note history when focus is outside text fields', () => {
+    const { navigateHistory, stop } = setup();
+    const host = mount('<button type="button"></button>');
+    try {
+      expect(pressOn(host.firstElementChild!).defaultPrevented).toBe(true);
+      expect(navigateHistory).toHaveBeenCalledWith(-1);
+    } finally {
+      stop();
+      host.remove();
+    }
+  });
+
+  it('honors a binding the user explicitly assigned inside the editor', () => {
+    const { navigateHistory, stop } = setup([
+      { command: 'core:navigate-back' as never, keystroke: 'Meta-ArrowLeft' },
+    ]);
+    const host = mount('<div class="cm-content" contenteditable="true"></div>');
+    try {
+      pressOn(host.firstElementChild!);
+      expect(navigateHistory).toHaveBeenCalledWith(-1);
+    } finally {
+      stop();
+      host.remove();
+    }
+  });
+});
+
+describe('Cmd/Ctrl+D', () => {
+  it('duplicates the note from the editor instead of deleting the line', () => {
+    const store = createWorkspaceStore(createApi().api);
+    const duplicateNotes = vi.fn(async () => true);
+    store.setState({
+      platform: 'linux',
+      activeNoteId: firstNote.id,
+      duplicateNotes,
+    });
+    const stop = installShortcuts(store);
+    const editor = document.createElement('div');
+    editor.className = 'cm-content';
+    document.body.append(editor);
+    const press = (repeat = false) => {
+      const event = new KeyboardEvent('keydown', {
+        key: 'd',
+        ctrlKey: true,
+        repeat,
+        bubbles: true,
+        cancelable: true,
+      });
+      editor.dispatchEvent(event);
+      return event;
+    };
+    try {
+      expect(press().defaultPrevented).toBe(true);
+      expect(duplicateNotes).toHaveBeenCalledTimes(1);
+      press(true);
+      expect(duplicateNotes).toHaveBeenCalledTimes(1);
+    } finally {
+      stop();
+      editor.remove();
+    }
+  });
+  it('leaves line deletion available without a default shortcut', () => {
+    const command = shortcutCommands.find(
+      ({ id }) => id === 'editor:delete-line',
+    )!;
+    expect(shortcutFor(command, [], false)).toBe('');
+    expect(shortcutFor(command, [], true)).toBe('');
+  });
+  it('does nothing in Trash or without a note', () => {
+    const store = createWorkspaceStore(createApi().api);
+    expect(executeShortcut(store, 'core:duplicate-note', null)).toBe(false);
+    store.setState({
+      activeNoteId: firstNote.id,
+      navigation: { type: 'trash' },
+    });
+    expect(executeShortcut(store, 'core:duplicate-note', null)).toBe(false);
+  });
 });

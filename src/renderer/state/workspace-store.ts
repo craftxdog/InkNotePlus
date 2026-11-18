@@ -24,8 +24,8 @@ import {
 } from '../../shared/preferences';
 import { emptyLibrary, defaultNoteMetadata } from '../../shared/library';
 import {
+  activeListFilter,
   createLibraryActions,
-  navigationFilter,
   metadataForNewNote,
   matchesNavigation,
 } from './library-actions';
@@ -86,11 +86,7 @@ export function createWorkspaceStore(
       const currentRequest = ++requestId;
       const query = get().searchQuery;
       const offset = append ? get().noteList.notes.length : 0;
-      const filter = {
-        ...(get().searchGlobal
-          ? { sort: get().preferences.noteSort }
-          : navigationFilter(get().navigation, get().preferences)),
-      };
+      const filter = activeListFilter(get());
       // Persistence refreshes the current query in the background. Keep the
       // visible list in place instead of flashing its loading row on every save.
       if (!preserveLoaded || get().noteList.status !== 'ready')
@@ -175,6 +171,9 @@ export function createWorkspaceStore(
           const preserveDraft =
             (preserveLoaded || state.noteList.isCreating) &&
             !state.searchQuery &&
+            state.tagFilter.every((tag) =>
+              state.document.metadata.tags.includes(tag),
+            ) &&
             matchesNavigation(
               state.document.metadata,
               state.navigation,
@@ -239,7 +238,8 @@ export function createWorkspaceStore(
         get().noteList.status === 'loading' ||
         get().noteList.hasMore ||
         get().noteList.notes.length >= 50 ||
-        get().preferences.noteSort === 'title'
+        get().tagFilter.length > 0 ||
+        get().preferences.noteSort !== 'updated-desc'
       ) {
         void refreshNotes(false, true);
       } else {
@@ -429,6 +429,7 @@ export function createWorkspaceStore(
       },
       activeNoteId: initialSession?.activeNoteId ?? null,
       selectedNoteIds: [],
+      tagFilter: [],
       libraryDialog: null,
       setLibraryDialog(libraryDialog) {
         set({ libraryDialog });
@@ -721,7 +722,11 @@ export function createWorkspaceStore(
           const result = await api.notes.create({
             title: 'Nota sin título',
             body: '',
-            metadata: metadataForNewNote(get().navigation, get().preferences),
+            metadata: metadataForNewNote(
+              get().navigation,
+              get().preferences,
+              get().tagFilter,
+            ),
           });
           if (currentGeneration !== generation) return;
           if (!result.ok) {

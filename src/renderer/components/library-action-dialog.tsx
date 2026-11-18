@@ -1,6 +1,12 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { AppErrorCode, Result } from '../../shared/ipc';
-import { tagColorSchema, type TagColor } from '../../shared/tags';
+import type { NoteStatus } from '../../shared/note-metadata';
+import {
+  tagColorSchema,
+  tagNameSchema,
+  type TagColor,
+} from '../../shared/tags';
+import { statusLabels } from './note-status';
 import type { LibraryDialogRequest } from '../state/workspace-types';
 import { useWorkspace, useWorkspaceStore } from '../state/workspace-context';
 import { Modal } from './modal';
@@ -35,6 +41,7 @@ export function LibraryActionDialog({
 }) {
   const store = useWorkspaceStore();
   const notebooks = useWorkspace((state) => state.library.notebooks);
+  const tags = useWorkspace((state) => state.library.tags);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<AppErrorCode | null>(null);
   const [name, setName] = useState(
@@ -52,16 +59,47 @@ export function LibraryActionDialog({
     return colors.find((tag) => tag.name === name)?.color ?? tagColor(name);
   });
   const [destination, setDestination] = useState<string | null>(() => {
-    if (request.kind !== 'restore') return null;
+    if (request.kind !== 'restore' && request.kind !== 'move-notes')
+      return null;
     const state = store.getState();
     const original =
       request.ids.length === 1
         ? state.noteList.notes.find((note) => note.id === request.ids[0])
             ?.metadata?.notebookId
         : null;
-    const preferred = original ?? state.preferences.defaultNotebookId;
+    const preferred =
+      original ??
+      (request.kind === 'restore' ? state.preferences.defaultNotebookId : null);
     return notebooks.some(({ id }) => id === preferred) ? preferred : null;
   });
+  const selectedNotes =
+    'ids' in request
+      ? store
+          .getState()
+          .noteList.notes.filter((note) => request.ids.includes(note.id))
+      : [];
+  const [status, setStatus] = useState<NoteStatus>(
+    selectedNotes.length === 1
+      ? (selectedNotes[0].metadata?.status ?? 'none')
+      : 'active',
+  );
+  const tagListId = useId();
+  const [tagInput, setTagInput] = useState('');
+  const [removedTags, setRemovedTags] = useState<readonly string[]>([]);
+  const addedTags = [
+    ...new Set(
+      tagInput
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+    ),
+  ];
+  const validTags =
+    addedTags.length <= 32 &&
+    addedTags.every((tag) => tagNameSchema.safeParse(tag).success);
+  const currentTags = [
+    ...new Set(selectedNotes.flatMap((note) => note.metadata?.tags ?? [])),
+  ].sort((a, b) => a.localeCompare(b));
   const count = 'ids' in request ? request.ids.length : 0;
   const notes =
     count === 1 ? 'la nota seleccionada' : `las ${count} notas seleccionadas`;
@@ -79,6 +117,28 @@ export function LibraryActionDialog({
           action: 'restore',
           ids: [...request.ids],
           notebookId: destination,
+        });
+        break;
+      case 'move-notes':
+        result = await state.updateNotes({
+          action: 'move',
+          ids: [...request.ids],
+          notebookId: destination,
+        });
+        break;
+      case 'status-notes':
+        result = await state.updateNotes({
+          action: 'status',
+          ids: [...request.ids],
+          status,
+        });
+        break;
+      case 'tag-notes':
+        result = await state.updateNotes({
+          action: 'tag',
+          ids: [...request.ids],
+          add: addedTags,
+          remove: [...removedTags],
         });
         break;
       case 'trash':
@@ -137,7 +197,65 @@ export function LibraryActionDialog({
         }}
       >
         {action.message && <p>{action.message}</p>}
-        {request.kind === 'restore' && (
+        {request.kind === 'status-notes' && (
+          <label>
+            Estado
+            <select
+              autoFocus
+              value={status}
+              disabled={busy}
+              onChange={(event) => setStatus(event.target.value as NoteStatus)}
+            >
+              {(Object.entries(statusLabels) as [NoteStatus, string][]).map(
+                ([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+        )}
+        {request.kind === 'tag-notes' && (
+          <>
+            <label>
+              Añadir etiquetas
+              <input
+                autoFocus
+                type="text"
+                list={tagListId}
+                placeholder="Separadas por comas"
+                value={tagInput}
+                disabled={busy}
+                aria-invalid={!validTags}
+                onChange={(event) => setTagInput(event.target.value)}
+              />
+              <datalist id={tagListId}>
+                {tags.map(({ name: tag }) => (
+                  <option key={tag} value={tag} />
+                ))}
+              </datalist>
+            </label>
+            {currentTags.map((tag) => (
+              <label className="dialog-checkbox" key={tag}>
+                <input
+                  type="checkbox"
+                  checked={removedTags.includes(tag)}
+                  disabled={busy}
+                  onChange={(event) =>
+                    setRemovedTags((values) =>
+                      event.target.checked
+                        ? [...values, tag]
+                        : values.filter((value) => value !== tag),
+                    )
+                  }
+                />
+                Quitar <TagBadge name={tag} />
+              </label>
+            ))}
+          </>
+        )}
+        {(request.kind === 'restore' || request.kind === 'move-notes') && (
           <NotebookPicker
             notebooks={notebooks}
             value={destination}
@@ -222,9 +340,11 @@ export function LibraryActionDialog({
           <p role="alert" className="list-error">
             {error === 'conflict' && request.kind === 'edit-tag'
               ? 'Ya existe una etiqueta con ese nombre.'
-              : error === 'not_found'
-                ? 'El elemento ya no está disponible.'
-                : 'No se pudo completar la operación. Revisa los cambios pendientes.'}
+              : error === 'conflict' && request.kind === 'tag-notes'
+                ? 'Alguna nota superaría el límite de 32 etiquetas.'
+                : error === 'not_found'
+                  ? 'El elemento ya no está disponible.'
+                  : 'No se pudo completar la operación. Revisa los cambios pendientes.'}
           </p>
         )}
         <footer className="dialog-actions">
@@ -244,7 +364,9 @@ export function LibraryActionDialog({
               ((request.kind === 'edit-tag' ||
                 request.kind === 'rename-notebook') &&
                 !name.trim()) ||
-              (request.kind === 'move-notebook' && parent === currentParent)
+              (request.kind === 'move-notebook' && parent === currentParent) ||
+              (request.kind === 'tag-notes' &&
+                (!validTags || (!addedTags.length && !removedTags.length)))
             }
           >
             {action.confirm}
@@ -262,6 +384,27 @@ function describeAction(request: LibraryDialogRequest, notes: string) {
         title: 'Mover a papelera',
         confirm: 'Mover a papelera',
         message: `Puedes recuperar ${notes} desde Papelera.`,
+        danger: false,
+      };
+    case 'move-notes':
+      return {
+        title: 'Mover a notebook',
+        confirm: 'Mover',
+        message: `Elige dónde colocar ${notes}.`,
+        danger: false,
+      };
+    case 'tag-notes':
+      return {
+        title: 'Etiquetar notas',
+        confirm: 'Aplicar',
+        message: `Cambia las etiquetas de ${notes}.`,
+        danger: false,
+      };
+    case 'status-notes':
+      return {
+        title: 'Cambiar estado',
+        confirm: 'Aplicar',
+        message: `Elige el estado de ${notes}.`,
         danger: false,
       };
     case 'restore':

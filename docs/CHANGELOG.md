@@ -18,6 +18,9 @@
 - Las notas se mueven arrastrándolas a un notebook o a «Sin notebook», también
   con varias seleccionadas.
 - Cmd/Ctrl+D duplica la nota. Borrar línea queda disponible sin atajo por defecto.
+- Las notas seleccionadas se pueden mover, etiquetar y cambiar de estado en lote.
+- Pulsar etiquetas en la lista acumula filtros, y Alt+clic deja solo la pulsada.
+- Las notas se ordenan por título, creación o modificación, en ambos sentidos.
 
 ### Corregido
 
@@ -38,7 +41,7 @@
 
 ### Pruebas
 
-- 502 pruebas automatizadas, lint y TypeScript aprobados.
+- 525 pruebas automatizadas, lint y TypeScript aprobados.
 - QA nativo local completo en macOS Apple Silicon: edición, autoguardado,
   sincronización, respaldos, HTML/PDF, papelera, temas y búsqueda con 3.000 notas.
 - Doce lenguajes comprobados en siete temas; 972 mediciones de contraste por

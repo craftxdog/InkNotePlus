@@ -1,3 +1,4 @@
+import type { NoteSort } from '../shared/ipc';
 import type { NoteMetadata } from '../shared/note-metadata';
 export type NoteId = string;
 
@@ -32,11 +33,12 @@ export interface ListNotesInput {
   offset?: number;
   scopeId?: string;
   includeDescendants?: boolean;
-  sort?: 'updated' | 'title';
+  sort?: NoteSort;
   trashed?: boolean;
   notebookId?: string | null;
   status?: NoteMetadata['status'];
   tag?: string;
+  tags?: readonly string[];
   templates?: boolean;
   excludeFinished?: boolean;
 }

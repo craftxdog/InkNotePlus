@@ -2,6 +2,7 @@ import type {
   AppErrorCode,
   ManageTrashInput,
   NoteProjection,
+  NoteSort,
   Result,
 } from '../../shared/ipc';
 import type { MainLayoutState } from '../layout/inkdrop-main-layout';
@@ -26,8 +27,16 @@ export type Navigation =
   | { type: 'status'; status: NoteStatus }
   | { type: 'tag'; name: string };
 
+export type NoteActionKind =
+  | 'trash'
+  | 'restore'
+  | 'delete'
+  | 'move-notes'
+  | 'tag-notes'
+  | 'status-notes';
+
 export type LibraryDialogRequest =
-  | { kind: 'trash' | 'restore' | 'delete'; ids: readonly string[] }
+  | { kind: NoteActionKind; ids: readonly string[] }
   | { kind: 'empty' }
   | {
       kind: 'delete-notebook' | 'rename-notebook' | 'move-notebook';
@@ -74,6 +83,7 @@ export interface WorkspaceState {
   readonly notebookDialogOpen: boolean;
   readonly activeNoteId: string | null;
   readonly selectedNoteIds: readonly string[];
+  readonly tagFilter: readonly string[];
   readonly libraryDialog: LibraryDialogRequest | null;
   readonly searchQuery: string;
   readonly searchGlobal: boolean;
@@ -137,10 +147,12 @@ export interface WorkspaceActions {
   updateTag(input: UpdateTagInput): Promise<Result<boolean>>;
   deleteTag(name: string): Promise<Result<boolean>>;
   setLibraryDialog(request: LibraryDialogRequest | null): void;
-  openNoteAction(
-    kind: 'trash' | 'restore' | 'delete',
-    ids?: readonly string[],
-  ): boolean;
+  openNoteAction(kind: NoteActionKind, ids?: readonly string[]): boolean;
+  updateNotes(input: ManageTrashInput): Promise<Result<number>>;
+  setNoteSort(sort: NoteSort): Promise<void>;
+  setTagFilter(names: readonly string[]): Promise<void>;
+  toggleTagFilter(name: string): Promise<void>;
+  renameTagFilter(name: string, next: string | null): void;
   connect(beforeFlush?: () => void): () => void;
   refreshNotes(preserveLoaded?: boolean): Promise<void>;
   loadMoreNotes(): Promise<void>;

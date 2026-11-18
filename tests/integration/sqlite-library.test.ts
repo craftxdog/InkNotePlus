@@ -189,8 +189,16 @@ describe('persistent shell library', () => {
       expectedRevision: 1,
       isPinned: true,
     });
-    const first = notes.search({ query: 'needle', sort: 'title', limit: 50 });
-    const second = notes.search({ query: 'needle', sort: 'title', offset: 50 });
+    const first = notes.search({
+      query: 'needle',
+      sort: 'title-asc',
+      limit: 50,
+    });
+    const second = notes.search({
+      query: 'needle',
+      sort: 'title-asc',
+      offset: 50,
+    });
     expect(first[0].title).toBe('Z pinned');
     expect([...first, ...second].slice(1).map((note) => note.title)).toEqual(
       Array.from(

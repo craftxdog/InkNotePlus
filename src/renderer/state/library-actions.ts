@@ -1,6 +1,10 @@
 import type { StoreApi } from 'zustand/vanilla';
 import type { InkNoteApi } from '../../preload/api';
-import type { WorkspaceStore, Navigation } from './workspace-types';
+import type {
+  WorkspaceState,
+  WorkspaceStore,
+  Navigation,
+} from './workspace-types';
 import {
   pruneNotebookPreferences,
   type Preferences,
@@ -9,8 +13,10 @@ import type { NotebookIconName } from '../../shared/notebook-icons';
 import { defaultNoteMetadata } from '../../shared/note-metadata';
 import {
   failure,
+  maxTagFilters,
   type ListNotesInput,
   type ManageTrashInput,
+  type NoteSort,
   type Result,
 } from '../../shared/ipc';
 import type { UpdateTagInput } from '../../shared/tags';
@@ -95,6 +101,20 @@ export function navigationFilter(
   }
 }
 
+export function activeListFilter(
+  state: Pick<
+    WorkspaceState,
+    'navigation' | 'preferences' | 'searchGlobal' | 'tagFilter'
+  >,
+): ListNotesInput {
+  return {
+    ...(state.searchGlobal
+      ? { sort: state.preferences.noteSort }
+      : navigationFilter(state.navigation, state.preferences)),
+    ...(state.tagFilter.length ? { tags: [...state.tagFilter] } : {}),
+  };
+}
+
 export function createLibraryActions(
   api: InkNoteApi,
   set: StoreApi<WorkspaceStore>['setState'],
@@ -140,7 +160,42 @@ export function createLibraryActions(
       },
     );
   }
+  function updateNotes(input: ManageTrashInput) {
+    return mutate(
+      () => api.notes.manageTrash(input),
+      () => set({ selectedNoteIds: [] }),
+    );
+  }
+  async function setTagFilter(names: readonly string[]) {
+    set({
+      tagFilter: [...new Set(names)].slice(0, maxTagFilters),
+      selectedNoteIds: [],
+    });
+    await get().refreshNotes();
+  }
   return {
+    updateNotes,
+    setTagFilter,
+    toggleTagFilter(name: string) {
+      const { tagFilter } = get();
+      return setTagFilter(
+        tagFilter.includes(name)
+          ? tagFilter.filter((tag) => tag !== name)
+          : [...tagFilter, name],
+      );
+    },
+    renameTagFilter(name: string, next: string | null) {
+      set((state) => ({
+        tagFilter: state.tagFilter.flatMap((tag) =>
+          tag !== name ? [tag] : next ? [next] : [],
+        ),
+      }));
+    },
+    async setNoteSort(noteSort: NoteSort) {
+      const saving = get().updatePreferences({ noteSort });
+      await get().refreshNotes();
+      await saving;
+    },
     moveNotebook,
     renameNotebook(id: string, name: string) {
       return mutate(() => api.library.renameNotebook({ id, name }));
@@ -149,11 +204,11 @@ export function createLibraryActions(
       if (!(await moveNotebook(input)).ok) fail();
     },
     async moveNotes(ids: readonly string[], notebookId: string | null) {
-      const result = await mutate(
-        () =>
-          api.notes.manageTrash({ action: 'move', ids: [...ids], notebookId }),
-        () => set({ selectedNoteIds: [] }),
-      );
+      const result = await updateNotes({
+        action: 'move',
+        ids: [...ids],
+        notebookId,
+      });
       if (!result.ok) fail();
     },
     setNotebookDialogOpen(
@@ -173,9 +228,7 @@ export function createLibraryActions(
         const state = get();
         const result = await api.library.get({
           scopeId: state.preferences.notebookScopeId,
-          filter: state.searchGlobal
-            ? { sort: state.preferences.noteSort }
-            : navigationFilter(state.navigation, state.preferences),
+          filter: activeListFilter(state),
           query: state.searchQuery,
           globalSearch: state.searchGlobal,
         });
@@ -205,6 +258,7 @@ export function createLibraryActions(
         searchQuery: '',
         searchGlobal: false,
         selectedNoteIds: [],
+        tagFilter: [],
       });
       await get().refreshNotes();
     },
@@ -215,6 +269,7 @@ export function createLibraryActions(
         searchQuery: '',
         searchGlobal: false,
         selectedNoteIds: [],
+        tagFilter: [],
       });
       const saving = get().updatePreferences({ notebookScopeId: id });
       await get().refreshNotes();
@@ -306,6 +361,7 @@ export function createLibraryActions(
         () => api.library.updateTag(input),
         () => {
           const { navigation } = get();
+          get().renameTagFilter(input.name, input.nextName);
           if (navigation.type === 'tag' && navigation.name === input.name)
             set({ navigation: { type: 'tag', name: input.nextName } });
         },
@@ -316,6 +372,7 @@ export function createLibraryActions(
         () => api.library.deleteTag(name),
         () => {
           const { navigation } = get();
+          get().renameTagFilter(name, null);
           if (navigation.type === 'tag' && navigation.name === name)
             set({
               navigation: { type: 'all' },
@@ -332,8 +389,9 @@ export function createLibraryActions(
 export function metadataForNewNote(
   navigation: Navigation,
   preferences?: Preferences,
+  tagFilter: readonly string[] = [],
 ) {
-  return {
+  const metadata = {
     ...defaultNoteMetadata,
     notebookId:
       preferences?.notebookScopeId ?? preferences?.defaultNotebookId ?? null,
@@ -343,5 +401,10 @@ export function metadataForNewNote(
     ...(navigation.type === 'templates' ? { isTemplate: true } : {}),
     ...(navigation.type === 'status' ? { status: navigation.status } : {}),
     ...(navigation.type === 'tag' ? { tags: [navigation.name] } : {}),
+  };
+  // A new note must satisfy the active filter or it would vanish at once.
+  return {
+    ...metadata,
+    tags: [...new Set([...metadata.tags, ...tagFilter])].slice(0, 32),
   };
 }

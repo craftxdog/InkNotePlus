@@ -471,6 +471,31 @@
     gap: var(--4px);
     padding: 0 var(--12px) var(--10px);
   }
+  .note-tag-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--4px);
+    padding: 0 var(--12px) var(--10px);
+  }
+  .note-tag-filter button {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    border: 0;
+    border-radius: var(--4px);
+    background: transparent;
+    padding: 0;
+    color: var(--muted-text-color);
+    cursor: pointer;
+  }
+  .note-tag-filter-clear {
+    margin-inline-start: auto;
+    font-size: var(--tiny);
+  }
+  [data-filter-tag] {
+    cursor: pointer;
+  }
   .search-form {
     display: flex;
     align-items: center;
@@ -702,5 +727,13 @@
   }
   .popover button:hover {
     background: var(--input-highlight-background);
+  }
+  .popover button[aria-pressed='true'] {
+    font-weight: var(--font-weights-semibold);
+  }
+  .popover hr {
+    margin: var(--4px) 0;
+    border: 0;
+    border-block-start: 1px solid var(--border-color);
   }
 }

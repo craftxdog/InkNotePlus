@@ -8,6 +8,7 @@ import {
 } from '@codemirror/search';
 import type { WorkspaceStoreApi } from './state/workspace-store';
 import {
+  noteSortCommands,
   shortcutCommands,
   shortcutFor,
   type ShortcutCommand,
@@ -91,6 +92,14 @@ export function executeShortcut(
       state.selectNote(next.id);
       return true;
     }
+    case 'view:sort-by-title-in-asc':
+    case 'view:sort-by-title-in-desc':
+    case 'view:sort-by-date-created-in-asc':
+    case 'view:sort-by-date-created-in-desc':
+    case 'view:sort-by-date-updated-in-asc':
+    case 'view:sort-by-date-updated-in-desc':
+      void state.setNoteSort(noteSortCommands[command]);
+      return true;
     case 'core:save-note':
       void state.flushDrafts();
       return true;

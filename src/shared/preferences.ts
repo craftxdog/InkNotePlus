@@ -1,5 +1,5 @@
 import { z } from './validation';
-import { appErrorSchema } from './ipc';
+import { appErrorSchema, noteSortSchema } from './ipc';
 import { keybindingsSchema } from './keybindings';
 
 export const themeIdSchema = z
@@ -27,7 +27,7 @@ const fields = {
   notebookScopeId: z.uuid().nullable(),
   expandedNotebookIds: z.array(z.uuid()).max(1000),
   showNoteCounts: z.boolean(),
-  noteSort: z.enum(['updated', 'title']),
+  noteSort: noteSortSchema,
   editorFontFamily: fontFamilySchema,
   editorFontSize: z.number().int().min(10).max(40),
   editorLineHeight: z.number().min(1).max(3),
@@ -62,7 +62,7 @@ export const defaultPreferences: Preferences = {
   notebookScopeId: null,
   expandedNotebookIds: [],
   showNoteCounts: true,
-  noteSort: 'updated',
+  noteSort: 'updated-desc',
   // Empty families inherit the theme/platform stack instead of downloading fonts.
   editorFontFamily: '',
   editorFontSize: 14,

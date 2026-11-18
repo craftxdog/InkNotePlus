@@ -72,6 +72,8 @@ export function Sidebar({
     | null
   >(null);
   const openLibraryDialog = useWorkspace((state) => state.setLibraryDialog);
+  const tagFilter = useWorkspace((state) => state.tagFilter);
+  const toggleTagFilter = useWorkspace((state) => state.toggleTagFilter);
   const notebookSearchId = useId();
   const closeNotebookSearch = () => {
     setNotebookSearch(null);
@@ -304,6 +306,12 @@ export function Sidebar({
           actions={
             menu.kind === 'tag'
               ? [
+                  {
+                    label: tagFilter.includes(menu.name)
+                      ? 'Quitar del filtro'
+                      : 'Añadir al filtro',
+                    run: () => void toggleTagFilter(menu.name),
+                  },
                   {
                     label: 'Editar etiqueta…',
                     run: () =>

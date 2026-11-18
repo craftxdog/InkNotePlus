@@ -168,6 +168,9 @@ La migración 7 añade `position` para ordenar notebooks entre hermanos y conser
 el orden alfabético de las bibliotecas existentes. Mover un notebook valida ciclos
 en SQLite y reordena sus hermanos en una transacción. El arrastre de notas y
 notebooks vive dentro de la ventana y no interpreta datos externos.
+El filtro de etiquetas se aplica sobre la vista actual con lógica AND, no se
+guarda en la sesión y admite hasta ocho etiquetas. Las acciones en lote usan una
+sola transacción: si una nota superaría 32 etiquetas, no cambia ninguna.
 
 El selector del editor y la búsqueda lateral comparten la jerarquía de notebooks.
 La búsqueda conserva padres como contexto y no modifica la expansión guardada.

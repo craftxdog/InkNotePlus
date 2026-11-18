@@ -9,17 +9,17 @@
 InkNote tiene una base sólida y todas sus pruebas pasan, pero esas pruebas no cubrían
 varias diferencias con Inkdrop. La auditoría registró **23 funciones implementadas de
 forma incorrecta o incompleta** y **31 funciones sin implementar**. Ya están resueltos
-INC-01, INC-02, INC-03, INC-04, INC-05, INC-06, FAL-03, FAL-04 y FAL-05, así que quedan **17 incorrectas y 28 faltantes**.
+INC-01 a INC-06, INC-11, INC-12, INC-13, FAL-03, FAL-04 y FAL-05, así que quedan **14 incorrectas y 28 faltantes**.
 
 | Prioridad     | Significado                                       | Incorrectas | Faltantes |  Total |
 | ------------- | ------------------------------------------------- | ----------: | --------: | -----: |
 | P0            | Riesgo para el uso diario o los datos (resueltos) |           0 |         0 |      0 |
 | P1            | Función básica que el usuario espera              |           2 |         4 |      6 |
-| P2            | Paridad importante                                |          12 |        15 |     27 |
+| P2            | Paridad importante                                |           9 |        15 |     24 |
 | P3            | Ecosistema, integraciones y mejoras               |           3 |         9 |     12 |
-| **Pendiente** |                                                   |      **17** |    **28** | **45** |
+| **Pendiente** |                                                   |      **14** |    **28** | **42** |
 
-El siguiente bloque recomendado es completar la organización diaria: **INC-12**, **INC-11** e **INC-13**.
+El siguiente bloque recomendado es escritura y lectura: **INC-07**, **INC-08** y **FAL-08**.
 
 ## Resultados de las pruebas
 
@@ -185,17 +185,23 @@ Estas tres decisiones cambian el alcance del trabajo, así que conviene resolver
 
 #### INC-11. El filtro por etiquetas admite una sola etiqueta
 
+**Estado: resuelto el 2026-11-18.** Pulsar etiquetas en la lista acumula filtros con lógica AND y Alt+clic deja solo la pulsada. Comprobado en la app empaquetada.
+
 - **Evidencia (Código):** `tag` es un único valor en [ipc.ts:48](../src/shared/ipc.ts:48) y [library-actions.ts:89](../src/renderer/state/library-actions.ts:89).
 - **Inkdrop:** varias etiquetas [reducen los resultados](https://docs.inkdrop.app/start-guide/how-to-organize-notes), y Alt+clic deja solo la pulsada.
 - **Cambio:** aceptar `tags: string[]` con lógica AND y permitir el filtro desde las etiquetas de la lista.
 
 #### INC-12. Las acciones múltiples solo permiten enviar a la papelera
 
+**Estado: resuelto el 2026-11-18.** El menú de la lista permite mover, etiquetar, cambiar estado, duplicar y enviar a la papelera, cada lote en una transacción. Comprobado en la app empaquetada.
+
 - **Evidencia (Sonda):** con dos notas seleccionadas, el menú solo ofrece «Mover a papelera». Ver [note-list.tsx:252](../src/renderer/components/note-list.tsx:252).
 - **Inkdrop:** [mover, etiquetar, cambiar estado y eliminar](https://www.inkdrop.app/features) en lote.
 - **Cambio:** añadir esas acciones en una sola transacción SQLite.
 
 #### INC-13. La ordenación es limitada
+
+**Estado: resuelto el 2026-11-18.** Título, creación y modificación admiten ambos sentidos, también con los comandos `view:sort-by-*`. Comprobado en la app empaquetada.
 
 - **Evidencia (Sonda y código):** solo hay «Última modificación» y «Título». Ver [preferences.ts:30](../src/shared/preferences.ts:30).
 - **Inkdrop:** título, fecha de creación y fecha de modificación, en orden [ascendente o descendente](https://developers.inkdrop.app/guides/list-of-commands).
@@ -329,12 +335,11 @@ La ausencia de estas funciones se comprobó en el código fuente.
 
 ## Orden de trabajo recomendado
 
-1. **Organización diaria:** INC-12, INC-11 e INC-13.
-2. **Escritura y lectura:** INC-07, INC-08, FAL-08, FAL-09, FAL-10, FAL-11, INC-15, INC-16 y FAL-21.
-3. **Datos:** FAL-02, FAL-01, INC-19, INC-14 e INC-23.
-4. **Integración con el escritorio:** INC-09, INC-10, INC-17, FAL-06, FAL-07, FAL-12, FAL-13 y FAL-20.
-5. **Plataforma:** FAL-14, FAL-15, FAL-18, FAL-19, FAL-16 y FAL-17, según D-2 y D-3.
-6. **Ecosistema:** el resto de tareas P3.
+1. **Escritura y lectura:** INC-07, INC-08, FAL-08, FAL-09, FAL-10, FAL-11, INC-15, INC-16 y FAL-21.
+2. **Datos:** FAL-02, FAL-01, INC-19, INC-14 e INC-23.
+3. **Integración con el escritorio:** INC-09, INC-10, INC-17, FAL-06, FAL-07, FAL-12, FAL-13 y FAL-20.
+4. **Plataforma:** FAL-14, FAL-15, FAL-18, FAL-19, FAL-16 y FAL-17, según D-2 y D-3.
+5. **Ecosistema:** el resto de tareas P3.
 
 ## Funciones verificadas sin diferencias relevantes
 

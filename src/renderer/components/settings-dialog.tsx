@@ -188,8 +188,20 @@ export function SettingsDialog() {
                         void refresh();
                       }}
                     >
-                      <option value="updated">Última modificación</option>
-                      <option value="title">Título</option>
+                      <option value="updated-desc">
+                        Última modificación, recientes primero
+                      </option>
+                      <option value="updated-asc">
+                        Última modificación, antiguas primero
+                      </option>
+                      <option value="created-desc">
+                        Fecha de creación, recientes primero
+                      </option>
+                      <option value="created-asc">
+                        Fecha de creación, antiguas primero
+                      </option>
+                      <option value="title-asc">Título, de la A a la Z</option>
+                      <option value="title-desc">Título, de la Z a la A</option>
                     </select>
                   </label>
                   {toggle(

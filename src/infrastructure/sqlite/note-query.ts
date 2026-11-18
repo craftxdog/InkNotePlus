@@ -1,4 +1,5 @@
 import type { ListNotesInput } from '../../domain/note';
+import type { NoteSort } from '../../shared/ipc';
 
 // UNION deduplicates even malformed cyclic hierarchies; all IDs stay bound.
 export const subtreeSql = `WITH RECURSIVE subtree(id) AS (
@@ -8,6 +9,20 @@ export const subtreeSql = `WITH RECURSIVE subtree(id) AS (
 
 export const unfinishedSql = (table: string) =>
   `json_extract(${table}.metadata_json,'$.status') NOT IN ('completed','dropped')`;
+
+const sortColumns = {
+  updated: 'notes.updated_at',
+  created: 'notes.created_at',
+  title: 'notes.title COLLATE NOCASE',
+} as const;
+
+export function noteSortSql(sort: NoteSort = 'updated-desc') {
+  const [field, direction] = sort.split('-') as [
+    keyof typeof sortColumns,
+    'asc' | 'desc',
+  ];
+  return `${sortColumns[field]} ${direction.toUpperCase()},`;
+}
 
 export function noteFilter(input: ListNotesInput): {
   sql: string;
@@ -52,6 +67,12 @@ export function noteFilter(input: ListNotesInput): {
       "EXISTS(SELECT 1 FROM json_each(notes.metadata_json,'$.tags') WHERE value = ?)",
     );
     params.push(input.tag);
+  }
+  for (const tag of input.tags ?? []) {
+    clauses.push(
+      "EXISTS(SELECT 1 FROM json_each(notes.metadata_json,'$.tags') WHERE value = ?)",
+    );
+    params.push(tag);
   }
   return { sql: clauses.join(' AND '), params };
 }

@@ -155,6 +155,13 @@
     gap: var(--6px);
     font-size: var(--small);
   }
+  .dialog-form label.dialog-checkbox {
+    flex-direction: row;
+    align-items: center;
+  }
+  .dialog-form .dialog-checkbox input {
+    inline-size: auto;
+  }
   .dialog-form input,
   .dialog-form select,
   .settings-content select {

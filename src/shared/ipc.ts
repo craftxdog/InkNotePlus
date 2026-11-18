@@ -10,6 +10,27 @@ const noteIdSchema = z.uuid();
 const limitSchema = z.number().int().min(1).max(100);
 const timestampSchema = z.string().datetime({ offset: true });
 
+export const noteSortValues = [
+  'updated-desc',
+  'updated-asc',
+  'created-desc',
+  'created-asc',
+  'title-asc',
+  'title-desc',
+] as const;
+// Earlier versions stored only the field, each with one implicit direction.
+export const noteSortSchema = z.preprocess(
+  (value) =>
+    value === 'updated'
+      ? 'updated-desc'
+      : value === 'title'
+        ? 'title-asc'
+        : value,
+  z.enum(noteSortValues),
+);
+export type NoteSort = (typeof noteSortValues)[number];
+export const maxTagFilters = 8;
+
 export const IPC_CHANNELS = {
   notes: {
     create: 'notes:create',
@@ -41,11 +62,12 @@ export const listNotesInputSchema = z
     offset: z.number().int().min(0).max(1_000_000).optional(),
     scopeId: z.uuid().optional(),
     includeDescendants: z.boolean().optional(),
-    sort: z.enum(['updated', 'title']).optional(),
+    sort: noteSortSchema.optional(),
     trashed: z.boolean().optional(),
     notebookId: z.uuid().nullable().optional(),
     status: noteStatusSchema.optional(),
     tag: tagNameSchema.optional(),
+    tags: z.array(tagNameSchema).min(1).max(maxTagFilters).optional(),
     templates: z.boolean().optional(),
     excludeFinished: z.boolean().optional(),
   })
@@ -89,6 +111,21 @@ export const manageTrashSchema = z.discriminatedUnion('action', [
       action: z.literal('move'),
       ids: selectedNoteIds,
       notebookId: z.uuid().nullable(),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal('status'),
+      ids: selectedNoteIds,
+      status: noteStatusSchema,
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal('tag'),
+      ids: selectedNoteIds,
+      add: z.array(tagNameSchema).max(32),
+      remove: z.array(tagNameSchema).max(1000),
     })
     .strict(),
   z.object({ action: z.literal('delete'), ids: selectedNoteIds }).strict(),

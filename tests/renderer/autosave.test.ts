@@ -20,7 +20,7 @@ describe('automatic note persistence', () => {
       },
     });
     const store = createWorkspaceStore(api);
-    await store.getState().updatePreferences({ noteSort: 'title' });
+    await store.getState().updatePreferences({ noteSort: 'title-asc' });
     await store.getState().refreshNotes();
     const states: string[] = [];
     const stop = store.subscribe((state) => states.push(state.noteList.status));

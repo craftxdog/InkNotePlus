@@ -245,6 +245,16 @@ export const shortcutCommands = [
     scope: 'app',
     key: '',
   },
+  ...(
+    [
+      ['view:sort-by-title-in-asc', 'Ordenar por título (A-Z)'],
+      ['view:sort-by-title-in-desc', 'Ordenar por título (Z-A)'],
+      ['view:sort-by-date-created-in-asc', 'Ordenar por creación (antiguas)'],
+      ['view:sort-by-date-created-in-desc', 'Ordenar por creación (recientes)'],
+      ['view:sort-by-date-updated-in-asc', 'Ordenar por cambios (antiguas)'],
+      ['view:sort-by-date-updated-in-desc', 'Ordenar por cambios (recientes)'],
+    ] as const
+  ).map(([id, label]) => ({ id, label, scope: 'app' as const, key: '' })),
   { id: 'view:show-editor', label: 'Sólo editor', scope: 'app', key: '' },
   {
     id: 'view:show-side-by-side',
@@ -261,6 +271,14 @@ export const shortcutCommands = [
   ...editorShortcutCommands,
 ] as const;
 export type ShortcutCommand = (typeof shortcutCommands)[number]['id'];
+export const noteSortCommands = {
+  'view:sort-by-title-in-asc': 'title-asc',
+  'view:sort-by-title-in-desc': 'title-desc',
+  'view:sort-by-date-created-in-asc': 'created-asc',
+  'view:sort-by-date-created-in-desc': 'created-desc',
+  'view:sort-by-date-updated-in-asc': 'updated-asc',
+  'view:sort-by-date-updated-in-desc': 'updated-desc',
+} as const;
 const legacyCommandIds: Readonly<Record<string, ShortcutCommand>> = {
   'editor:toggle-bold': 'core:strong',
   'editor:toggle-italic': 'core:emphasize',

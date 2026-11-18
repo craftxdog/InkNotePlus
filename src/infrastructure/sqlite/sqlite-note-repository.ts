@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { noteFilter } from './note-query';
+import { noteFilter, noteSortSql } from './note-query';
 import { compileNoteSearch } from './search-query';
 import type { DatabaseSync } from 'node:sqlite';
 
@@ -141,7 +141,7 @@ export class SqliteNoteRepository implements NoteRepository {
         SELECT ${noteColumns}
         FROM notes
         WHERE ${filter.sql}
-        ORDER BY is_pinned DESC, ${input.sort === 'title' ? 'title COLLATE NOCASE,' : ''} updated_at DESC, id DESC
+        ORDER BY notes.is_pinned DESC, ${noteSortSql(input.sort)} notes.updated_at DESC, notes.id DESC
         LIMIT ? OFFSET ?
       `)
       .all(...filter.params, limit, input.offset ?? 0)
@@ -167,7 +167,7 @@ export class SqliteNoteRepository implements NoteRepository {
         SELECT ${noteColumns}
         FROM notes ${search.join}
         WHERE ${search.sql}
-        ORDER BY notes.is_pinned DESC, ${input.sort === 'title' ? 'notes.title COLLATE NOCASE,' : search.fts ? 'bm25(notes_fts),' : ''} notes.updated_at DESC, notes.id DESC
+        ORDER BY notes.is_pinned DESC, ${(input.sort ?? 'updated-desc') !== 'updated-desc' ? noteSortSql(input.sort) : search.fts ? 'bm25(notes_fts),' : ''} notes.updated_at DESC, notes.id DESC
         LIMIT ? OFFSET ?
       `)
       .all(...search.params, normalizeLimit(input.limit), input.offset ?? 0)
@@ -236,6 +236,26 @@ export class SqliteNoteRepository implements NoteRepository {
             { ...metadata, notebookId: input.notebookId },
             null,
           );
+        } else if (input.action === 'status') {
+          if (note.deletedAt !== null || metadata.status === input.status)
+            continue;
+          this.writePlacement(
+            note,
+            { ...metadata, status: input.status },
+            null,
+          );
+        } else if (input.action === 'tag') {
+          if (note.deletedAt !== null) continue;
+          const tags = [
+            ...new Set([
+              ...metadata.tags.filter((tag) => !input.remove.includes(tag)),
+              ...input.add,
+            ]),
+          ];
+          if (JSON.stringify(tags) === JSON.stringify(metadata.tags)) continue;
+          // Rejecting here rolls back the notes already changed in this batch.
+          if (tags.length > 32) throw new NoteConflictError(id);
+          this.writePlacement(note, { ...metadata, tags }, null);
         } else {
           if (note.deletedAt === null) throw new NoteConflictError(id);
           this.purge(note, now);

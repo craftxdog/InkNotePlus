@@ -7,7 +7,9 @@ import {
   type CreateNotebookInput,
   type LibraryInput,
   type LibrarySnapshot,
+  type MoveNotebookInput,
   type Notebook,
+  type RenameNotebookInput,
 } from '../../shared/library';
 import { noteFilter, subtreeSql, unfinishedSql } from './note-query';
 import { compileNoteSearch } from './search-query';
@@ -18,6 +20,7 @@ import { withSqliteWrite } from './database';
 import { SqliteNoteRepository } from './sqlite-note-repository';
 
 export class TagNameConflictError extends Error {}
+export class NotebookMoveError extends Error {}
 
 export class SqliteLibraryRepository {
   constructor(
@@ -27,15 +30,19 @@ export class SqliteLibraryRepository {
   createNotebook(input: CreateNotebookInput): Notebook {
     const id = randomUUID();
     this.database
-      .prepare(
-        'INSERT INTO notebooks(id,name,parent_id,created_at,icon) VALUES (?,?,?,?,?)',
-      )
+      .prepare(`
+        INSERT INTO notebooks(id,name,parent_id,created_at,icon,position)
+        VALUES (?,?,?,?,?,(
+          SELECT coalesce(max(position) + 1, 0) FROM notebooks WHERE parent_id IS ?
+        ))
+      `)
       .run(
         id,
         input.name,
         input.parentId ?? null,
         new Date().toISOString(),
         input.icon ?? 'book-open',
+        input.parentId ?? null,
       );
     return {
       id,
@@ -61,7 +68,7 @@ export class SqliteLibraryRepository {
       SELECT b.id,b.name,b.parent_id AS parentId,b.icon,
         (SELECT COUNT(*) FROM notes n WHERE n.deleted_at IS NULL AND ${unfinishedSql('n')} AND json_extract(n.metadata_json,'$.notebookId')=b.id) AS count,
         (SELECT COUNT(*) FROM notes n WHERE n.deleted_at IS NULL AND ${unfinishedSql('n')} AND json_extract(n.metadata_json,'$.notebookId') IN (SELECT id FROM descendants WHERE ancestor=b.id)) AS descendantCount
-      FROM notebooks b ORDER BY b.name COLLATE NOCASE
+      FROM notebooks b ORDER BY b.position, b.name COLLATE NOCASE, b.id
     `)
       .all()
       .map((row) => notebookSchema.parse(row));
@@ -141,6 +148,44 @@ export class SqliteLibraryRepository {
       .run(input.icon, input.id);
     if (changed.changes !== 1) throw new Error('Notebook does not exist.');
     return this.getSnapshot().notebooks.find((book) => book.id === input.id)!;
+  }
+
+  renameNotebook({ id, name }: RenameNotebookInput): boolean {
+    return (
+      this.database
+        .prepare('UPDATE notebooks SET name=? WHERE id=?')
+        .run(name, id).changes === 1
+    );
+  }
+
+  moveNotebook({ id, parentId, beforeId }: MoveNotebookInput): boolean {
+    return withSqliteWrite(this.database, () => {
+      const exists = this.database.prepare(
+        'SELECT 1 FROM notebooks WHERE id = ?',
+      );
+      if (!exists.get(id) || (parentId && !exists.get(parentId))) return false;
+      const subtree = this.database.prepare(subtreeSql).all(id);
+      if (parentId && subtree.some((row) => row.id === parentId))
+        throw new NotebookMoveError();
+      const siblings = this.database
+        .prepare(`
+          SELECT id FROM notebooks WHERE parent_id IS ? AND id <> ?
+          ORDER BY position, name COLLATE NOCASE, id
+        `)
+        .all(parentId, id)
+        .map((row) => String(row.id));
+      const index = beforeId ? siblings.indexOf(beforeId) : siblings.length;
+      if (index < 0) throw new NotebookMoveError();
+      siblings.splice(index, 0, id);
+      this.database
+        .prepare('UPDATE notebooks SET parent_id=? WHERE id=?')
+        .run(parentId, id);
+      const place = this.database.prepare(
+        'UPDATE notebooks SET position=? WHERE id=?',
+      );
+      siblings.forEach((sibling, position) => place.run(position, sibling));
+      return true;
+    });
   }
 
   deleteNotebook(id: string): string[] {

@@ -14,7 +14,11 @@ import {
   type Result,
 } from '../../shared/ipc';
 import type { UpdateTagInput } from '../../shared/tags';
-import type { NoteMetadata, Notebook } from '../../shared/library';
+import type {
+  MoveNotebookInput,
+  NoteMetadata,
+  Notebook,
+} from '../../shared/library';
 
 export function matchesNavigation(
   metadata: NoteMetadata,
@@ -123,7 +127,35 @@ export function createLibraryActions(
       return failure('unavailable');
     }
   }
+  function moveNotebook(input: MoveNotebookInput) {
+    return mutate(
+      () => api.library.moveNotebook(input),
+      async () => {
+        const { expandedNotebookIds } = get().preferences;
+        // Reveal the notebook in its new parent.
+        if (input.parentId && !expandedNotebookIds.includes(input.parentId))
+          await get().updatePreferences({
+            expandedNotebookIds: [...expandedNotebookIds, input.parentId],
+          });
+      },
+    );
+  }
   return {
+    moveNotebook,
+    renameNotebook(id: string, name: string) {
+      return mutate(() => api.library.renameNotebook({ id, name }));
+    },
+    async reorderNotebook(input: MoveNotebookInput) {
+      if (!(await moveNotebook(input)).ok) fail();
+    },
+    async moveNotes(ids: readonly string[], notebookId: string | null) {
+      const result = await mutate(
+        () =>
+          api.notes.manageTrash({ action: 'move', ids: [...ids], notebookId }),
+        () => set({ selectedNoteIds: [] }),
+      );
+      if (!result.ok) fail();
+    },
     setNotebookDialogOpen(
       notebookDialogOpen: boolean,
       parentId?: string | null,

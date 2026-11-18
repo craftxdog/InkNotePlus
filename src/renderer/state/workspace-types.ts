@@ -13,6 +13,7 @@ import type { ManagedImage } from '../../shared/images';
 import type { UpdateTagInput } from '../../shared/tags';
 import type {
   LibrarySnapshot,
+  MoveNotebookInput,
   NoteMetadata,
   NoteStatus,
 } from '../../shared/library';
@@ -28,7 +29,11 @@ export type Navigation =
 export type LibraryDialogRequest =
   | { kind: 'trash' | 'restore' | 'delete'; ids: readonly string[] }
   | { kind: 'empty' }
-  | { kind: 'delete-notebook'; id: string; name: string }
+  | {
+      kind: 'delete-notebook' | 'rename-notebook' | 'move-notebook';
+      id: string;
+      name: string;
+    }
   | { kind: 'edit-tag' | 'delete-tag'; name: string };
 
 export interface DocumentState {
@@ -124,6 +129,10 @@ export interface WorkspaceActions {
   createNotebook(name: string, parentId?: string | null): Promise<void>;
   setNotebookIcon(id: string, icon: NotebookIconName): Promise<void>;
   manageTrash(input: ManageTrashInput): Promise<Result<number>>;
+  renameNotebook(id: string, name: string): Promise<Result<boolean>>;
+  moveNotebook(input: MoveNotebookInput): Promise<Result<boolean>>;
+  reorderNotebook(input: MoveNotebookInput): Promise<void>;
+  moveNotes(ids: readonly string[], notebookId: string | null): Promise<void>;
   deleteNotebook(id: string): Promise<Result<string[]>>;
   updateTag(input: UpdateTagInput): Promise<Result<boolean>>;
   deleteTag(name: string): Promise<Result<boolean>>;
@@ -146,6 +155,7 @@ export interface WorkspaceActions {
   setSidebarDrawerOpen(open: boolean): void;
   setDistractionFreeEnabled(enabled: boolean): void;
   createNote(): Promise<void>;
+  duplicateNotes(ids?: readonly string[]): Promise<boolean>;
   updateDraft(
     changes: Partial<
       Pick<DocumentState, 'title' | 'body' | 'metadata' | 'isPinned'>

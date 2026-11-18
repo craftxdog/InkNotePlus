@@ -17,6 +17,8 @@ export const notebookRecordSchema = z
     parentId: z.uuid().nullable(),
     createdAt: z.string().datetime(),
     icon: notebookIconSchema,
+    // Backups written before manual ordering have no position.
+    position: z.number().int().nonnegative().default(0),
   })
   .strict();
 export type NotebookRecord = z.output<typeof notebookRecordSchema>;
@@ -47,7 +49,7 @@ export class SqliteLibraryTransfer {
   listNotebooks(): NotebookRecord[] {
     return this.database
       .prepare(`SELECT id, name, parent_id AS parentId, created_at AS createdAt,
-        icon FROM notebooks ORDER BY id`)
+        icon, position FROM notebooks ORDER BY id`)
       .all()
       .map((row) => notebookRecordSchema.parse(row));
   }
@@ -111,12 +113,19 @@ export class SqliteLibraryTransfer {
       );
       for (const { name, color } of tags) insertTag.run(name, color);
       const insertNotebook = this.database.prepare(`
-        INSERT INTO notebooks (id, name, parent_id, created_at, icon)
-        VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING
+        INSERT INTO notebooks (id, name, parent_id, created_at, icon, position)
+        VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING
       `);
-      for (const { id, name, parentId, createdAt, icon } of orderedNotebooks) {
+      for (const book of orderedNotebooks) {
         counts.notebooks += Number(
-          insertNotebook.run(id, name, parentId, createdAt, icon).changes,
+          insertNotebook.run(
+            book.id,
+            book.name,
+            book.parentId,
+            book.createdAt,
+            book.icon,
+            book.position,
+          ).changes,
         );
       }
       const rememberRecovery = this.database.prepare(

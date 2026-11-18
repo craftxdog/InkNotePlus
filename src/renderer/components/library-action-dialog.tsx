@@ -5,6 +5,10 @@ import type { LibraryDialogRequest } from '../state/workspace-types';
 import { useWorkspace, useWorkspaceStore } from '../state/workspace-context';
 import { Modal } from './modal';
 import { NotebookPicker } from './notebook-picker';
+import {
+  notebookSubtreeIds,
+  notebookTree,
+} from '../notebooks/notebook-hierarchy';
 import { TagBadge, tagColor } from './tag-badge';
 
 const colorLabels: Record<TagColor, string> = {
@@ -34,8 +38,15 @@ export function LibraryActionDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<AppErrorCode | null>(null);
   const [name, setName] = useState(
-    request.kind === 'edit-tag' ? request.name : '',
+    request.kind === 'edit-tag' || request.kind === 'rename-notebook'
+      ? request.name
+      : '',
   );
+  const currentParent =
+    request.kind === 'move-notebook'
+      ? (notebooks.find(({ id }) => id === request.id)?.parentId ?? '')
+      : '';
+  const [parent, setParent] = useState(currentParent);
   const [color, setColor] = useState<TagColor>(() => {
     const colors = store.getState().library.tagColors;
     return colors.find((tag) => tag.name === name)?.color ?? tagColor(name);
@@ -83,6 +94,16 @@ export function LibraryActionDialog({
       case 'delete-notebook':
         result = await state.deleteNotebook(request.id);
         break;
+      case 'rename-notebook':
+        result = await state.renameNotebook(request.id, name.trim());
+        break;
+      case 'move-notebook':
+        result = await state.moveNotebook({
+          id: request.id,
+          parentId: parent || null,
+          beforeId: null,
+        });
+        break;
       case 'edit-tag':
         result = await state.updateTag({
           name: request.name,
@@ -124,6 +145,43 @@ export function LibraryActionDialog({
             disabled={busy}
             label="Notebook de destino"
           />
+        )}
+        {request.kind === 'rename-notebook' && (
+          <label>
+            Nombre
+            <input
+              autoFocus
+              type="text"
+              value={name}
+              maxLength={80}
+              required
+              disabled={busy}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+        )}
+        {request.kind === 'move-notebook' && (
+          <label>
+            Dentro de
+            <select
+              autoFocus
+              value={parent}
+              disabled={busy}
+              onChange={(event) => setParent(event.target.value)}
+            >
+              <option value="">Biblioteca</option>
+              {notebookTree(notebooks)
+                .filter(
+                  ({ notebook }) =>
+                    !notebookSubtreeIds(notebooks, request.id).has(notebook.id),
+                )
+                .map(({ notebook, path }) => (
+                  <option key={notebook.id} value={notebook.id}>
+                    {path.join(' / ')}
+                  </option>
+                ))}
+            </select>
+          </label>
         )}
         {request.kind === 'edit-tag' && (
           <>
@@ -181,7 +239,13 @@ export function LibraryActionDialog({
           <button
             className={`button ${action.danger ? 'button--danger' : 'button--primary'}`}
             type="submit"
-            disabled={busy || (request.kind === 'edit-tag' && !name.trim())}
+            disabled={
+              busy ||
+              ((request.kind === 'edit-tag' ||
+                request.kind === 'rename-notebook') &&
+                !name.trim()) ||
+              (request.kind === 'move-notebook' && parent === currentParent)
+            }
           >
             {action.confirm}
           </button>
@@ -228,6 +292,20 @@ function describeAction(request: LibraryDialogRequest, notes: string) {
         confirm: 'Eliminar notebook',
         message: `Se eliminará «${request.name}» con sus subnotebooks. Sus notas pasarán a Papelera.`,
         danger: true,
+      };
+    case 'rename-notebook':
+      return {
+        title: 'Renombrar notebook',
+        confirm: 'Guardar cambios',
+        message: null,
+        danger: false,
+      };
+    case 'move-notebook':
+      return {
+        title: 'Mover notebook',
+        confirm: 'Mover notebook',
+        message: `Elige dónde colocar «${request.name}» y sus subnotebooks.`,
+        danger: false,
       };
     case 'edit-tag':
       return {

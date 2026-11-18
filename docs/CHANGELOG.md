@@ -13,6 +13,12 @@
   referencia de commit y enlace HTTP(S) de origen. HTML y PDF conservan las
   cabeceras, la numeración y el resaltado.
 
+- Los notebooks se pueden renombrar, mover a otro notebook y ordenar a mano, con
+  arrastre o desde su menú contextual. El orden se conserva en los respaldos.
+- Las notas se mueven arrastrándolas a un notebook o a «Sin notebook», también
+  con varias seleccionadas.
+- Cmd/Ctrl+D duplica la nota. Borrar línea queda disponible sin atajo por defecto.
+
 ### Corregido
 
 - Detail aparece al pasar el puntero o navegar con teclado, sin quedarse
@@ -32,7 +38,7 @@
 
 ### Pruebas
 
-- 474 pruebas automatizadas, lint y TypeScript aprobados.
+- 502 pruebas automatizadas, lint y TypeScript aprobados.
 - QA nativo local completo en macOS Apple Silicon: edición, autoguardado,
   sincronización, respaldos, HTML/PDF, papelera, temas y búsqueda con 3.000 notas.
 - Doce lenguajes comprobados en siete temas; 972 mediciones de contraste por

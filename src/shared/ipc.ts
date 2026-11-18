@@ -84,6 +84,13 @@ export const manageTrashSchema = z.discriminatedUnion('action', [
       notebookId: z.uuid().nullable(),
     })
     .strict(),
+  z
+    .object({
+      action: z.literal('move'),
+      ids: selectedNoteIds,
+      notebookId: z.uuid().nullable(),
+    })
+    .strict(),
   z.object({ action: z.literal('delete'), ids: selectedNoteIds }).strict(),
   z.object({ action: z.literal('empty') }).strict(),
 ]);

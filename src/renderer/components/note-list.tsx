@@ -1,4 +1,10 @@
-import { memo, useEffect, useState, type MouseEventHandler } from 'react';
+import {
+  memo,
+  useEffect,
+  useState,
+  type DragEventHandler,
+  type MouseEventHandler,
+} from 'react';
 import {
   PanelLeft,
   SquarePen,
@@ -22,6 +28,7 @@ import { useWorkspace } from '../state/workspace-context';
 import { IconButton } from './icon-button';
 import { TagBadge } from './tag-badge';
 import { statusLabels, statusIcons } from './note-status';
+import { endLibraryDrag, startLibraryDrag } from '../notebooks/library-drag';
 
 export function NoteList({
   onToggleSidebar,
@@ -43,6 +50,7 @@ export function NoteList({
   const setLibraryDialog = useWorkspace((state) => state.setLibraryDialog);
   const trashCount = useWorkspace((state) => state.library.trash);
   const pin = useWorkspace((state) => state.togglePin);
+  const duplicate = useWorkspace((state) => state.duplicateNotes);
   const query = useWorkspace((state) => state.searchQuery);
   const terms = searchHighlightTerms(query);
   const customize = useWorkspace((state) => state.customizeTemplate);
@@ -175,6 +183,13 @@ export function NoteList({
             active={note.id === activeId}
             selected={selectedIds.includes(note.id)}
             terms={terms}
+            draggable={!inTrash}
+            onDragStart={(event) =>
+              startLibraryDrag(event, {
+                kind: 'notes',
+                ids: selectedIds.includes(note.id) ? selectedIds : [note.id],
+              })
+            }
             onContextMenu={(event) => {
               event.preventDefault();
               event.currentTarget.focus();
@@ -258,6 +273,13 @@ export function NoteList({
                         },
                       ]
                     : []),
+                  {
+                    label:
+                      menu.ids.length === 1
+                        ? 'Duplicar nota'
+                        : `Duplicar ${menu.ids.length} notas`,
+                    run: () => void duplicate(menu.ids),
+                  },
                   {
                     label: 'Mover a papelera',
                     run: () => openNoteAction('trash', menu.ids),
@@ -344,6 +366,8 @@ const NoteListItem = memo(function NoteListItem({
   selected,
   onSelect,
   terms,
+  draggable,
+  onDragStart,
   onContextMenu,
 }: {
   note: NoteProjection;
@@ -351,6 +375,8 @@ const NoteListItem = memo(function NoteListItem({
   selected: boolean;
   onSelect: MouseEventHandler<HTMLButtonElement>;
   terms: string[];
+  draggable: boolean;
+  onDragStart: DragEventHandler<HTMLButtonElement>;
   onContextMenu: React.MouseEventHandler<HTMLButtonElement>;
 }) {
   const noteStatus = note.metadata?.status ?? 'none';
@@ -366,6 +392,9 @@ const NoteListItem = memo(function NoteListItem({
         data-active={active || selected}
         aria-pressed={selected || undefined}
         aria-current={active ? 'true' : undefined}
+        draggable={draggable}
+        onDragStart={onDragStart}
+        onDragEnd={endLibraryDrag}
         onClick={onSelect}
         onContextMenu={onContextMenu}
       >

@@ -36,6 +36,7 @@ import {
   Trash2,
   RotateCcw,
   Files,
+  Copy,
   ImagePlus,
   Highlighter,
   ListChecks,
@@ -106,6 +107,7 @@ export function DocumentWorkspace({
   );
   const navigation = useWorkspace((state) => state.navigation);
   const openNoteAction = useWorkspace((state) => state.openNoteAction);
+  const duplicateNotes = useWorkspace((state) => state.duplicateNotes);
   const importImage = useWorkspace((state) => state.importImage);
   const exportNote = useWorkspace((state) => state.transfer.exportNote);
   const view = useRef<EditorView | null>(null);
@@ -324,6 +326,18 @@ export function DocumentWorkspace({
               >
                 <Pin size={16} />
                 {draft.isPinned ? 'Desfijar nota' : 'Fijar nota'}
+              </button>
+              <button
+                type="button"
+                disabled={!draft.noteId || inTrash}
+                onClick={(event) => {
+                  const menu = event.currentTarget.closest('details');
+                  if (menu) menu.open = false;
+                  if (draft.noteId) void duplicateNotes([draft.noteId]);
+                }}
+              >
+                <Copy size={16} />
+                Duplicar nota
               </button>
               <button
                 type="button"

@@ -25,6 +25,12 @@ export const shortcutCommands = [
   },
   { id: 'core:save-note', label: 'Guardar nota', scope: 'app', key: 'Mod-s' },
   {
+    id: 'core:duplicate-note',
+    label: 'Duplicar nota',
+    scope: 'app',
+    key: 'Mod-d',
+  },
+  {
     id: 'editor:find',
     label: 'Buscar en la nota',
     scope: 'editor',

@@ -1,6 +1,7 @@
 import type { IpcMain, WebContents } from 'electron';
 import type { ZodType } from 'zod';
 import {
+  NotebookMoveError,
   TagNameConflictError,
   type SqliteLibraryRepository,
 } from '../../infrastructure/sqlite/sqlite-library-repository';
@@ -9,6 +10,8 @@ import {
   createNotebookSchema,
   deleteNotebookSchema,
   libraryInputSchema,
+  moveNotebookSchema,
+  renameNotebookSchema,
 } from '../../shared/library';
 import { failure, success, type Result } from '../../shared/ipc';
 import { isTrustedIpcEvent } from './note-handlers';
@@ -22,6 +25,8 @@ export function registerLibraryHandlers(options: {
     | 'getSnapshot'
     | 'createNotebook'
     | 'setNotebookIcon'
+    | 'renameNotebook'
+    | 'moveNotebook'
     | 'deleteNotebook'
     | 'updateTag'
     | 'deleteTag'
@@ -47,7 +52,10 @@ export function registerLibraryHandlers(options: {
         return run(parsed.data);
       } catch (error) {
         return failure(
-          error instanceof TagNameConflictError ? 'conflict' : 'unavailable',
+          error instanceof TagNameConflictError ||
+            error instanceof NotebookMoveError
+            ? 'conflict'
+            : 'unavailable',
         );
       }
     });
@@ -67,6 +75,12 @@ export function registerLibraryHandlers(options: {
   );
   handle(LIBRARY_CHANNELS.setNotebookIcon, setNotebookIconSchema, (input) =>
     changed(repository.setNotebookIcon(input)),
+  );
+  handle(LIBRARY_CHANNELS.renameNotebook, renameNotebookSchema, (input) =>
+    repository.renameNotebook(input) ? changed(true) : failure('not_found'),
+  );
+  handle(LIBRARY_CHANNELS.moveNotebook, moveNotebookSchema, (input) =>
+    repository.moveNotebook(input) ? changed(true) : failure('not_found'),
   );
   handle(LIBRARY_CHANNELS.deleteNotebook, deleteNotebookSchema, ({ id }) => {
     const ids = repository.deleteNotebook(id);

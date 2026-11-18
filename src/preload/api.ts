@@ -55,8 +55,13 @@ import {
   deleteNotebookSchema,
   deletedNotebooksResultSchema,
   tagMutationResultSchema,
+  moveNotebookSchema,
+  notebookMutationResultSchema,
+  renameNotebookSchema,
   type LibraryInput,
   type CreateNotebookInput,
+  type MoveNotebookInput,
+  type RenameNotebookInput,
   type LibrarySnapshot,
   type Notebook,
 } from '../shared/library';
@@ -140,6 +145,8 @@ export interface InkNoteApi {
     get(input?: LibraryInput): Promise<Result<LibrarySnapshot>>;
     createNotebook(input: CreateNotebookInput): Promise<Result<Notebook>>;
     setNotebookIcon(input: SetNotebookIconInput): Promise<Result<Notebook>>;
+    renameNotebook(input: RenameNotebookInput): Promise<Result<boolean>>;
+    moveNotebook(input: MoveNotebookInput): Promise<Result<boolean>>;
     deleteNotebook(id: string): Promise<Result<string[]>>;
     updateTag(input: UpdateTagInput): Promise<Result<boolean>>;
     deleteTag(name: string): Promise<Result<boolean>>;
@@ -364,6 +371,22 @@ export function createInkNoteApi(
           input,
           setNotebookIconSchema,
           notebookResultSchema,
+        ),
+      renameNotebook: (input) =>
+        invoke(
+          ipcRenderer,
+          LIBRARY_CHANNELS.renameNotebook,
+          input,
+          renameNotebookSchema,
+          notebookMutationResultSchema,
+        ),
+      moveNotebook: (input) =>
+        invoke(
+          ipcRenderer,
+          LIBRARY_CHANNELS.moveNotebook,
+          input,
+          moveNotebookSchema,
+          notebookMutationResultSchema,
         ),
       deleteNotebook: (id) =>
         invoke(

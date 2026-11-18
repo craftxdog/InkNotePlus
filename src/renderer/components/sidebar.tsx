@@ -20,6 +20,35 @@ import { UiSlot } from '../extensions/ui-slots';
 import { matchesNotebook } from '../notebooks/notebook-hierarchy';
 import { statusLabels, statusIcons } from './note-status';
 import { ContextMenu } from './context-menu';
+import { currentLibraryDrag } from '../notebooks/library-drag';
+
+// Dropping notes here clears their notebook.
+function UnfiledDropTarget({ children }: { children: ReactNode }) {
+  const moveNotes = useWorkspace((state) => state.moveNotes);
+  const [over, setOver] = useState(false);
+  return (
+    <div
+      data-note-drop-target=""
+      data-drop={over ? 'inside' : undefined}
+      onDragOver={(event) => {
+        if (currentLibraryDrag()?.kind !== 'notes') return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(event) => {
+        const drag = currentLibraryDrag();
+        setOver(false);
+        if (drag?.kind !== 'notes') return;
+        event.preventDefault();
+        void moveNotes(drag.ids, null);
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 export function Sidebar({
   onNavigate,
@@ -158,15 +187,17 @@ export function Sidebar({
               />
             </div>
           )}
-          {!scope &&
-            matchesNotebook('Sin notebook', notebookSearch ?? '') &&
-            row(
-              'Sin notebook',
-              Inbox,
-              { type: 'notebook', id: 'unfiled' },
-              library.unfiled,
-              'navigation-item--notebook',
-            )}
+          {!scope && matchesNotebook('Sin notebook', notebookSearch ?? '') && (
+            <UnfiledDropTarget>
+              {row(
+                'Sin notebook',
+                Inbox,
+                { type: 'notebook', id: 'unfiled' },
+                library.unfiled,
+                'navigation-item--notebook',
+              )}
+            </UnfiledDropTarget>
+          )}
           <NotebookTree
             parentId={scope}
             onNavigate={onNavigate}

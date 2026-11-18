@@ -6,12 +6,16 @@ import {
   executeShortcut,
 } from '../../src/renderer/shortcuts';
 import { createWorkspaceStore } from '../../src/renderer/state/workspace-store';
-import { createApi } from '../support/renderer-api';
+import { createApi, firstNote } from '../support/renderer-api';
 import {
   preferencesSchema,
   preferencesPatchSchema,
 } from '../../src/shared/preferences';
-import { shortcutConflict } from '../../src/shared/keybindings';
+import {
+  shortcutCommands,
+  shortcutConflict,
+  shortcutFor,
+} from '../../src/shared/keybindings';
 
 afterEach(() => vi.useRealTimers());
 it('uses the documented sidebar shortcut for both a narrow drawer and docked desktop panels', () => {
@@ -247,5 +251,57 @@ describe('note history shortcuts on macOS', () => {
       stop();
       host.remove();
     }
+  });
+});
+
+describe('Cmd/Ctrl+D', () => {
+  it('duplicates the note from the editor instead of deleting the line', () => {
+    const store = createWorkspaceStore(createApi().api);
+    const duplicateNotes = vi.fn(async () => true);
+    store.setState({
+      platform: 'linux',
+      activeNoteId: firstNote.id,
+      duplicateNotes,
+    });
+    const stop = installShortcuts(store);
+    const editor = document.createElement('div');
+    editor.className = 'cm-content';
+    document.body.append(editor);
+    const press = (repeat = false) => {
+      const event = new KeyboardEvent('keydown', {
+        key: 'd',
+        ctrlKey: true,
+        repeat,
+        bubbles: true,
+        cancelable: true,
+      });
+      editor.dispatchEvent(event);
+      return event;
+    };
+    try {
+      expect(press().defaultPrevented).toBe(true);
+      expect(duplicateNotes).toHaveBeenCalledTimes(1);
+      press(true);
+      expect(duplicateNotes).toHaveBeenCalledTimes(1);
+    } finally {
+      stop();
+      editor.remove();
+    }
+  });
+  it('leaves line deletion available without a default shortcut', () => {
+    const command = shortcutCommands.find(
+      ({ id }) => id === 'editor:delete-line',
+    )!;
+    expect(shortcutFor(command, [], false)).toBe('');
+    expect(shortcutFor(command, [], true)).toBe('');
+  });
+  it('does nothing in Trash or without a note', () => {
+    const store = createWorkspaceStore(createApi().api);
+    expect(executeShortcut(store, 'core:duplicate-note', null)).toBe(false);
+    store.setState({
+      activeNoteId: firstNote.id,
+      navigation: { type: 'trash' },
+    });
+    expect(executeShortcut(store, 'core:duplicate-note', null)).toBe(false);
   });
 });

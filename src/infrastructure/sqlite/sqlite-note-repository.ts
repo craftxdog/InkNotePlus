@@ -200,7 +200,8 @@ export class SqliteNoteRepository implements NoteRepository {
 
   manageTrash(input: ManageTrashInput): number {
     return withSqliteWrite(this.database, () => {
-      if (input.action === 'restore') this.requireNotebook(input.notebookId);
+      if (input.action === 'restore' || input.action === 'move')
+        this.requireNotebook(input.notebookId);
       const ids =
         input.action === 'empty'
           ? this.database
@@ -219,6 +220,17 @@ export class SqliteNoteRepository implements NoteRepository {
           this.writePlacement(note, metadata, now);
         } else if (input.action === 'restore') {
           if (note.deletedAt === null) continue;
+          this.writePlacement(
+            note,
+            { ...metadata, notebookId: input.notebookId },
+            null,
+          );
+        } else if (input.action === 'move') {
+          if (
+            note.deletedAt !== null ||
+            metadata.notebookId === input.notebookId
+          )
+            continue;
           this.writePlacement(
             note,
             { ...metadata, notebookId: input.notebookId },

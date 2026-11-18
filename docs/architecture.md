@@ -164,6 +164,10 @@ expandido filtra notas directas; uno contraído incluye descendientes. Los
 filtros y la ordenación se aplican antes de paginar. Los eventos vuelven a
 consultar la ventana cargada para evitar omisiones al fijar/desfijar notas.
 La migración 4 añade iconos persistentes a notebooks sin modificar notas.
+La migración 7 añade `position` para ordenar notebooks entre hermanos y conserva
+el orden alfabético de las bibliotecas existentes. Mover un notebook valida ciclos
+en SQLite y reordena sus hermanos en una transacción. El arrastre de notas y
+notebooks vive dentro de la ventana y no interpreta datos externos.
 
 El selector del editor y la búsqueda lateral comparten la jerarquía de notebooks.
 La búsqueda conserva padres como contexto y no modifica la expansión guardada.

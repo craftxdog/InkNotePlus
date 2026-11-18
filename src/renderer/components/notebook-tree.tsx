@@ -2,14 +2,28 @@ import { ChevronDown, ChevronRight, Library } from 'lucide-react';
 import { useWorkspace } from '../state/workspace-context';
 import { IconButton } from './icon-button';
 import type { Notebook } from '../../shared/library';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type DragEvent } from 'react';
 import { NotebookIcon, NotebookIconPicker } from './notebook-icon';
 import { ContextMenu } from './context-menu';
 import {
   filterNotebookTree,
   matchesNotebook,
+  notebookDropTarget,
+  notebookStepTarget,
   notebookTree,
+  type NotebookDropZone,
 } from '../notebooks/notebook-hierarchy';
+import {
+  currentLibraryDrag,
+  endLibraryDrag,
+  startLibraryDrag,
+} from '../notebooks/library-drag';
+
+function dropZone(event: DragEvent<HTMLElement>): NotebookDropZone {
+  const { top, height } = event.currentTarget.getBoundingClientRect();
+  const ratio = (event.clientY - top) / height;
+  return ratio < 0.25 ? 'before' : ratio > 0.75 ? 'after' : 'inside';
+}
 
 export function NotebookBreadcrumbs() {
   const books = useWorkspace((state) => state.library.notebooks);
@@ -74,6 +88,12 @@ export function NotebookTree({
   const [iconNotebookId, setIconNotebookId] = useState<string | null>(null);
   const create = useWorkspace((state) => state.setNotebookDialogOpen);
   const openLibraryDialog = useWorkspace((state) => state.setLibraryDialog);
+  const moveNotes = useWorkspace((state) => state.moveNotes);
+  const reorder = useWorkspace((state) => state.reorderNotebook);
+  const [drop, setDrop] = useState<{
+    id: string;
+    zone: NotebookDropZone;
+  } | null>(null);
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(
     null,
   );
@@ -86,6 +106,15 @@ export function NotebookTree({
     [books],
   );
   const searching = !!query.trim();
+  // Notes always land inside a notebook; notebooks use the row edges to reorder.
+  const resolveDrop = (event: DragEvent<HTMLElement>, id: string) => {
+    const drag = currentLibraryDrag();
+    if (drag?.kind === 'notes') return { drag, zone: 'inside' as const };
+    if (drag?.kind !== 'notebook') return null;
+    const zone = dropZone(event);
+    const placement = notebookDropTarget(books, drag.id, id, zone);
+    return placement && { drag, zone, placement };
+  };
   const visible = filterNotebookTree(entries, query).filter(
     (entry) =>
       searching || entry.ancestors.every((id) => expanded.includes(id)),
@@ -108,6 +137,40 @@ export function NotebookTree({
         <div
           className="notebook-row"
           data-notebook-depth={depth}
+          data-drop={drop?.id === book.id ? drop.zone : undefined}
+          draggable={!searching}
+          onDragStart={(event) =>
+            startLibraryDrag(event, { kind: 'notebook', id: book.id })
+          }
+          onDragEnd={() => {
+            endLibraryDrag();
+            setDrop(null);
+          }}
+          onDragOver={(event) => {
+            const target = resolveDrop(event, book.id);
+            if (!target) {
+              setDrop(null);
+              return;
+            }
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            if (drop?.id !== book.id || drop.zone !== target.zone)
+              setDrop({ id: book.id, zone: target.zone });
+          }}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node))
+              setDrop(null);
+          }}
+          onDrop={(event) => {
+            const target = resolveDrop(event, book.id);
+            setDrop(null);
+            if (!target) return;
+            event.preventDefault();
+            if (target.drag.kind === 'notes')
+              void moveNotes(target.drag.ids, book.id);
+            else if (target.placement)
+              void reorder({ id: target.drag.id, ...target.placement });
+          }}
           style={{
             paddingInlineStart: `min(calc(var(--16px) + ${depth} * var(--16px)), 45%)`,
           }}
@@ -210,6 +273,40 @@ export function NotebookTree({
                 label: 'Cambiar icono',
                 run: () => setIconNotebookId(book.id),
               },
+              {
+                label: 'Renombrar…',
+                run: () =>
+                  openLibraryDialog({
+                    kind: 'rename-notebook',
+                    id: book.id,
+                    name: book.name,
+                  }),
+              },
+              {
+                label: 'Mover a…',
+                run: () =>
+                  openLibraryDialog({
+                    kind: 'move-notebook',
+                    id: book.id,
+                    name: book.name,
+                  }),
+              },
+              ...(
+                [
+                  ['Subir', -1],
+                  ['Bajar', 1],
+                ] as const
+              ).flatMap(([label, step]) => {
+                const placement = notebookStepTarget(books, book.id, step);
+                return placement
+                  ? [
+                      {
+                        label,
+                        run: () => void reorder({ id: book.id, ...placement }),
+                      },
+                    ]
+                  : [];
+              }),
               {
                 label: 'Eliminar notebook…',
                 run: () =>

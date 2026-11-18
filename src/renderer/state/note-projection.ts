@@ -1,4 +1,4 @@
-import type { NoteProjection } from '../../shared/ipc';
+import { maxTitleLength, type NoteProjection } from '../../shared/ipc';
 import type { DocumentState, WorkspaceState } from './workspace-types';
 import { defaultNoteMetadata } from '../../shared/note-metadata';
 
@@ -11,6 +11,14 @@ export const emptyDocument: DocumentState = {
   metadata: defaultNoteMetadata,
   isPinned: false,
 };
+
+export function duplicateTitle(title: string) {
+  const suffix = ' (copia)';
+  return (
+    (title || 'Nota sin título').slice(0, maxTitleLength - suffix.length) +
+    suffix
+  );
+}
 
 export function toDocument(note: NoteProjection): DocumentState {
   return {

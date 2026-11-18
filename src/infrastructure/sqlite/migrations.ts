@@ -145,4 +145,22 @@ export const migrations: readonly SqliteMigration[] = [
       CREATE INDEX backup_recoveries_source_idx ON backup_recoveries(source_key);
     `,
   },
+  {
+    // Existing libraries keep the alphabetical order they already display.
+    version: 7,
+    sql: `
+      ALTER TABLE notebooks ADD COLUMN position INTEGER NOT NULL DEFAULT 0;
+      UPDATE notebooks SET position = (
+        SELECT COUNT(*) FROM notebooks AS sibling
+        WHERE sibling.parent_id IS notebooks.parent_id
+          AND (
+            sibling.name COLLATE NOCASE < notebooks.name COLLATE NOCASE
+            OR (
+              sibling.name COLLATE NOCASE = notebooks.name COLLATE NOCASE
+              AND sibling.id < notebooks.id
+            )
+          )
+      );
+    `,
+  },
 ];

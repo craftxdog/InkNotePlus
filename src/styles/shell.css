@@ -189,6 +189,26 @@
   .notebook-row:hover:not([data-active='true']) {
     background: var(--sidebar-menu-item-inactive-background);
   }
+  .notebook-row[data-drop='inside'],
+  [data-note-drop-target][data-drop='inside'] {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -2px;
+  }
+  .notebook-row[data-drop='before']::before,
+  .notebook-row[data-drop='after']::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    block-size: 2px;
+    background: var(--primary-color);
+    pointer-events: none;
+  }
+  .notebook-row[data-drop='before']::before {
+    inset-block-start: 0;
+  }
+  .notebook-row[data-drop='after']::before {
+    inset-block-end: 0;
+  }
   .notebook-select {
     display: flex;
     align-items: center;

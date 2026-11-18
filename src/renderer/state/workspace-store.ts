@@ -12,6 +12,7 @@ import { failure, success } from '../../shared/ipc';
 import { linkedNoteId } from '../../shared/note-link';
 import {
   emptyDocument,
+  duplicateTitle,
   mergeNote,
   selectDocument,
   toDocument,
@@ -755,6 +756,81 @@ export function createWorkspaceStore(
           if (currentGeneration === generation)
             set((state) => ({
               noteList: { ...state.noteList, isCreating: false },
+            }));
+        }
+      },
+      async duplicateNotes(ids) {
+        const state = get();
+        const targets =
+          ids ??
+          (state.selectedNoteIds.length
+            ? state.selectedNoteIds
+            : state.activeNoteId
+              ? [state.activeNoteId]
+              : []);
+        if (
+          !targets.length ||
+          state.navigation.type === 'trash' ||
+          state.noteList.isCreating
+        )
+          return false;
+        const currentGeneration = generation;
+        set((current) => ({
+          noteList: { ...current.noteList, isCreating: true, errorCode: null },
+        }));
+        try {
+          if (!(await get().flushDrafts())) return false;
+          let copy: NoteProjection | undefined;
+          for (const id of targets) {
+            const source = await api.notes.list({ id, limit: 1 });
+            if (currentGeneration !== generation) return false;
+            if (!source.ok) {
+              reportFailure(source.error.code);
+              break;
+            }
+            const note = source.data[0];
+            if (!note) continue;
+            const result = await api.notes.create({
+              title: duplicateTitle(note.title),
+              body: note.body,
+              ...(note.metadata ? { metadata: note.metadata } : {}),
+            });
+            if (currentGeneration !== generation) return false;
+            if (!result.ok) {
+              reportFailure(result.error.code);
+              break;
+            }
+            copy = result.data;
+          }
+          if (!copy) return false;
+          const opened = copy;
+          requestId += 1;
+          set((current) => {
+            const notes = mergeNote(
+              current.searchQuery ? [] : current.noteList.notes,
+              opened,
+            );
+            return {
+              ...selectDocument(current, opened.id, notes),
+              searchQuery: '',
+              selectedNoteIds: [],
+              noteList: {
+                ...current.noteList,
+                notes,
+                status: 'ready',
+                errorCode: null,
+              },
+            };
+          });
+          await refreshNotes();
+          return true;
+        } catch {
+          if (currentGeneration === generation) reportFailure('unavailable');
+          return false;
+        } finally {
+          if (currentGeneration === generation)
+            set((current) => ({
+              noteList: { ...current.noteList, isCreating: false },
             }));
         }
       },

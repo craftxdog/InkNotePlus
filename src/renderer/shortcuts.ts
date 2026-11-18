@@ -94,6 +94,14 @@ export function executeShortcut(
     case 'core:save-note':
       void state.flushDrafts();
       return true;
+    case 'core:duplicate-note':
+      if (
+        state.navigation.type === 'trash' ||
+        (!state.activeNoteId && !state.selectedNoteIds.length)
+      )
+        return false;
+      void state.duplicateNotes();
+      return true;
     case 'editor:toggle-line-wrapping':
       void state.updatePreferences({
         lineWrapping:
@@ -363,6 +371,7 @@ export function installShortcuts(
       const repeatedFormat =
         event.repeat &&
         (id.startsWith('core:toggle-') ||
+          id === 'core:duplicate-note' ||
           id === 'core:strong' ||
           id === 'core:emphasize' ||
           id === 'core:strikethrough');

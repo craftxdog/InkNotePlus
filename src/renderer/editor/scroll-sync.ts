@@ -4,7 +4,9 @@ import {
   collectTextRanges,
   previewAtSource,
   previewGlyph,
-  sourceAtPreview,
+  previewLetter,
+  previewLetterIndex,
+  previewRangeBox,
   type TextRange,
 } from './preview-source-position';
 
@@ -39,6 +41,19 @@ export function mapScroll(
   );
 }
 
+// Reading row inside a pane: 35% down, sliding to the top edge at the start
+// and to the bottom edge at the end, so both ends of the panes meet exactly.
+export function referenceOffset(pane: HTMLElement) {
+  const height = pane.clientHeight,
+    reading = height * 0.35;
+  const remaining = Math.max(0, pane.scrollHeight - height - pane.scrollTop);
+  return Math.min(
+    height,
+    Math.min(reading, pane.scrollTop) +
+      Math.max(0, height - reading - remaining),
+  );
+}
+
 export function createScrollSync(
   view: EditorView,
   preview: HTMLElement,
@@ -56,6 +71,13 @@ export function createScrollSync(
   let lastSourcePosition: number | null = null;
   let ranges: TextRange[] | null = null;
   const textRanges = () => (ranges ??= collectTextRanges(view, preview));
+  // Rendered ranges in preview order, with their measured vertical extent.
+  let boxes: { range: TextRange; top: number; bottom: number }[] | null = null;
+  const textBoxes = () =>
+    (boxes ??= textRanges()
+      .map((range) => ({ range, ...previewRangeBox(preview, range) }))
+      .filter((box) => box.bottom > box.top)
+      .sort((a, b) => a.top - b.top || a.bottom - b.bottom));
   // Screen top of a source position, estimated when CodeMirror has not drawn it.
   const editorTop = (position: number) =>
     view.coordsAtPos(position)?.top ??
@@ -119,30 +141,120 @@ export function createScrollSync(
     }
     const reference = referenceY - bounds.top + editor.scrollTop;
     const offset = reference - editor.scrollTop;
-    if (before && after && after.editor > before.editor) {
-      // Letters and block edges are measured differently; keep the map monotonic.
-      const points = [{ editor: before.editor, preview: before.preview }];
-      for (const point of [...anchors, after]) {
-        const last = points[points.length - 1];
-        if (
-          point.editor > last.editor &&
-          point.editor <= after.editor &&
-          point.preview >= last.preview &&
-          point.preview <= after.preview
-        )
-          points.push({ editor: point.editor, preview: point.preview });
-      }
-      if (points[points.length - 1].editor !== after.editor) points.push(after);
-      lastSourcePosition = before.position;
-      return mapScroll(points, reference, 'editor') - offset;
+    const real = before ?? after;
+    if (!real) return null;
+    lastSourcePosition = real.position;
+    const pair = edges(before, after);
+    return pair
+      ? blend(...pair, reference, 'editor') - offset
+      : real.preview - (real.editor - editor.scrollTop);
+  }
+  // Interpolates between two measured letters, through the block edges between
+  // them, keeping the map monotonic in both panes.
+  function blend(
+    before: ScrollAnchor,
+    after: ScrollAnchor,
+    position: number,
+    from: Pane,
+  ) {
+    const points = [before];
+    for (const point of [...anchors, after]) {
+      const last = points[points.length - 1];
+      if (
+        point.editor > last.editor &&
+        point.editor <= after.editor &&
+        point.preview > last.preview &&
+        point.preview <= after.preview
+      )
+        points.push({ editor: point.editor, preview: point.preview });
     }
-    const single = before ?? after;
-    if (!single) return null;
-    lastSourcePosition = single.position;
-    return single.preview - (single.editor - editor.scrollTop);
+    if (points.length === 1) points.push(after);
+    return mapScroll(points, position, from);
+  }
+  // Without a letter on one side, blend from the start or toward the end of
+  // both panes, so a leading or trailing diagram does not cause a jump.
+  function edges(
+    before: ScrollAnchor | null,
+    after: ScrollAnchor | null,
+  ): [ScrollAnchor, ScrollAnchor] | null {
+    if (!before && !after) return null;
+    if (!after)
+      return [
+        before!,
+        { editor: editor.scrollHeight, preview: preview.scrollHeight },
+      ];
+    if (!before) return [{ editor: 0, preview: 0 }, after];
+    // Out-of-order letters (e.g. footnotes) keep the nearer one aligned.
+    return after.editor > before.editor && after.preview > before.preview
+      ? [before, after]
+      : null;
+  }
+  // Editor scroll for the letters around the preview's reference row.
+  function blendedEditorScroll(bounds: DOMRect) {
+    const list = textBoxes();
+    if (!list.length) return null;
+    const offset = referenceOffset(preview);
+    const reference = preview.scrollTop + offset;
+    // Last range starting at or above the reference row.
+    let low = 0,
+      high = list.length - 1;
+    while (low < high) {
+      const middle = Math.ceil((low + high) / 2);
+      if (list[middle].top <= reference) low = middle;
+      else high = middle - 1;
+    }
+    const letter = (
+      box: (typeof list)[number] | undefined,
+      index: number | 'last',
+    ) => {
+      if (!box) return null;
+      const glyph = previewLetter(
+        view,
+        preview,
+        box.range,
+        index === 'last' ? box.range.text.length - 1 : index,
+      );
+      return glyph
+        ? {
+            position: glyph.position,
+            bottom: glyph.bottom,
+            preview: glyph.top,
+            editor: editorTop(glyph.position) - bounds.top + editor.scrollTop,
+          }
+        : null;
+    };
+    const current = list[low];
+    let before: ReturnType<typeof letter> = null,
+      after: ReturnType<typeof letter> = null;
+    if (current.top <= reference && reference < current.bottom) {
+      const row = letter(
+        current,
+        previewLetterIndex(preview, current.range, reference),
+      );
+      if (row && row.preview <= reference) {
+        before = row;
+        const next = previewLetterIndex(preview, current.range, row.bottom);
+        const candidate = letter(current, next);
+        after =
+          candidate && candidate.preview >= row.bottom
+            ? candidate
+            : letter(list[low + 1], 0);
+      } else after = row;
+    } else if (current.top <= reference) {
+      before = letter(current, 'last');
+      after = letter(list[low + 1], 0);
+    } else after = letter(current, 0);
+    const real = before ?? after;
+    if (!real) return null;
+    lastSourcePosition = real.position;
+    const pair = edges(before, after);
+    return pair
+      ? blend(...pair, reference, 'preview') - offset
+      : real.editor - (real.preview - preview.scrollTop);
   }
   function measure() {
     ranges = null;
+    boxes = null;
     const previewTop = preview.getBoundingClientRect().top;
     const editorPadding =
       view.documentTop - editor.getBoundingClientRect().top + editor.scrollTop;
@@ -215,7 +327,7 @@ export function createScrollSync(
     let value = trackingCursor
       ? preview.scrollTop + editor.scrollTop - lastEditorTop
       : mapScroll(anchors, source.scrollTop, owner);
-    const referenceY = editorBounds.top + editor.clientHeight * 0.35;
+    const referenceY = editorBounds.top + referenceOffset(editor);
     if (owner === 'editor' && !trackingCursor) {
       const blended = blendedScroll(
         referenceY,
@@ -267,22 +379,8 @@ export function createScrollSync(
         }
       }
     } else {
-      const point = sourceAtPreview(view, preview);
-      if (point) {
-        lastSourcePosition = point.position;
-        const coordinates = view.coordsAtPos(point.position);
-        const block = view.lineBlockAt(point.position);
-        const padding = view.documentTop - editorBounds.top + editor.scrollTop;
-        // An offscreen, virtualized row is first estimated. CodeMirror's viewport
-        // update schedules a second pass with its measured character coordinates.
-        const editorY = coordinates
-          ? coordinates.top - editorBounds.top + editor.scrollTop
-          : padding +
-            block.top +
-            (block.height * (point.position - block.from)) /
-              Math.max(1, block.to - block.from);
-        value = editorY - point.y;
-      }
+      const blended = blendedEditorScroll(editorBounds);
+      if (blended !== null) value = blended;
     }
     if (!trackingCursor && source.scrollTop < 1) value = 0;
     else if (!trackingCursor && maximum > 0 && source.scrollTop >= maximum - 1)

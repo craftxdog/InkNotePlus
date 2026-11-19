@@ -296,8 +296,15 @@ del siguiente bloque con texto. Entre ambas usa los bordes medidos de los
 bloques intermedios (líneas en blanco, código, fórmulas, imágenes o diagramas),
 de modo que avanza de forma continua y nunca retrocede al cruzar un bloque.
 Los rangos de texto del preview se ordenan una sola vez por medición y se
-buscan con búsqueda binaria en lugar de recorrer el DOM en cada frame. El mapa
-de bloques sigue siendo el respaldo cuando no hay texto que comparar.
+buscan con búsqueda binaria en lugar de recorrer el DOM en cada frame. Al
+desplazar el preview se aplica lo mismo en sentido inverso: las letras que
+rodean su fila de referencia, ordenadas por su posición vertical medida, fijan
+el scroll del editor, y un diagrama alto ya no lo hace saltar al pasar. Si no
+hay letra a un lado, interpola desde el inicio o hacia el final de ambos
+paneles. La fila de referencia está al 35 % de la altura, pero se desliza hasta
+el borde superior al inicio y hasta el inferior al final, de modo que los
+extremos coinciden sin saltos. El mapa de bloques sigue siendo el respaldo
+cuando no hay texto que comparar.
 
 La regresión `scripts/smoke-enter-scroll.mjs` reproduce Enter con un preview
 más alto que el editor, verifica el anclaje antes de escribir y cubre Backspace,

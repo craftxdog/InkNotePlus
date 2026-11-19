@@ -176,6 +176,54 @@ export function previewGlyph(
     : null;
 }
 
+// Letter `index` of a rendered range, in preview content coordinates.
+export function previewLetter(
+  view: EditorView,
+  preview: HTMLElement,
+  { from, to, text }: TextRange,
+  index: number,
+) {
+  const offset = Math.max(0, Math.min(text.length - 1, index));
+  const rect = characterRect(text, offset);
+  if (!rect.height) return null;
+  const source = view.state.doc.sliceString(from, to);
+  const position =
+    source.length === text.length
+      ? offset
+      : sourceTextOffsets(source, text.data, preview.ownerDocument)[offset];
+  if (position === undefined) return null;
+  const top =
+    rect.top - preview.getBoundingClientRect().top + preview.scrollTop;
+  return { position: from + position, top, bottom: top + rect.height };
+}
+
+// First letter whose row ends below `y` (preview content coordinates).
+export function previewLetterIndex(
+  preview: HTMLElement,
+  { text }: TextRange,
+  y: number,
+) {
+  const offset = preview.getBoundingClientRect().top - preview.scrollTop;
+  let low = 0,
+    high = text.length - 1;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (characterRect(text, middle).bottom - offset <= y) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+}
+
+// Vertical extent of a rendered range, in preview content coordinates.
+export function previewRangeBox(preview: HTMLElement, { text }: TextRange) {
+  const range = text.ownerDocument.createRange();
+  range.selectNodeContents(text);
+  const rect = range.getBoundingClientRect();
+  const top =
+    rect.top - preview.getBoundingClientRect().top + preview.scrollTop;
+  return { top, bottom: top + rect.height };
+}
+
 export function sourceAtPreview(view: EditorView, preview: HTMLElement) {
   const bounds = preview.getBoundingClientRect();
   const referenceY = bounds.top + preview.clientHeight * 0.35;

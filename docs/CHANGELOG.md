@@ -7,6 +7,8 @@
 - Al desplazar el editor en notas largas, el preview avanza de forma continua.
   Ya no sube y baja al cruzar líneas en blanco, bloques de código, tablas o
   diagramas, y busca la posición sin recorrer todo el preview en cada frame.
+- Al desplazar el preview, el editor lo acompaña sin saltos, también al pasar
+  por diagramas Mermaid altos.
 
 ## 1.5.0 — 2026-11-19
 

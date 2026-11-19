@@ -348,3 +348,56 @@ it('moves the preview smoothly while the editor scrolls across text and blank li
   expect(Math.max(...steps.slice(0, -1))).toBeLessThan(30);
   panes.destroy();
 });
+
+it('moves the editor smoothly while the preview scrolls across text and gaps', () => {
+  const panes = createPanes(100);
+  const { editor, preview, flushFrame } = panes;
+  preview.dispatchEvent(new WheelEvent('wheel'));
+  const positions: number[] = [];
+  const maximum = preview.scrollHeight - preview.clientHeight;
+  for (let top = 0; top <= maximum; top += 4) {
+    preview.scrollTop = top;
+    preview.dispatchEvent(new Event('scroll'));
+    flushFrame();
+    positions.push(editor.scrollTop);
+  }
+  const steps = positions
+    .slice(1)
+    .map((value, index) => value - positions[index]);
+  // Each preview gap is wider than the editor's blank line, so the editor
+  // moves slower than the preview, but never backwards or in leaps. The last
+  // step reveals the end of the editor on purpose.
+  expect(Math.min(...steps)).toBeGreaterThanOrEqual(-0.5);
+  expect(Math.max(...steps.slice(0, -1))).toBeLessThan(20);
+  panes.destroy();
+});
+
+it('follows smoothly from the start of the note through a block without text', () => {
+  const panes = createPanes(100);
+  const { view, editor, preview, flushFrame } = panes;
+  vi.spyOn(view, 'posAtCoords').mockImplementation(({ y }) => {
+    const line = Math.min(
+      view.state.doc.lines,
+      Math.max(1, Math.floor((y - 80 + editor.scrollTop) / 25) + 1),
+    );
+    return view.state.doc.line(line).from;
+  });
+  // The first two paragraphs render like a diagram: no source-mapped text.
+  for (const span of [...preview.querySelectorAll('span')].slice(0, 2))
+    delete span.dataset.sourceTextLine;
+  editor.dispatchEvent(new WheelEvent('wheel'));
+  const positions: number[] = [];
+  const maximum = editor.scrollHeight - editor.clientHeight;
+  for (let top = 0; top <= maximum; top += 5) {
+    editor.scrollTop = top;
+    editor.dispatchEvent(new Event('scroll'));
+    flushFrame();
+    positions.push(preview.scrollTop);
+  }
+  const steps = positions
+    .slice(1)
+    .map((value, index) => value - positions[index]);
+  expect(Math.min(...steps)).toBeGreaterThanOrEqual(-0.5);
+  expect(Math.max(...steps.slice(0, -1))).toBeLessThan(30);
+  panes.destroy();
+});

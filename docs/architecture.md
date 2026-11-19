@@ -224,6 +224,17 @@ y una actualización por frame. Las medidas se invalidan al cambiar contenido,
 anchura o tema; la conexión sigue la instancia real de CodeMirror en StrictMode.
 El estado de scroll no pasa por Zustand ni provoca un render de React.
 
+El preview divide la nota en bloques de primer nivel (`markdown-blocks.ts`) y
+analiza cada uno por separado con un componente memoizado. Al escribir solo
+se vuelve a analizar el bloque editado. Nunca corta dentro de código cercado ni
+de fórmulas `$$`, y mantiene juntas las listas sueltas. Una nota con
+definiciones de referencia o de notas al pie se analiza entera, porque esas
+definiciones afectan a todo el documento. Las líneas del AST se desplazan a su
+posición en la nota (`remarkLineOffset`). Los offsets quedan relativos al
+bloque: el texto de antes puede cambiar sin volver a analizarlo, y las tareas
+suman el offset del bloque al marcarse. Las claves de los bloques sobreviven a
+las ediciones, así que React actualiza el bloque editado en su sitio.
+
 El preview confirma su contenido desde `useLayoutEffect`, con la misma
 normalización LF/CRLF que CodeMirror. Guarda la referencia inmutable del
 documento correspondiente al DOM renderizado; un cambio pendiente del editor
@@ -288,8 +299,23 @@ zona de lectura; al escribir es la posición del cursor. Un preview diferido
 sólo participa cuando corresponde al borrador actual. Si el cursor no tiene
 un glifo en el preview, por ejemplo tras Enter en una línea vacía, conserva el
 anclaje visual y acompaña únicamente el desplazamiento real del editor. Al
-volver a escribir, retoma las coordenadas del texto renderizado. El mapa de
-bloques sigue siendo el respaldo al desplazar manualmente.
+volver a escribir, retoma las coordenadas del texto renderizado.
+
+Al desplazar el editor, el preview interpola entre la letra que está en la
+fila de referencia, o justo antes, y la primera letra de la fila siguiente o
+del siguiente bloque con texto. Entre ambas usa los bordes medidos de los
+bloques intermedios (líneas en blanco, código, fórmulas, imágenes o diagramas),
+de modo que avanza de forma continua y nunca retrocede al cruzar un bloque.
+Los rangos de texto del preview se ordenan una sola vez por medición y se
+buscan con búsqueda binaria en lugar de recorrer el DOM en cada frame. Al
+desplazar el preview se aplica lo mismo en sentido inverso: las letras que
+rodean su fila de referencia, ordenadas por su posición vertical medida, fijan
+el scroll del editor, y un diagrama alto ya no lo hace saltar al pasar. Si no
+hay letra a un lado, interpola desde el inicio o hacia el final de ambos
+paneles. La fila de referencia está al 35 % de la altura, pero se desliza hasta
+el borde superior al inicio y hasta el inferior al final, de modo que los
+extremos coinciden sin saltos. El mapa de bloques sigue siendo el respaldo
+cuando no hay texto que comparar.
 
 La regresión `scripts/smoke-enter-scroll.mjs` reproduce Enter con un preview
 más alto que el editor, verifica el anclaje antes de escribir y cubre Backspace,

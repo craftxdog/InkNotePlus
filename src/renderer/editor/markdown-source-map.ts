@@ -65,7 +65,26 @@ export function rehypeSourceText() {
   };
 }
 
+// Moves a block's parsed lines to where the block starts in the note. Offsets
+// stay relative to the block, so text before it can change without a re-parse.
+export function remarkLineOffset({ line = 1 }: { line?: number } = {}) {
+  return (tree: SourceNode) => {
+    if (line === 1) return;
+    const visit = (node: SourceNode) => {
+      const { position } = node;
+      if (position)
+        node.position = {
+          start: { ...position.start, line: position.start.line + line - 1 },
+          end: { ...position.end, line: position.end.line + line - 1 },
+        };
+      node.children?.forEach(visit);
+    };
+    visit(tree);
+  };
+}
+
 // Use the parser's source positions. Text inside fenced code never becomes a task.
+// `data-task-offset` is relative to the parsed text (one preview block).
 export function remarkSourceMap() {
   return (tree: SourceNode, file: { value: unknown }) => {
     const source = String(file.value);
@@ -75,8 +94,6 @@ export function remarkSourceMap() {
       if (blocks.has(node.type) && start !== undefined && end !== undefined) {
         const properties: Record<string, string | number | boolean> = {
           ...node.data?.hProperties,
-          'data-source-start': start,
-          'data-source-end': end,
         };
         properties['data-source-line'] = node.position!.start.line;
         properties['data-source-column'] = node.position!.start.column;

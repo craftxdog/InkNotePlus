@@ -43,7 +43,23 @@ export function sourceTextOffsets(
   return offsets;
 }
 
-function spanRange(view: EditorView, span: HTMLElement) {
+export interface TextRange {
+  from: number;
+  to: number;
+  text: Text;
+}
+
+// Rendered text in source order. Footnotes render at the end but sort by source.
+export function collectTextRanges(view: EditorView, preview: HTMLElement) {
+  const ranges: TextRange[] = [];
+  for (const span of preview.querySelectorAll<HTMLElement>(selector)) {
+    const range = spanRange(view, span);
+    if (range) ranges.push(range);
+  }
+  return ranges.sort((a, b) => a.from - b.from || a.to - b.to);
+}
+
+function spanRange(view: EditorView, span: HTMLElement): TextRange | null {
   const line = Number(span.dataset.sourceTextLine),
     endLine = Number(span.dataset.sourceTextEndLine);
   if (
@@ -81,13 +97,12 @@ export function previewAtSource(
   preview: HTMLElement,
   position: number,
   referenceY?: number,
+  ranges: readonly TextRange[] = collectTextRanges(view, preview),
 ) {
-  let before: ReturnType<typeof spanRange> = null,
-    after: ReturnType<typeof spanRange> = null,
-    containing: ReturnType<typeof spanRange> = null;
-  for (const span of preview.querySelectorAll<HTMLElement>(selector)) {
-    const range = spanRange(view, span);
-    if (!range) continue;
+  let before: TextRange | null = null,
+    after: TextRange | null = null,
+    containing: TextRange | null = null;
+  for (const range of ranges) {
     if (range.from <= position && range.to >= position) {
       containing = range;
       break;
@@ -103,7 +118,7 @@ export function previewAtSource(
   // Hidden URLs can occupy several wrapped rows. Choose the closest visible
   // source row, rather than counting Markdown characters that have no glyph.
   const candidates = containing ? [containing] : [after, before];
-  let closest: ReturnType<typeof spanRange> = null,
+  let closest: TextRange | null = null,
     distance = Infinity;
   for (const range of candidates) {
     if (!range) continue;
@@ -122,7 +137,7 @@ export function previewAtSource(
     }
   }
   if (!closest) return null;
-  const { from, to, text } = closest;
+  const { from, to } = closest;
   // Do not jump to a different block while editing code or an equation.
   if (
     view.state.doc.lineAt(position).number <
@@ -130,6 +145,16 @@ export function previewAtSource(
     view.state.doc.lineAt(position).number > view.state.doc.lineAt(to).number
   )
     return null;
+  return previewGlyph(view, preview, closest, position);
+}
+
+// The preview position of the rendered letter for a source position.
+export function previewGlyph(
+  view: EditorView,
+  preview: HTMLElement,
+  { from, to, text }: TextRange,
+  position: number,
+) {
   const source = view.state.doc.sliceString(from, to),
     raw = Math.max(0, position - from);
   const offsets =
@@ -149,6 +174,54 @@ export function previewAtSource(
         y: rect.top - preview.getBoundingClientRect().top + preview.scrollTop,
       }
     : null;
+}
+
+// Letter `index` of a rendered range, in preview content coordinates.
+export function previewLetter(
+  view: EditorView,
+  preview: HTMLElement,
+  { from, to, text }: TextRange,
+  index: number,
+) {
+  const offset = Math.max(0, Math.min(text.length - 1, index));
+  const rect = characterRect(text, offset);
+  if (!rect.height) return null;
+  const source = view.state.doc.sliceString(from, to);
+  const position =
+    source.length === text.length
+      ? offset
+      : sourceTextOffsets(source, text.data, preview.ownerDocument)[offset];
+  if (position === undefined) return null;
+  const top =
+    rect.top - preview.getBoundingClientRect().top + preview.scrollTop;
+  return { position: from + position, top, bottom: top + rect.height };
+}
+
+// First letter whose row ends below `y` (preview content coordinates).
+export function previewLetterIndex(
+  preview: HTMLElement,
+  { text }: TextRange,
+  y: number,
+) {
+  const offset = preview.getBoundingClientRect().top - preview.scrollTop;
+  let low = 0,
+    high = text.length - 1;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (characterRect(text, middle).bottom - offset <= y) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+}
+
+// Vertical extent of a rendered range, in preview content coordinates.
+export function previewRangeBox(preview: HTMLElement, { text }: TextRange) {
+  const range = text.ownerDocument.createRange();
+  range.selectNodeContents(text);
+  const rect = range.getBoundingClientRect();
+  const top =
+    rect.top - preview.getBoundingClientRect().top + preview.scrollTop;
+  return { top, bottom: top + rect.height };
 }
 
 export function sourceAtPreview(view: EditorView, preview: HTMLElement) {

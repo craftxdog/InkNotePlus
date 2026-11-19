@@ -361,9 +361,10 @@ it.each(['wheel', 'pointerdown', 'touchstart', 'keydown'])(
       panes.selectLine(5);
       panes.flushFrame();
       panes.preview.dispatchEvent(new Event(event));
-      panes.scroll(panes.preview, 400);
+      // The preview reference row lands on line 12's first letter.
+      panes.scroll(panes.preview, 445);
       panes.flushFrame();
-      expect(panes.positions(12)).toEqual({ editor: 150, preview: 150 });
+      expect(panes.positions(12)).toEqual({ editor: 105, preview: 105 });
     } finally {
       panes.destroy();
     }
@@ -378,22 +379,23 @@ it('follows the user pane across preview wheel, unmapped editing, and editor whe
     panes.selectLine(8);
     panes.flushFrame();
 
-    panes.scroll(panes.preview, 400, true);
+    panes.scroll(panes.preview, 445, true);
     panes.flushFrame();
-    expect(panes.positions(12)).toEqual({ editor: 150, preview: 150 });
+    expect(panes.positions(12)).toEqual({ editor: 105, preview: 105 });
     // Deliver the browser scroll event caused by the controller assignment.
     panes.editor.dispatchEvent(new Event('scroll'));
     panes.selectLine(8);
     panes.flushFrame();
-    expect(panes.positions(12)).toEqual({ editor: 150, preview: 150 });
+    expect(panes.positions(12)).toEqual({ editor: 105, preview: 105 });
 
-    panes.scroll(panes.editor, 100, true);
+    // The reference row (35% of the pane) lands on line 16's first letter.
+    panes.scroll(panes.editor, 270, true);
     panes.flushFrame();
-    expect(panes.positions()).toEqual({ editor: 0, preview: 0 });
+    expect(panes.positions(16)).toEqual({ editor: 105, preview: 105 });
     panes.preview.dispatchEvent(new Event('scroll'));
     panes.sync.refresh();
     panes.flushFrame();
-    expect(panes.positions()).toEqual({ editor: 0, preview: 0 });
+    expect(panes.positions(16)).toEqual({ editor: 105, preview: 105 });
   } finally {
     panes.destroy();
   }

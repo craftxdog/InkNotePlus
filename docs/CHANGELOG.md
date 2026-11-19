@@ -1,5 +1,16 @@
 # Historial de versiones
 
+## 1.4.1 — 2026-11-19
+
+### Corregido
+
+- En Preferencias, los campos de dirección, contraseña y frase de cifrado ya no
+  parecen desactivados. Ahora usan el mismo estilo que el resto de campos.
+
+### Pruebas
+
+- 1165 pruebas automatizadas, lint y TypeScript aprobados.
+
 ## 1.4.0 — 2026-11-18
 
 ### Añadido

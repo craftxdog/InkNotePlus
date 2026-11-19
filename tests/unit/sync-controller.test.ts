@@ -58,6 +58,24 @@ describe('sync controller', () => {
     });
   });
 
+  it('does not touch the system keychain without a connection', () => {
+    const persisted = vi.fn(() => true);
+    const controller = createSyncController({
+      load: () => null,
+      save: () => {},
+      clear: () => {},
+      persisted,
+      run: async () => result,
+      unlock: async () => Buffer.alloc(32),
+      reset: () => {},
+      onStatus: () => {},
+    });
+    controller.start();
+    controller.status();
+    expect(persisted).not.toHaveBeenCalled();
+    controller.dispose();
+  });
+
   it('never exposes the password or key in its status', () => {
     const { controller } = setup();
     const text = JSON.stringify(controller.status());

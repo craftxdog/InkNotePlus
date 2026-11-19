@@ -44,6 +44,21 @@ describe('local API controller', () => {
     });
   });
 
+  it('does not touch the system keychain while disabled', async () => {
+    const persisted = vi.fn(() => true);
+    const controller = createLocalApiController({
+      createServer: () => ({
+        listen: async (port) => port,
+        close: async () => {},
+      }),
+      credentials: { password: () => 'x', regenerate: () => 'y', persisted },
+      onChange: () => {},
+    });
+    await controller.apply({ enabled: false, port: 19840 });
+    controller.status();
+    expect(persisted).not.toHaveBeenCalled();
+  });
+
   it('starts on the configured port', async () => {
     const { controller, servers, onChange } = setup();
     await controller.apply({ enabled: true, port: 19840 });

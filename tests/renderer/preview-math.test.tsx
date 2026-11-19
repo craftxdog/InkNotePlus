@@ -25,7 +25,7 @@ it('renders inline, display and fenced math without interpreting ordinary code o
   expect(container.querySelector('code')?.textContent).toBe('$literal$');
   expect(container.querySelector('script')).toBeNull();
   expect(
-    container.querySelector('.math-block[data-source-start]'),
+    container.querySelector('.math-block[data-source-line]'),
   ).not.toBeNull();
 });
 

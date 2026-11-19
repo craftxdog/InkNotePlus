@@ -224,6 +224,17 @@ y una actualización por frame. Las medidas se invalidan al cambiar contenido,
 anchura o tema; la conexión sigue la instancia real de CodeMirror en StrictMode.
 El estado de scroll no pasa por Zustand ni provoca un render de React.
 
+El preview divide la nota en bloques de primer nivel (`markdown-blocks.ts`) y
+analiza cada uno por separado con un componente memoizado. Al escribir solo
+se vuelve a analizar el bloque editado. Nunca corta dentro de código cercado ni
+de fórmulas `$$`, y mantiene juntas las listas sueltas. Una nota con
+definiciones de referencia o de notas al pie se analiza entera, porque esas
+definiciones afectan a todo el documento. Las líneas del AST se desplazan a su
+posición en la nota (`remarkLineOffset`). Los offsets quedan relativos al
+bloque: el texto de antes puede cambiar sin volver a analizarlo, y las tareas
+suman el offset del bloque al marcarse. Las claves de los bloques sobreviven a
+las ediciones, así que React actualiza el bloque editado en su sitio.
+
 El preview confirma su contenido desde `useLayoutEffect`, con la misma
 normalización LF/CRLF que CodeMirror. Guarda la referencia inmutable del
 documento correspondiente al DOM renderizado; un cambio pendiente del editor

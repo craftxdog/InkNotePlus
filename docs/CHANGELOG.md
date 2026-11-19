@@ -9,6 +9,8 @@
   diagramas, y busca la posición sin recorrer todo el preview en cada frame.
 - Al desplazar el preview, el editor lo acompaña sin saltos, también al pasar
   por diagramas Mermaid altos.
+- Escribir en notas largas es más fluido: el preview solo vuelve a procesar el
+  bloque que cambia, en lugar de toda la nota en cada tecla.
 
 ## 1.5.0 — 2026-11-19
 

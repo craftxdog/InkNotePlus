@@ -95,7 +95,7 @@ export async function verifyCodeBlocks({ page, profile }) {
         filename: block.querySelector('.codeblock-filename')?.textContent,
         numbers: block.querySelector('.mde-preview-code-line-number')
           ?.textContent,
-        source: block.hasAttribute('data-source-start'),
+        source: block.hasAttribute('data-source-line'),
         tokens: block.querySelectorAll('code span[class*="tok-"]').length,
       })),
     );

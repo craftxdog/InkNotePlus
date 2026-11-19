@@ -260,7 +260,7 @@ export function createScrollSync(
       view.documentTop - editor.getBoundingClientRect().top + editor.scrollTop;
     const points: ScrollAnchor[] = [{ editor: 0, preview: 0 }];
     for (const element of preview.querySelectorAll<HTMLElement>(
-      '[data-source-start]',
+      '[data-source-line]',
     )) {
       const line = Number(element.dataset.sourceLine),
         endLine = Number(element.dataset.sourceEndLine);

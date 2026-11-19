@@ -51,8 +51,8 @@ it('renders the reference TSX header, numbered lines and exact source text', () 
     '```tsx filename="src/components/note-list-item.tsx" line=18 title="Memoize the row"\nexport const Item = () => <div>Hello</div>;\n// second line\n```';
   const { container } = preview(body);
   const block = container.querySelector('.codeblock')!;
-  expect(block.getAttribute('data-source-start')).toBe('0');
-  expect(block.getAttribute('data-source-end')).toBe(String(body.length));
+  expect(block.getAttribute('data-source-line')).toBe('1');
+  expect(block.getAttribute('data-source-end-line')).toBe('4');
   expect(block.querySelector('.codeblock-title')?.textContent).toBe(
     'Memoize the row',
   );

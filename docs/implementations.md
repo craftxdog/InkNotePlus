@@ -351,6 +351,15 @@ Las tres decisiones están tomadas.
 - **Cambio:** interpolación continua entre letras y bordes de bloque, y una lista ordenada de rangos de texto que se reutiliza mientras no cambie la medición.
 - **Aceptación:** ningún panel retrocede al desplazar el otro, en ambos sentidos, y avanza sin saltos salvo al llegar al final.
 
+#### INC-25. Escribir en notas largas se vuelve lento
+
+**Estado: resuelto el 2026-11-19.** El preview analiza cada bloque de primer nivel por separado y solo vuelve a procesar el que cambia. Medido con la app empaquetada escribiendo 57 teclas a mitad de nota.
+
+- **Evidencia (Sonda):** en una nota de 1104 líneas, cada tecla costaba 51 ms de hilo principal, frente a 10 ms en una nota corta. El 90 % era JavaScript.
+- **Causa:** [markdown-preview.tsx](../src/renderer/editor/markdown-preview.tsx) volvía a analizar con micromark y a convertir a HTML toda la nota en cada cambio.
+- **Cambio:** división en bloques (`markdown-blocks.ts`), un componente memoizado por bloque, líneas absolutas con `remarkLineOffset` y claves que sobreviven a las ediciones.
+- **Aceptación:** el HTML es idéntico al de la nota completa. En la nota de 1104 líneas cada tecla cuesta 18 ms, y en las notas reales de prueba entre 14 y 16 ms (antes 18 ms).
+
 ## Parte 2: funciones sin implementar
 
 La ausencia de estas funciones se comprobó en el código fuente.

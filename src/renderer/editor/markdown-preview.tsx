@@ -1,6 +1,7 @@
 import {
   memo,
   useDeferredValue,
+  useMemo,
   createContext,
   useContext,
   useLayoutEffect,
@@ -20,7 +21,12 @@ import { parseImageDimensions } from './image-dimensions';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import { useWorkspace } from '../state/workspace-context';
-import { remarkSourceMap, rehypeSourceText } from './markdown-source-map';
+import {
+  remarkLineOffset,
+  remarkSourceMap,
+  rehypeSourceText,
+} from './markdown-source-map';
+import { splitMarkdownBlocks } from './markdown-blocks';
 import { remarkHighlights } from './highlights';
 import { linkedNoteId } from '../../shared/note-link';
 import { remarkGithubAlerts } from './github-alerts';
@@ -54,6 +60,77 @@ const PreviewContext = createContext<{
   noteId: string | null;
 } | null>(null);
 const TaskOffsetContext = createContext<number | null>(null);
+// Source offset of the preview block being rendered.
+const BlockOffsetContext = createContext(0);
+const transformUrl = (url: string, key: string) =>
+  (key === 'src' && managedImageUrlPattern.test(url)) ||
+  (key === 'href' && linkedNoteId(url))
+    ? url
+    : defaultUrlTransform(url);
+
+// Parsing dominates typing in long notes. Each top-level block parses on its
+// own, so a keystroke only parses the block it changes. Text inserted above a
+// block shifts its offsets, which are read through BlockOffsetContext instead.
+const PreviewMarkdownBlock = memo(function PreviewMarkdownBlock({
+  text,
+  line,
+}: {
+  text: string;
+  line: number;
+}) {
+  const plugins = useMemo(
+    () => [[remarkLineOffset, { line }] as const, ...gfm],
+    [line],
+  );
+  return (
+    <Markdown
+      remarkPlugins={plugins as never}
+      rehypePlugins={sourceText}
+      skipHtml
+      components={components}
+      urlTransform={transformUrl}
+    >
+      {text}
+    </Markdown>
+  );
+});
+// Keys that survive edits: unchanged blocks at both ends keep theirs, and
+// edited blocks reuse the keys in between, so React updates them in place
+// (keeping, for example, a code block's DOM) instead of remounting them.
+function useBlockKeys(texts: readonly string[]) {
+  const previous = useRef<{ texts: readonly string[]; keys: number[] }>({
+    texts: [],
+    keys: [],
+  });
+  const next = useRef(0);
+  return useMemo(() => {
+    const old = previous.current;
+    let head = 0;
+    while (
+      head < texts.length &&
+      head < old.texts.length &&
+      texts[head] === old.texts[head]
+    )
+      head++;
+    let tail = 0;
+    while (
+      tail < texts.length - head &&
+      tail < old.texts.length - head &&
+      texts[texts.length - 1 - tail] === old.texts[old.texts.length - 1 - tail]
+    )
+      tail++;
+    const middle = old.keys.slice(head, old.keys.length - tail);
+    const keys = texts.map((_, index) => {
+      if (index < head) return old.keys[index];
+      if (index >= texts.length - tail)
+        return old.keys[old.keys.length - (texts.length - index)];
+      return middle[index - head] ?? next.current++;
+    });
+    for (const key of keys) next.current = Math.max(next.current, key + 1);
+    previous.current = { texts, keys };
+    return keys;
+  }, [texts]);
+}
 
 export const MarkdownPreview = memo(function MarkdownPreview({
   body,
@@ -74,6 +151,13 @@ export const MarkdownPreview = memo(function MarkdownPreview({
   const openNoteLink = useWorkspace((state) => state.openNoteLink);
   const toggle = useWorkspace((state) => state.toggleTask);
   const noteId = useWorkspace((state) => state.document.noteId);
+  const blocks = useMemo(
+    () => splitMarkdownBlocks(deferredBody),
+    [deferredBody],
+  );
+  const keys = useBlockKeys(
+    useMemo(() => blocks.map((block) => block.text), [blocks]),
+  );
   return (
     <PreviewContext
       value={{
@@ -87,20 +171,11 @@ export const MarkdownPreview = memo(function MarkdownPreview({
       }}
     >
       <div className="mde-preview" aria-label="Vista previa Markdown">
-        <Markdown
-          remarkPlugins={gfm}
-          rehypePlugins={sourceText}
-          skipHtml
-          components={components}
-          urlTransform={(url, key) =>
-            (key === 'src' && managedImageUrlPattern.test(url)) ||
-            (key === 'href' && linkedNoteId(url))
-              ? url
-              : defaultUrlTransform(url)
-          }
-        >
-          {deferredBody}
-        </Markdown>
+        {blocks.map((block, index) => (
+          <BlockOffsetContext key={keys[index]} value={block.offset}>
+            <PreviewMarkdownBlock text={block.text} line={block.line} />
+          </BlockOffsetContext>
+        ))}
       </div>
     </PreviewContext>
   );
@@ -109,11 +184,13 @@ export const MarkdownPreview = memo(function MarkdownPreview({
 function PreviewListItem({
   node,
   children,
+  'data-task-offset': _offset,
   ...props
-}: ComponentProps<'li'> & ExtraProps) {
+}: ComponentProps<'li'> & ExtraProps & { 'data-task-offset'?: unknown }) {
   const value = node?.properties['data-task-offset'];
+  const block = useContext(BlockOffsetContext);
   return (
-    <TaskOffsetContext value={typeof value === 'number' ? value : null}>
+    <TaskOffsetContext value={typeof value === 'number' ? block + value : null}>
       <li {...props}>{children}</li>
     </TaskOffsetContext>
   );

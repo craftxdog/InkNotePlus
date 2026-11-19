@@ -159,15 +159,22 @@ export function registerNoteIpcHandlers(
   };
 }
 
+const noteWindowContents = new Set<WebContents>();
+
+// Note windows load the same trusted page as the main window.
+export function trustWebContents(contents: WebContents) {
+  noteWindowContents.add(contents);
+  return () => noteWindowContents.delete(contents);
+}
+
 export function isTrustedIpcEvent(
   event: IpcMainInvokeEvent,
   expectedWebContents: WebContents | null,
 ): boolean {
-  return (
-    expectedWebContents !== null &&
-    event.sender === expectedWebContents &&
-    event.senderFrame === expectedWebContents.mainFrame
-  );
+  const trusted =
+    event.sender === expectedWebContents ||
+    noteWindowContents.has(event.sender);
+  return trusted && event.senderFrame === event.sender.mainFrame;
 }
 
 function createMutationHandler<TInput>(

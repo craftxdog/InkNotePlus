@@ -210,6 +210,29 @@ export function registerTransferHandlers(options: {
     importNotesSchema,
     (window, { kind, notebookId }) =>
       exportOnce(async () => {
+        const storeImported = async (bytes: Buffer) =>
+          (await storeImage(bytes, options.userData, options.isDecodableImage))
+            .url;
+        if (kind === 'apple-notes') {
+          if (process.platform !== 'darwin') return failure('unavailable');
+          const [{ readAppleNotes }, { readAppleNotesSources }] =
+            await Promise.all([
+              import('../apple-notes'),
+              import('../note-import'),
+            ]);
+          const { notes, locked } = await readAppleNotes();
+          const source = await readAppleNotesSources(notes, {
+            storeImage: storeImported,
+          });
+          const saved = library.importNotes(source.notes, notebookId);
+          options.onImported();
+          return success({
+            ...saved,
+            images: source.images,
+            missingImages: source.missingImages,
+            skipped: source.skipped + locked,
+          });
+        }
         const selection = await dialog.showOpenDialog(window, {
           title:
             kind === 'folder' ? 'Importar carpeta de notas' : 'Importar notas',
@@ -240,14 +263,7 @@ export function registerTransferHandlers(options: {
           return success(null);
         const { readImportSources } = await import('../note-import');
         const source = await readImportSources(selection.filePaths, {
-          storeImage: async (bytes) =>
-            (
-              await storeImage(
-                bytes,
-                options.userData,
-                options.isDecodableImage,
-              )
-            ).url,
+          storeImage: storeImported,
         });
         const saved = library.importNotes(source.notes, notebookId);
         options.onImported();

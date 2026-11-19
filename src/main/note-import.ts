@@ -1,3 +1,5 @@
+import type { AppleNote } from './apple-notes';
+import { isKindleClippings, parseKindleClippings } from './kindle-clippings';
 import { createHash, randomUUID } from 'node:crypto';
 import { lstat, readdir, realpath } from 'node:fs/promises';
 import path from 'node:path';
@@ -474,6 +476,47 @@ async function readInkdropLibrary(
   });
 }
 
+const untitledAppleNote = 'Nota de Apple Notes';
+
+export async function readAppleNotesSources(
+  entries: readonly AppleNote[],
+  options: ImportOptions,
+) {
+  const context: ImportContext = {
+    ...options,
+    cache: new Map(),
+    images: 0,
+    missingImages: 0,
+  };
+  const notes: ImportedNote[] = [];
+  let skipped = 0;
+  for (const entry of entries) {
+    const title = entry.title.trim() || untitledAppleNote;
+    // Local paths mean nothing here, so only embedded images are imported.
+    const note = await readHtml(context, entry.html, '/', '/', title);
+    // Notes repeats the title as the first line of the body.
+    const [first, ...rest] = note.body.split('\n');
+    const body =
+      first?.trim() === title ? rest.join('\n').replace(/^\n+/, '') : note.body;
+    if (body.length > maxBodyLength) skipped++;
+    else
+      notes.push({
+        ...note,
+        title: title.slice(0, maxTitleLength),
+        body,
+        createdAt: entry.createdAt,
+        updatedAt: entry.updatedAt,
+        folders: ['Apple Notes', ...entry.folders],
+      });
+  }
+  return {
+    notes,
+    images: context.images,
+    missingImages: context.missingImages,
+    skipped,
+  };
+}
+
 export async function readImportSources(
   paths: readonly string[],
   options: ImportOptions,
@@ -504,6 +547,20 @@ export async function readImportSources(
     }
     const text = (await readRegularFile(file, maxTextFile)).toString('utf8');
     const stat = await lstat(file);
+    if (isKindleClippings(path.basename(file), text)) {
+      for (const book of parseKindleClippings(text))
+        add(
+          {
+            ...book,
+            title: book.title.slice(0, maxTitleLength),
+            tags: ['kindle'],
+            createdAt: stat.birthtime.toISOString(),
+            updatedAt: stat.mtime.toISOString(),
+          },
+          [...folders, 'Kindle'],
+        );
+      return;
+    }
     const dates = {
       createdAt: stat.birthtime.toISOString(),
       updatedAt: stat.mtime.toISOString(),

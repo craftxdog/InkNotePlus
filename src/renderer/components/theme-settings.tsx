@@ -77,6 +77,7 @@ export function ThemeSettings() {
           Tema
           <select
             aria-label="Tema"
+            disabled={preferences.followSystemTheme}
             value={preferences.theme}
             onChange={(event) => void update({ theme: event.target.value })}
           >
@@ -87,6 +88,62 @@ export function ThemeSettings() {
             ))}
           </select>
         </label>
+        <label className="setting-toggle">
+          <input
+            type="checkbox"
+            checked={preferences.followSystemTheme}
+            onChange={(event) =>
+              void update({ followSystemTheme: event.target.checked })
+            }
+          />
+          Seguir la apariencia del sistema
+        </label>
+        {preferences.followSystemTheme && (
+          <>
+            <label>
+              Tema claro
+              <select
+                aria-label="Tema claro"
+                value={preferences.lightTheme}
+                onChange={(event) =>
+                  void update({ lightTheme: event.target.value })
+                }
+              >
+                {packages
+                  .filter((theme) => theme.manifest.themeAppearance === 'light')
+                  .map((theme) => (
+                    <option
+                      key={theme.manifest.name}
+                      value={theme.manifest.name}
+                    >
+                      {theme.label}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label>
+              Tema oscuro
+              <select
+                aria-label="Tema oscuro"
+                value={preferences.darkTheme}
+                onChange={(event) =>
+                  void update({ darkTheme: event.target.value })
+                }
+              >
+                {packages
+                  .filter((theme) => theme.manifest.themeAppearance === 'dark')
+                  .map((theme) => (
+                    <option
+                      key={theme.manifest.name}
+                      value={theme.manifest.name}
+                    >
+                      {theme.label}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          </>
+        )}
         <p className="settings-description">
           Un paquete controla interfaz, editor, vista previa y diagramas
           mediante variables CSS.

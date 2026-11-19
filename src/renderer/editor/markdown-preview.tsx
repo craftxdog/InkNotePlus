@@ -30,6 +30,7 @@ import {
   readMarkdownFence,
 } from './markdown-presentation';
 import { remarkCodeFenceMeta } from './code-fence';
+import { remarkEmoji } from './remark-emoji';
 
 const gfm = [
   remarkGfm,
@@ -37,6 +38,7 @@ const gfm = [
   remarkGithubAlerts,
   remarkHighlights,
   remarkCodeFenceMeta,
+  remarkEmoji,
   remarkSourceMap,
 ];
 const sourceText = [rehypeSourceText];

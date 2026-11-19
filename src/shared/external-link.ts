@@ -3,6 +3,8 @@ import { appErrorSchema } from './ipc';
 
 export const EXTERNAL_LINK_CHANNEL = 'links:open-external';
 export const LINK_TITLE_CHANNEL = 'links:fetch-title';
+export const NOTE_LINK_CHANNEL = 'links:open-note';
+export const NOTE_LINK_READY_CHANNEL = 'links:note-links-ready';
 export const maxLinkTitleLength = 200;
 export const externalLinkSchema = z
   .object({

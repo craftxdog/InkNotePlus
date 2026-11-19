@@ -1,3 +1,4 @@
+import { copyText } from '../editor/clipboard';
 import {
   ChevronDown,
   FileText,
@@ -311,6 +312,10 @@ export function Sidebar({
                       ? 'Quitar del filtro'
                       : 'Añadir al filtro',
                     run: () => void toggleTagFilter(menu.name),
+                  },
+                  {
+                    label: 'Copiar nombre de la etiqueta',
+                    run: () => void copyText(menu.name),
                   },
                   {
                     label: 'Editar etiqueta…',

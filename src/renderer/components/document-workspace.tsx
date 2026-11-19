@@ -1,3 +1,4 @@
+import { aiErrorMessages } from '../ai/messages';
 import {
   useEffect,
   useLayoutEffect,
@@ -608,6 +609,24 @@ export function DocumentWorkspace({
                   onFloatingToolbar={setFloatingToolbar}
                   noteLinks={noteLinks}
                   fetchLinkTitle={store.getState().fetchLinkTitle}
+                  aiSuggest={(input) => {
+                    const requestId = crypto.randomUUID();
+                    const state = store.getState();
+                    return {
+                      cancel: () => void state.cancelAi(requestId),
+                      result: state
+                        .runAi({ requestId, kind: 'continue', ...input })
+                        .then((response) =>
+                          !response.ok
+                            ? { error: aiErrorMessages.failed }
+                            : response.data.status === 'ok'
+                              ? { text: response.data.text }
+                              : {
+                                  error: aiErrorMessages[response.data.status],
+                                },
+                        ),
+                    };
+                  }}
                   onVimAction={(action, argument) => {
                     const aliases = {
                       write: 'core:save-note',

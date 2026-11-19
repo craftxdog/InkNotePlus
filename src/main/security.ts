@@ -29,6 +29,8 @@ export function createContentSecurityPolicy(
     "img-src 'self' data: inknote-asset:",
     "font-src 'self' inknote-asset:",
     `connect-src ${connectSource}`,
+    // Only the sandboxed plugin host may be embedded.
+    'frame-src inknote-asset://plugin-host',
     "object-src 'none'",
     "base-uri 'none'",
     "form-action 'none'",

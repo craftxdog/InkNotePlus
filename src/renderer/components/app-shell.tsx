@@ -18,9 +18,12 @@ import { CommandPalette } from './command-palette';
 import { ImageViewer } from './image-viewer';
 import { NoteRevisionsDialog } from './note-revisions-dialog';
 import { UiSlot } from '../extensions/ui-slots';
+import { PluginHost } from '../plugins/plugin-host';
 import { LibraryActionDialog } from './library-action-dialog';
 import { SelectedNotesPanel } from './note-trash-actions';
 const TemplatePicker = lazy(() => import('./template-picker'));
+const AiAssistantDialog = lazy(() => import('./ai-assistant-dialog'));
+const GithubSnippetDialog = lazy(() => import('./github-snippet-dialog'));
 
 export function AppShell() {
   const layout = useWorkspace((state) => state.mainLayout);
@@ -32,6 +35,9 @@ export function AppShell() {
   const settingsOpen = useWorkspace((state) => state.settingsOpen);
   const notebookDialogOpen = useWorkspace((state) => state.notebookDialogOpen);
   const templatePickerOpen = useWorkspace((state) => state.templatePickerOpen);
+  const aiAssistant = useWorkspace((state) => state.aiAssistant);
+  const noteWindow = useWorkspace((state) => state.noteWindow);
+  const githubSnippetOpen = useWorkspace((state) => state.githubSnippetOpen);
   const commandPaletteOpen = useWorkspace((state) => state.commandPaletteOpen);
   const libraryDialog = useWorkspace((state) => state.libraryDialog);
   const imageViewer = useWorkspace((state) => state.imageViewer);
@@ -183,9 +189,20 @@ export function AppShell() {
           />
         )}
         <UiSlot name="modal" />
+        {!noteWindow && <PluginHost />}
         {templatePickerOpen && (
           <Suspense fallback={null}>
             <TemplatePicker />
+          </Suspense>
+        )}
+        {aiAssistant && (
+          <Suspense fallback={null}>
+            <AiAssistantDialog />
+          </Suspense>
+        )}
+        {githubSnippetOpen && (
+          <Suspense fallback={null}>
+            <GithubSnippetDialog />
           </Suspense>
         )}
       </div>

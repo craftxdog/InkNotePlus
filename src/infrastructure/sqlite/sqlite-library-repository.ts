@@ -16,6 +16,7 @@ import { compileNoteSearch } from './search-query';
 import type { SetNotebookIconInput } from '../../shared/notebook-icons';
 import { defaultNoteMetadata } from '../../shared/note-metadata';
 import type { UpdateTagInput } from '../../shared/tags';
+import type { ActivityDay, ActivityInput } from '../../shared/activity';
 import { withSqliteWrite } from './database';
 import { SqliteNoteRepository } from './sqlite-note-repository';
 
@@ -123,6 +124,42 @@ export class SqliteLibraryRepository {
       }),
       matching: this.count(matchingFilter, input.query),
     });
+  }
+
+  // One year of local days. A task counts when a revision first marks it completed.
+  getActivity(
+    { offsetMinutes }: ActivityInput,
+    now = new Date(),
+  ): ActivityDay[] {
+    const since = new Date(now.getTime() - 371 * 86_400_000).toISOString();
+    const modifier = `${offsetMinutes >= 0 ? '+' : ''}${offsetMinutes} minutes`;
+    return this.database
+      .prepare(`
+        WITH history AS (
+          SELECT note_id, revision,
+            date(created_at, ?) AS day,
+            json_extract(metadata_json, '$.status') AS status,
+            LAG(json_extract(metadata_json, '$.status')) OVER (
+              PARTITION BY note_id ORDER BY revision
+            ) AS previous
+          FROM note_revisions
+          WHERE created_at >= ?
+        )
+        SELECT day AS date,
+          COUNT(DISTINCT note_id) AS edited,
+          COUNT(DISTINCT CASE WHEN revision = 1 THEN note_id END) AS created,
+          COUNT(DISTINCT CASE
+            WHEN status = 'completed' AND previous IS NOT 'completed'
+            THEN note_id END) AS completed
+        FROM history GROUP BY day ORDER BY day
+      `)
+      .all(modifier, since)
+      .map((row) => ({
+        date: String(row.date),
+        edited: Number(row.edited),
+        created: Number(row.created),
+        completed: Number(row.completed),
+      }));
   }
 
   private count(

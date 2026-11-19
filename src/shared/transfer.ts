@@ -69,7 +69,7 @@ export type ExportNotesInput = z.output<typeof exportNotesSchema>;
 
 export const importNotesSchema = z
   .object({
-    kind: z.enum(['files', 'folder']),
+    kind: z.enum(['files', 'folder', 'apple-notes']),
     notebookId: z.uuid().nullable(),
   })
   .strict();

@@ -9,11 +9,13 @@ import {
 import type { WorkspaceStoreApi } from './state/workspace-store';
 import {
   noteSortCommands,
+  resolveShortcutCommand,
   shortcutCommands,
   shortcutFor,
   type ShortcutCommand,
 } from '../shared/keybindings';
 import { editorCommands } from './editor/editor-commands';
+import { requestAiSuggestion } from './editor/ai-suggestion';
 import { linkAtCursor } from './editor/text-commands';
 import { copyText } from './editor/clipboard';
 import { linkedNoteId, noteMarkdownLink } from '../shared/note-link';
@@ -33,6 +35,12 @@ export function keystrokeMatches(
   return (
     (event.key.toLowerCase() === key?.toLowerCase() ||
       (/^[1-5]$/.test(key) && event.code === `Digit${key}`) ||
+      // Option turns letters into symbols on macOS, so compare the physical key.
+      (mac &&
+        event.altKey &&
+        /^[a-z]$/.test(key) &&
+        event.code === `Key${key.toUpperCase()}`) ||
+      (mac && event.altKey && key === '\\' && event.code === 'Backslash') ||
       (key === '[' && event.key === '{') ||
       (key === ']' && event.key === '}')) &&
     event.metaKey ===
@@ -53,6 +61,40 @@ function keepsNativeCaretMovement(
     (command === 'core:navigate-back' || command === 'core:navigate-forward') &&
     !!target?.closest('.cm-content, input, textarea, [contenteditable="true"]')
   );
+}
+
+// Dialogs own the keyboard. Only the shortcut that closes each one stays active.
+function commandAllowed(
+  state: ReturnType<WorkspaceStoreApi['getState']>,
+  command: ShortcutCommand,
+) {
+  return (
+    (!state.settingsOpen &&
+      !state.templatePickerOpen &&
+      !state.commandPaletteOpen &&
+      !state.imageViewer &&
+      !state.revisionsOpen &&
+      !state.aiAssistant &&
+      !state.githubSnippetOpen &&
+      !state.libraryDialog &&
+      !state.notebookDialogOpen) ||
+    (state.settingsOpen && command === 'application:open-preferences') ||
+    (state.commandPaletteOpen && command === 'core:toggle-telescope')
+  );
+}
+
+// How far the selector's element is from the focus, or -1 when it does not apply.
+function selectorDistance(selector: string, element: Element) {
+  try {
+    const match = element.closest(selector);
+    if (!match) return -1;
+    let distance = 0;
+    for (let node: Element | null = element; node !== match; distance++)
+      node = node?.parentElement ?? null;
+    return distance;
+  } catch {
+    return -1;
+  }
 }
 
 export function executeShortcut(
@@ -86,6 +128,28 @@ export function executeShortcut(
       return true;
     case 'telescope-themes:show':
       state.setCommandPaletteOpen(true, 'h ');
+      return true;
+    case 'import-markdown:import-from-file':
+      void state.importNotes('files');
+      return true;
+    case 'inknote:import-folder':
+      void state.importNotes('folder');
+      return true;
+    case 'inknote:import-apple-notes':
+      if (state.platform !== 'darwin') return false;
+      void state.importNotes('apple-notes');
+      return true;
+    case 'core:open-note-in-window':
+      if (!state.activeNoteId || state.navigation.type === 'trash')
+        return false;
+      void state.openNoteWindow(state.activeNoteId);
+      return true;
+    case 'export-as-markdown:all':
+    case 'export-as-html:all':
+      void state.exportNotes({
+        format: command === 'export-as-html:all' ? 'html' : 'markdown',
+        scope: { kind: 'all' },
+      });
       return true;
     case 'core:show-note-revisions':
       if (!state.document.noteId || state.navigation.type === 'trash')
@@ -163,7 +227,7 @@ export function executeShortcut(
       void copyText(noteMarkdownLink({ id: noteId, title }));
       return true;
     }
-    case 'core:focus-search':
+    case 'core:find':
       void state.setSearchGlobal(false);
       document.querySelector<HTMLInputElement>('#note-search')?.focus();
       return true;
@@ -174,14 +238,40 @@ export function executeShortcut(
     case 'core:find-clear':
       void state.setSearchQuery('');
       return true;
-    case 'core:pin-note':
+    case 'core:pin-note-to-top':
       state.togglePin();
       return true;
+    case 'ai:assistant':
+    case 'ai:suggest':
+    case 'github:insert-snippet': {
+      const element = document.querySelector<HTMLElement>('.cm-editor');
+      const view = element && EditorView.findFromDOM(element);
+      if (!view || state.navigation.type === 'trash') return false;
+      if (command === 'github:insert-snippet') {
+        state.setGithubSnippetOpen(true);
+        return true;
+      }
+      if (!state.preferences.aiEnabled) return false;
+      if (command === 'ai:suggest') return requestAiSuggestion(view);
+      const { from, to, empty } = view.state.selection.main;
+      const range = empty
+        ? { from: 0, to: view.state.doc.length }
+        : { from, to };
+      state.setAiAssistant({
+        ...range,
+        text: view.state.sliceDoc(range.from, range.to),
+      });
+      return true;
+    }
+    case 'core:move-note':
+    case 'core:move-note-from-list':
+      if (state.navigation.type === 'trash') return false;
+      return state.openNoteAction('move-notes');
     case 'core:delete-note':
       return state.openNoteAction(
         state.navigation.type === 'trash' ? 'delete' : 'trash',
       );
-    case 'editor:toggle-drawer': {
+    case 'core:show-editor-action-menu': {
       const drawer = document.querySelector<HTMLDetailsElement>('.editor-more');
       if (!drawer) return false;
       drawer.open = !drawer.open;
@@ -189,19 +279,19 @@ export function executeShortcut(
         drawer.querySelector<HTMLButtonElement>('.popover button')?.focus();
       return true;
     }
-    case 'editor:status-none':
+    case 'editor:change-note-status-none':
       state.setNoteStatus('none');
       return true;
-    case 'editor:status-active':
+    case 'editor:change-note-status-active':
       state.setNoteStatus('active');
       return true;
-    case 'editor:status-onhold':
+    case 'editor:change-note-status-onhold':
       state.setNoteStatus('onhold');
       return true;
-    case 'editor:status-completed':
+    case 'editor:change-note-status-completed':
       state.setNoteStatus('completed');
       return true;
-    case 'editor:status-dropped':
+    case 'editor:change-note-status-dropped':
       state.setNoteStatus('dropped');
       return true;
     case 'view:toggle-sidebar':
@@ -297,6 +387,7 @@ export function installShortcuts(
   surface: Window = window,
 ) {
   let prefix: string[] = [];
+  let lastKeyboard: { id: ShortcutCommand; at: number } | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let bindings:
     | ReturnType<WorkspaceStoreApi['getState']>['preferences']['keybindings']
@@ -331,6 +422,52 @@ export function installShortcuts(
       !event.metaKey &&
       (event.ctrlKey || event.key === 'Escape');
     if (vimFirst !== afterEditor) return;
+    if (commandAllowed(state, 'core:new-note')) {
+      const mac = state.platform === 'darwin';
+      const focus = element ?? document.body;
+      let best: { keys: string[]; command: string; distance: number } | null =
+        null;
+      // keymap.json comes last, so the user's own shortcuts win a tie.
+      for (const entry of [
+        ...Object.values(state.pluginKeymaps).flat(),
+        ...state.keymap.entries,
+      ]) {
+        const keys = entry.keystroke.split(' ');
+        if (
+          !prefix.every((key, index) => keys[index] === key) ||
+          !keystrokeMatches(keys[prefix.length] ?? '', event, mac)
+        )
+          continue;
+        const distance = selectorDistance(entry.selector, focus);
+        // The closest selector wins, and later entries win a tie.
+        if (distance >= 0 && (!best || distance <= best.distance))
+          best = { keys, command: entry.command, distance };
+      }
+      if (best) {
+        if (best.keys.length > prefix.length + 1) {
+          prefix.push(best.keys[prefix.length]);
+          clearTimeout(timer);
+          timer = setTimeout(reset, 1000);
+        } else {
+          reset();
+          if (best.command === 'native!' || best.command === 'unset!') return;
+          const id = resolveShortcutCommand(best.command);
+          if (
+            !id &&
+            best.command !== 'abort!' &&
+            !state.runPluginCommand(best.command)
+          )
+            return;
+          if (id) {
+            lastKeyboard = { id, at: performance.now() };
+            if (!executeShortcut(store, id, event.target)) return;
+          }
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+    }
     if (
       bindings !== state.preferences.keybindings ||
       platform !== state.platform
@@ -361,17 +498,7 @@ export function installShortcuts(
         (custom ||
           state.platform !== 'darwin' ||
           !keepsNativeCaretMovement(command.id, element)) &&
-        ((!state.settingsOpen &&
-          !state.templatePickerOpen &&
-          !state.commandPaletteOpen &&
-          !state.imageViewer &&
-          !state.revisionsOpen &&
-          !state.libraryDialog &&
-          !state.notebookDialogOpen) ||
-          (state.settingsOpen &&
-            command.id === 'application:open-preferences') ||
-          (state.commandPaletteOpen &&
-            command.id === 'core:toggle-telescope')) &&
+        commandAllowed(state, command.id) &&
         (command.scope === 'app' ||
           (command.scope === 'editor' &&
             (editor ||
@@ -400,6 +527,7 @@ export function installShortcuts(
     if (complete) {
       reset();
       const id = complete.command.id;
+      lastKeyboard = { id, at: performance.now() };
       if (
         (id === 'editor:indent-more' || id === 'editor:indent-less') &&
         complete.keys.length === 1 &&
@@ -426,6 +554,21 @@ export function installShortcuts(
     event.preventDefault();
     event.stopPropagation();
   };
+  const stopMenu = store.getState().onMenuCommand((value) => {
+    const id = resolveShortcutCommand(value);
+    if (!id || !commandAllowed(store.getState(), id)) return;
+    // A menu accelerator can follow the key event that already ran this command.
+    if (lastKeyboard?.id === id && performance.now() - lastKeyboard.at < 400)
+      return;
+    const target = document.activeElement;
+    executeShortcut(
+      store,
+      id === 'editor:find' && !target?.closest('.cm-editor')
+        ? 'preview:find'
+        : id,
+      target,
+    );
+  });
   const listener = (event: KeyboardEvent) => handle(event);
   const afterVim = (event: KeyboardEvent) => handle(event, true);
   surface.addEventListener('keydown', listener, true);
@@ -433,6 +576,7 @@ export function installShortcuts(
   surface.addEventListener('blur', reset);
   return () => {
     reset();
+    stopMenu();
     surface.removeEventListener('keydown', listener, true);
     surface.removeEventListener('keydown', afterVim);
     surface.removeEventListener('blur', reset);

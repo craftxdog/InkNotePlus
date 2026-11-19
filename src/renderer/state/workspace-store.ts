@@ -1,3 +1,5 @@
+import type { NoteWindowTarget } from './note-window';
+import { emptyKeymap } from '../../shared/keymap-file';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { createDraftPersistence, startAutosave } from './draft-persistence';
 import { updateTaskMarker } from '../editor/markdown-source-map';
@@ -47,6 +49,7 @@ function visibleSelection(
 export function createWorkspaceStore(
   api: InkNoteApi,
   initialSession?: WorkspaceSession,
+  noteWindow: NoteWindowTarget | null = null,
 ) {
   let requestId = 0;
   let restoringNoteId = initialSession?.activeNoteId ?? null;
@@ -66,6 +69,11 @@ export function createWorkspaceStore(
   let stopAutosave: (() => void) | undefined;
   let stopClose: (() => void) | undefined;
   let stopStyles: (() => void) | undefined;
+  let stopNoteLinks: (() => void) | undefined;
+  let stopKeymap: (() => void) | undefined;
+  let stopSync: (() => void) | undefined;
+  let pluginNoticeId = 0;
+  const pluginRunners = new Map<string, (command: string) => void>();
   let historyRequest = 0;
   let historyTarget: string | null = null;
 
@@ -277,6 +285,88 @@ export function createWorkspaceStore(
         }
       },
       setWindowBackground: api.setWindowBackground,
+      onMenuCommand: (listener) => api.onMenuCommand(listener),
+      openKeymapFile: () => api.keymap.open(),
+      getActivity: (input) => api.library.getActivity(input),
+      aiAssistant: null,
+      setAiAssistant: (aiAssistant) => set({ aiAssistant }),
+      githubSnippetOpen: false,
+      setGithubSnippetOpen: (githubSnippetOpen) => set({ githubSnippetOpen }),
+      syncApi: api.sync,
+      pluginApi: api,
+      pluginCommands: [],
+      pluginKeymaps: {},
+      pluginStatuses: {},
+      pluginNotices: [],
+      addPluginNotice: (notice) =>
+        set((state) => ({
+          pluginNotices: [
+            ...state.pluginNotices.slice(-4),
+            { ...notice, id: ++pluginNoticeId },
+          ],
+        })),
+      dismissPluginNotice: (id) =>
+        set((state) => ({
+          pluginNotices: state.pluginNotices.filter((item) => item.id !== id),
+        })),
+      setPluginStatus: (plugin, status) =>
+        set((state) => ({
+          pluginStatuses: { ...state.pluginStatuses, [plugin]: status },
+        })),
+      setPluginKeymap: (plugin, keymap) =>
+        set((state) => ({
+          pluginKeymaps: { ...state.pluginKeymaps, [plugin]: keymap },
+        })),
+      addPluginCommands: (plugin, names) =>
+        set((state) => ({
+          pluginCommands: [
+            ...state.pluginCommands.filter(
+              (item) => !names.includes(item.name),
+            ),
+            ...names.map((name) => ({ plugin, name })),
+          ],
+        })),
+      removePluginCommands: (plugin, names) =>
+        set((state) => ({
+          pluginCommands: state.pluginCommands.filter(
+            (item) => item.plugin !== plugin || !names.includes(item.name),
+          ),
+        })),
+      clearPlugin: (plugin) =>
+        set((state) => {
+          const { [plugin]: _keymap, ...pluginKeymaps } = state.pluginKeymaps;
+          const { [plugin]: _status, ...pluginStatuses } = state.pluginStatuses;
+          return {
+            pluginKeymaps,
+            pluginStatuses,
+            pluginCommands: state.pluginCommands.filter(
+              (item) => item.plugin !== plugin,
+            ),
+          };
+        }),
+      registerPluginRunner(plugin, run) {
+        pluginRunners.set(plugin, run);
+        return () => pluginRunners.delete(plugin);
+      },
+      runPluginCommand(name) {
+        const command = get().pluginCommands.find((item) => item.name === name);
+        const run = command && pluginRunners.get(command.plugin);
+        run?.(name);
+        return !!run;
+      },
+      runAi: (request) => api.ai.run(request),
+      cancelAi: (requestId) => api.ai.cancel(requestId),
+      getAiStatus: () => api.ai.status(),
+      setAiKey: (key) => api.ai.setKey(key),
+      clearAiKey: () => api.ai.clearKey(),
+      fetchGithubSnippet: (url) => api.github.snippet(url),
+      getGithubTokenStatus: () => api.github.status(),
+      setGithubToken: (token) => api.github.setToken(token),
+      clearGithubToken: () => api.github.clearToken(),
+      getLocalApiStatus: () => api.localApi.status(),
+      regenerateLocalApiPassword: () => api.localApi.regenerate(),
+      onLocalApiChanged: (listener) => api.localApi.onChange(listener),
+      keymap: emptyKeymap,
       reloadWindow: api.reloadWindow,
       transfer: {
         ...api.transfer,
@@ -464,9 +554,12 @@ export function createWorkspaceStore(
       searchQuery: initialSession?.searchQuery ?? '',
       searchGlobal: initialSession?.searchGlobal ?? false,
       sidebarDrawerOpen: false,
+      noteWindow,
+      openNoteWindow: (noteId) => api.openNoteWindow(noteId),
+      // A note window shows only its note, without the library panels.
       mainLayout: initialSession?.mainLayout ?? {
-        sidebarVisible: true,
-        distractionFreeEnabled: false,
+        sidebarVisible: !noteWindow,
+        distractionFreeEnabled: !!noteWindow,
       },
       noteList: {
         notes: [],
@@ -573,6 +666,8 @@ export function createWorkspaceStore(
             source,
             document.metadata,
             get().library.notebooks,
+            new Date(),
+            get().library.tags,
           );
           if (
             get().document.noteId !== document.noteId ||
@@ -646,14 +741,13 @@ export function createWorkspaceStore(
               set({ customStyles: result.data });
           });
           const revision = preferenceRevision;
-          void api.preferences
+          const initialLoad = api.preferences
             .get()
             .then((result) => {
-              if (currentGeneration !== generation) return;
+              if (currentGeneration !== generation) return undefined;
               if (!result.ok) {
                 set({ preferencesError: true });
-                void refreshNotes();
-                return;
+                return refreshNotes();
               }
               confirmedPreferences = result.data.preferences;
               set((state) => ({
@@ -665,14 +759,39 @@ export function createWorkspaceStore(
                     : state.preferences,
                 preferencesError: false,
               }));
-              void refreshNotes();
+              return refreshNotes();
             })
             .catch(() => {
-              if (currentGeneration === generation) {
-                set({ preferencesError: true });
-                void refreshNotes();
-              }
+              if (currentGeneration !== generation) return undefined;
+              set({ preferencesError: true });
+              return refreshNotes();
             });
+          stopKeymap = api.keymap.onChange((keymap) => set({ keymap }));
+          // Notebooks and tags from other devices have no note event of their own.
+          stopSync = api.sync.onChange((status) => {
+            if (status.state === 'idle' && status.lastResult?.pulled)
+              void get().refreshLibrary();
+          });
+          void api.keymap.get().then((result) => {
+            if (generation === currentGeneration && result.ok)
+              set({ keymap: result.data });
+          });
+          if (noteWindow)
+            void initialLoad.then(async () => {
+              if (currentGeneration !== generation) return;
+              if (noteWindow === 'new') return get().createNote();
+              const url = `inknote://note/${noteWindow}`;
+              const opened = await get().openNoteLink(url);
+              if (opened.ok && !opened.data) await get().openNoteLink(url);
+            });
+          // A link can start the app, so it waits for the first note list.
+          stopNoteLinks = api.links.onOpenNote((url) => {
+            void initialLoad.then(async () => {
+              if (currentGeneration !== generation) return;
+              const opened = await get().openNoteLink(url);
+              if (opened.ok && !opened.data) await get().openNoteLink(url);
+            });
+          });
         }
         let disconnected = false;
         return () => {
@@ -688,6 +807,12 @@ export function createWorkspaceStore(
             stopStyles = undefined;
             unsubscribe?.();
             unsubscribe = undefined;
+            stopNoteLinks?.();
+            stopNoteLinks = undefined;
+            stopKeymap?.();
+            stopKeymap = undefined;
+            stopSync?.();
+            stopSync = undefined;
             requestId += 1;
             generation += 1;
             set((state) => ({
@@ -779,6 +904,7 @@ export function createWorkspaceStore(
         set({ sidebarDrawerOpen: open });
       },
       setDistractionFreeEnabled(enabled) {
+        if (noteWindow) return;
         set((state) => ({
           sidebarDrawerOpen: false,
           mainLayout: { ...state.mainLayout, distractionFreeEnabled: enabled },

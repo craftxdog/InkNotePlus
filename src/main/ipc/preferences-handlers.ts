@@ -19,6 +19,7 @@ export function registerPreferencesHandlers(options: {
   styleNonce: string;
   platform: NodeJS.Platform;
   setWindowBackground?: (color: string) => void;
+  onPreferencesChanged?: () => void;
 }) {
   const { ipc, configuration } = options;
   ipc.handle(WINDOW_CHANNELS.background, (event, input: unknown) => {
@@ -55,6 +56,7 @@ export function registerPreferencesHandlers(options: {
         ...parsed.data,
       };
       configuration.set(coreConfig.appearance, next);
+      options.onPreferencesChanged?.();
       return success(next);
     } catch {
       return failure('unavailable');

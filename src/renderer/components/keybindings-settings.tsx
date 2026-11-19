@@ -11,6 +11,30 @@ import {
 } from '../../shared/keybindings';
 import { IconButton } from './icon-button';
 
+export function KeymapFileStatus() {
+  const keymap = useWorkspace((state) => state.keymap);
+  const open = useWorkspace((state) => state.openKeymapFile);
+  return (
+    <div className="keymap-file">
+      <p className="settings-description">
+        Para atajos por selector CSS y secuencias, edita keymap.json. Los
+        cambios se aplican al guardar. Además de comandos, admite native!,
+        unset! y abort!.
+      </p>
+      <button className="button" type="button" onClick={() => void open()}>
+        Abrir keymap.json
+      </button>
+      {keymap.errors.length > 0 && (
+        <ul className="keymap-file-errors" role="alert">
+          {keymap.errors.map((error) => (
+            <li key={error}>{error}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function Keybindings({ query }: { query: string }) {
   const preferences = useWorkspace((state) => state.preferences);
   const platform = useWorkspace((state) => state.platform);

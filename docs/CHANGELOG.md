@@ -4,6 +4,44 @@
 
 ### Añadido
 
+- Importación desde Apple Notes en macOS.
+- Las notas se pueden abrir en una ventana propia con Cmd/Ctrl+Mayús+N, y la nota
+  rápida usa esa misma ventana.
+- Archivos ZIP portables, también para Windows y Linux ARM64.
+- Plugins aislados, sin Node, sin red y sin acceso a tus archivos, compatibles con
+  parte de la API de Inkdrop: comandos, atajos, notas y notificaciones.
+- Script `init.js` opcional, con las mismas limitaciones que un plugin.
+- Sincronización con tu propio servidor CouchDB, con cifrado de extremo a extremo.
+  Incluye notas, notebooks, etiquetas e imágenes de hasta 4 MB. Si dos equipos
+  editan la misma nota, se conservan ambas versiones.
+- Proxy configurable y diagnóstico de conexión para la sincronización.
+- Kit de Docker para desplegar CouchDB en un servidor propio.
+- Asistente de IA opcional para mejorar, corregir, resumir o traducir texto, con
+  Anthropic, proveedores compatibles con OpenAI u Ollama. Está desactivado por
+  defecto y usa tu propia clave.
+- Sugerencias con texto fantasma: Tab las acepta y Esc las descarta.
+- Inserción de fragmentos de código desde enlaces de GitHub.
+- Servidor local opcional con API HTTP y MCP para que otras aplicaciones y agentes
+  de IA trabajen con tus notas. Está desactivado por defecto, solo acepta conexiones
+  desde el equipo y exige contraseña.
+- Los recortes de Kindle se importan como una nota por libro, y hay un script de
+  captura para Raycast y Alfred.
+- `keymap.json` permite definir atajos por selector CSS y secuencias, con
+  `native!`, `unset!` y `abort!`. Los errores aparecen en Preferencias.
+- Los temas pueden seguir la apariencia del sistema.
+- Atajos globales, nota rápida e icono en la bandeja, desactivados por defecto.
+- Diez plantillas integradas en cinco categorías y todo el catálogo de iconos
+  de Lucide para los notebooks.
+- Los códigos de emoji como `:smile:` se muestran en el preview y al exportar.
+- Preferencias muestra la actividad de 52 semanas y las rachas.
+- Se puede copiar el ID de notas y notebooks, y arrastrar una nota al editor para
+  insertar su enlace.
+- Los enlaces `inknote://note/<id>` abren la nota desde otras apps, tanto con
+  InkNote abierto como cerrado.
+- Menú propio de la aplicación con Archivo, Edición, Vista, Navegar, Ventana y
+  Ayuda, que muestra los atajos personalizados.
+- InkNote avisa de nuevas versiones publicadas en GitHub y abre la descarga. La
+  comprobación se puede desactivar en Preferencias y no envía datos de las notas.
 - El editor, el preview y la exportación comparten 143 gramáticas del catálogo
   oficial de CodeMirror. El autocompletado incluye sus alias y extensiones, con
   carga bajo demanda para Bash, Python, C/C++, Go, Rust, Java y otros lenguajes.
@@ -66,7 +104,7 @@
 
 ### Pruebas
 
-- 766 pruebas automatizadas, lint y TypeScript aprobados.
+- 1163 pruebas automatizadas, lint y TypeScript aprobados.
 - QA nativo local completo en macOS Apple Silicon: edición, autoguardado,
   sincronización, respaldos, HTML/PDF, papelera, temas y búsqueda con 3.000 notas.
 - Doce lenguajes comprobados en siete temas; 972 mediciones de contraste por

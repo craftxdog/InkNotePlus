@@ -1,0 +1,7 @@
+{$INKNOTE_SYNC_DOMAIN} {
+	encode gzip
+	request_body {
+		max_size 32MB
+	}
+	reverse_proxy couchdb:5984
+}

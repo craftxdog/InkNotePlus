@@ -24,9 +24,18 @@ import {
   Coffee,
   Music,
 } from 'lucide-react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import type { NotebookIconName } from '../../shared/notebook-icons';
+import { filterIconNames } from './notebook-icon-search';
 import { useWorkspace } from '../state/workspace-context';
 import { Modal } from './modal';
+
+// Each extra icon is its own chunk, so the catalog never loads at startup.
+const DynamicIcon = lazy(() =>
+  import('lucide-react/dynamic').then((module) => ({
+    default: module.DynamicIcon,
+  })),
+);
 
 const icons = {
   'book-open': [BookOpen, 'Libro abierto'],
@@ -62,8 +71,24 @@ export function NotebookIcon({
   name?: NotebookIconName;
   size?: number;
 }) {
-  const Icon = icons[name][0];
-  return <Icon size={size} strokeWidth={1.6} aria-hidden="true" />;
+  if (Object.hasOwn(icons, name)) {
+    const Icon = icons[name as keyof typeof icons][0];
+    return <Icon size={size} strokeWidth={1.6} aria-hidden="true" />;
+  }
+  const fallback = (
+    <BookOpen size={size} strokeWidth={1.6} aria-hidden="true" />
+  );
+  return (
+    <Suspense fallback={fallback}>
+      <DynamicIcon
+        name={name as never}
+        size={size}
+        strokeWidth={1.6}
+        aria-hidden="true"
+        fallback={() => fallback}
+      />
+    </Suspense>
+  );
 }
 export function NotebookIconPicker({
   id,
@@ -77,28 +102,57 @@ export function NotebookIconPicker({
   );
   const update = useWorkspace((state) => state.setNotebookIcon);
   const error = useWorkspace((state) => state.noteList.errorCode);
+  const [query, setQuery] = useState('');
+  const [catalog, setCatalog] = useState<readonly string[]>([]);
+  useEffect(() => {
+    let active = true;
+    void import('lucide-react/dynamic').then(({ iconNames }) => {
+      if (active) setCatalog(iconNames);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
   if (!book) return null;
+  const featured = Object.keys(icons);
+  const names = query.trim()
+    ? filterIconNames([...new Set([...featured, ...catalog])], query)
+    : featured;
   return (
     <Modal title={`Icono de ${book.name}`} onClose={onClose}>
       <div className="dialog-form">
+        <input
+          autoFocus
+          type="search"
+          aria-label="Buscar iconos"
+          placeholder="Buscar entre todos los iconos"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
         <div
           className="notebook-icon-picker"
           role="group"
           aria-label="Iconos de notebook"
         >
-          {Object.entries(icons).map(([name, [Icon, label]]) => (
-            <button
-              key={name}
-              className="icon-button"
-              type="button"
-              aria-label={`Usar icono ${label}`}
-              title={label}
-              aria-pressed={book.icon === name}
-              onClick={() => void update(id, name as NotebookIconName)}
-            >
-              <Icon size={24} strokeWidth={1.6} />
-            </button>
-          ))}
+          {names.map((name) => {
+            const label = Object.hasOwn(icons, name)
+              ? icons[name as keyof typeof icons][1]
+              : name;
+            return (
+              <button
+                key={name}
+                className="icon-button"
+                type="button"
+                aria-label={`Usar icono ${label}`}
+                title={label}
+                aria-pressed={book.icon === name}
+                onClick={() => void update(id, name)}
+              >
+                <NotebookIcon name={name} size={24} />
+              </button>
+            );
+          })}
+          {!names.length && <p>No se encontraron iconos.</p>}
         </div>
         {error && <p role="alert">No se pudo guardar el icono.</p>}
       </div>

@@ -27,7 +27,7 @@ export default function TemplatePicker() {
   const [error, setError] = useState<string | null>(null);
   const list = useRef<HTMLDivElement>(null);
   const builtin = builtinTemplates.filter((template) =>
-    `${template.title} ${template.category}`
+    `${template.title} ${template.category} ${readTemplate(template.body).config.description ?? ''}`
       .toLocaleLowerCase()
       .includes(query.toLocaleLowerCase()),
   );

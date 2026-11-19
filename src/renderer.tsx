@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import { App } from './renderer/app';
+import { noteWindowTarget } from './renderer/state/note-window';
 import { createWorkspaceStore } from './renderer/state/workspace-store';
 import {
   readWorkspaceSession,
@@ -11,19 +12,22 @@ import {
 const container = document.getElementById('root');
 if (!container) throw new Error('InkNote root element is missing.');
 
+const noteWindow = noteWindowTarget(location.search);
 const store = createWorkspaceStore(
   window.inkNote,
-  readWorkspaceSession(sessionStorage),
+  noteWindow ? undefined : readWorkspaceSession(sessionStorage),
+  noteWindow,
 );
 const stopSession = store.subscribe((state, previous) => {
   if (
-    state.activeNoteId !== previous.activeNoteId ||
-    state.navigation !== previous.navigation ||
-    state.searchQuery !== previous.searchQuery ||
-    state.searchGlobal !== previous.searchGlobal ||
-    state.mainLayout !== previous.mainLayout ||
-    state.noteHistory !== previous.noteHistory ||
-    state.noteList.status !== previous.noteList.status
+    !noteWindow &&
+    (state.activeNoteId !== previous.activeNoteId ||
+      state.navigation !== previous.navigation ||
+      state.searchQuery !== previous.searchQuery ||
+      state.searchGlobal !== previous.searchGlobal ||
+      state.mainLayout !== previous.mainLayout ||
+      state.noteHistory !== previous.noteHistory ||
+      state.noteList.status !== previous.noteList.status)
   )
     writeWorkspaceSession(sessionStorage, state);
 });
@@ -36,7 +40,7 @@ root.render(
 
 window.addEventListener('beforeunload', (event) => {
   const state = store.getState();
-  writeWorkspaceSession(sessionStorage, state);
+  if (!noteWindow) writeWorkspaceSession(sessionStorage, state);
   if (
     state.document.isDirty ||
     state.noteList.isSaving ||
@@ -50,7 +54,7 @@ window.addEventListener('beforeunload', (event) => {
 window.addEventListener(
   'pagehide',
   () => {
-    writeWorkspaceSession(sessionStorage, store.getState());
+    if (!noteWindow) writeWorkspaceSession(sessionStorage, store.getState());
     stopSession();
     root.unmount();
   },

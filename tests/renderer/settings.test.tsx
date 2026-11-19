@@ -117,7 +117,7 @@ it('opens complete preferences with a shortcut, applies editor settings without 
   );
   fireEvent.click(screen.getByRole('tab', { name: 'Atajos' }));
   const binding = screen.getByRole('textbox', { name: 'Atajo: Nueva nota' });
-  fireEvent.change(binding, { target: { value: 'Mod-Shift-n' } });
+  fireEvent.change(binding, { target: { value: 'Mod-Shift-y' } });
   fireEvent.blur(binding);
   await waitFor(async () =>
     expect(await api.preferences.get()).toMatchObject({
@@ -125,7 +125,7 @@ it('opens complete preferences with a shortcut, applies editor settings without 
         preferences: {
           lineNumbers: false,
           mathEnabled: false,
-          keybindings: [{ command: 'core:new-note', keystroke: 'Mod-Shift-n' }],
+          keybindings: [{ command: 'core:new-note', keystroke: 'Mod-Shift-y' }],
         },
       },
     }),

@@ -1,3 +1,6 @@
+import type { NoteWindowTarget } from './note-window';
+import type { PluginKeymapEntry } from '../../shared/plugins';
+import type { KeymapFile } from '../../shared/keymap-file';
 import type {
   AppErrorCode,
   ManageTrashInput,
@@ -34,6 +37,14 @@ export type Navigation =
   | { type: 'notebook'; id: string }
   | { type: 'status'; status: NoteStatus }
   | { type: 'tag'; name: string };
+
+export interface PluginNotice {
+  readonly id: number;
+  readonly plugin: string;
+  readonly level: 'info' | 'success' | 'warning' | 'error';
+  readonly message: string;
+  readonly detail?: string;
+}
 
 export type NoteActionKind =
   | 'trash'
@@ -92,6 +103,16 @@ export interface WorkspaceState {
   readonly styleNonce: string | null;
   readonly platform: 'darwin' | 'win32' | 'linux';
   readonly preferencesError: boolean;
+  readonly keymap: KeymapFile;
+  readonly noteWindow: NoteWindowTarget | null;
+  readonly pluginCommands: readonly { plugin: string; name: string }[];
+  readonly pluginKeymaps: Readonly<
+    Record<string, readonly PluginKeymapEntry[]>
+  >;
+  readonly pluginStatuses: Readonly<Record<string, string | null>>;
+  readonly pluginNotices: readonly PluginNotice[];
+  readonly aiAssistant: { from: number; to: number; text: string } | null;
+  readonly githubSnippetOpen: boolean;
   readonly settingsOpen: boolean;
   readonly library: LibrarySnapshot;
   readonly navigation: Navigation;
@@ -117,6 +138,40 @@ export interface WorkspaceState {
 export interface WorkspaceActions {
   navigateHistory(direction: -1 | 1): Promise<boolean>;
   setWindowBackground: InkNoteApi['setWindowBackground'];
+  onMenuCommand: InkNoteApi['onMenuCommand'];
+  openKeymapFile: InkNoteApi['keymap']['open'];
+  getActivity: InkNoteApi['library']['getActivity'];
+  setAiAssistant(
+    target: { from: number; to: number; text: string } | null,
+  ): void;
+  setGithubSnippetOpen(open: boolean): void;
+  syncApi: InkNoteApi['sync'];
+  openNoteWindow: InkNoteApi['openNoteWindow'];
+  pluginApi: InkNoteApi;
+  addPluginNotice(notice: Omit<PluginNotice, 'id'>): void;
+  dismissPluginNotice(id: number): void;
+  setPluginStatus(plugin: string, status: string | null): void;
+  setPluginKeymap(plugin: string, keymap: readonly PluginKeymapEntry[]): void;
+  addPluginCommands(plugin: string, names: readonly string[]): void;
+  removePluginCommands(plugin: string, names: readonly string[]): void;
+  clearPlugin(plugin: string): void;
+  registerPluginRunner(
+    plugin: string,
+    run: (command: string) => void,
+  ): () => void;
+  runPluginCommand(name: string): boolean;
+  runAi: InkNoteApi['ai']['run'];
+  cancelAi: InkNoteApi['ai']['cancel'];
+  getAiStatus: InkNoteApi['ai']['status'];
+  setAiKey: InkNoteApi['ai']['setKey'];
+  clearAiKey: InkNoteApi['ai']['clearKey'];
+  fetchGithubSnippet: InkNoteApi['github']['snippet'];
+  getGithubTokenStatus: InkNoteApi['github']['status'];
+  setGithubToken: InkNoteApi['github']['setToken'];
+  clearGithubToken: InkNoteApi['github']['clearToken'];
+  getLocalApiStatus: InkNoteApi['localApi']['status'];
+  regenerateLocalApiPassword: InkNoteApi['localApi']['regenerate'];
+  onLocalApiChanged: InkNoteApi['localApi']['onChange'];
   reloadWindow: InkNoteApi['reloadWindow'];
   readonly transfer: InkNoteApi['transfer'];
   importImage(base64?: string): Promise<Result<ManagedImage | null>>;

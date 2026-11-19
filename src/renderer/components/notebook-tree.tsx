@@ -1,3 +1,4 @@
+import { copyText } from '../editor/clipboard';
 import { ChevronDown, ChevronRight, Library } from 'lucide-react';
 import { useWorkspace } from '../state/workspace-context';
 import { IconButton } from './icon-button';
@@ -263,6 +264,10 @@ export function NotebookTree({
               {
                 label: 'Nuevo subnotebook',
                 run: () => create(true, book.id),
+              },
+              {
+                label: 'Copiar ID del notebook',
+                run: () => void copyText(book.id),
               },
               {
                 label: 'Detail',

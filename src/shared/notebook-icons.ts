@@ -1,31 +1,10 @@
 import { z } from './validation';
 
-export const notebookIconSchema = z.enum([
-  'book-open',
-  'notebook',
-  'inbox',
-  'briefcase',
-  'rocket',
-  'code',
-  'terminal',
-  'folder',
-  'file-text',
-  'book',
-  'graduation-cap',
-  'lightbulb',
-  'flask',
-  'bug',
-  'heart',
-  'star',
-  'home',
-  'globe',
-  'cloud',
-  'database',
-  'calendar',
-  'check',
-  'coffee',
-  'music',
-]);
+// Any Lucide name is valid. The renderer falls back when an icon is unknown.
+export const notebookIconSchema = z
+  .string()
+  .max(64)
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 export type NotebookIconName = z.output<typeof notebookIconSchema>;
 export const setNotebookIconSchema = z
   .object({ id: z.uuid(), icon: notebookIconSchema })

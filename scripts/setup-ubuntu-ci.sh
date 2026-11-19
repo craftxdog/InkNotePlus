@@ -19,7 +19,8 @@ case "${1:-runtime}" in
 esac
 
 apt_sources="$RUNNER_TEMP/inknote-ubuntu.sources"
-apt_mirrors="$RUNNER_TEMP/inknote-ubuntu-mirrors.txt"
+# apt downloads as the _apt user, which cannot enter the runner home folder.
+apt_mirrors="$(mktemp /tmp/inknote-ubuntu-mirrors.XXXXXX)"
 apt_config="$RUNNER_TEMP/inknote-apt.conf"
 
 # Every one of these hosts has failed on the runners at some point, so apt
@@ -32,6 +33,7 @@ https://mirrors.edge.kernel.org/ubuntu/
 http://azure.archive.ubuntu.com/ubuntu/
 http://archive.ubuntu.com/ubuntu/
 MIRRORS
+chmod 644 "$apt_mirrors"
 cat > "$apt_sources" <<SOURCES
 Types: deb
 URIs: mirror+file:$apt_mirrors

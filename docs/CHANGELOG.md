@@ -1,6 +1,6 @@
 # Historial de versiones
 
-## Sin publicar
+## 1.5.0 — 2026-11-19
 
 ### Añadido
 
@@ -8,6 +8,16 @@
   en Preferencias. Siguen bloqueadas por defecto y solo se cargan por HTTPS.
 - Extensión Web Clipper para navegadores Chromium, que guarda páginas o selecciones
   como notas a través del servidor local.
+
+### Corregido
+
+- La integración continua instala sus dependencias de Ubuntu aunque falle una de
+  las réplicas del archivo.
+
+### Pruebas
+
+- 1188 pruebas automatizadas, lint y TypeScript aprobados.
+- El Web Clipper se probó de extremo a extremo con Brave y la app empaquetada.
 
 ## 1.4.1 — 2026-11-19
 

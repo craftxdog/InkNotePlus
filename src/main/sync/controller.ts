@@ -45,7 +45,8 @@ export function createSyncController(options: {
     const stored = options.load();
     return {
       configured: !!stored,
-      persisted: options.persisted(),
+      // Checking the keychain can block startup, so it waits for a connection.
+      persisted: stored ? options.persisted() : true,
       connection: stored?.connection ?? null,
       state: !stored ? 'off' : syncing ? 'syncing' : error ? 'error' : 'idle',
       error: stored ? error : null,

@@ -1,6 +1,6 @@
 # Historial de versiones
 
-## 1.4.0 — Preparada para revisión
+## 1.4.0 — 2026-11-18
 
 ### Añadido
 
@@ -104,7 +104,7 @@
 
 ### Pruebas
 
-- 1163 pruebas automatizadas, lint y TypeScript aprobados.
+- 1165 pruebas automatizadas, lint y TypeScript aprobados.
 - QA nativo local completo en macOS Apple Silicon: edición, autoguardado,
   sincronización, respaldos, HTML/PDF, papelera, temas y búsqueda con 3.000 notas.
 - Doce lenguajes comprobados en siete temas; 972 mediciones de contraste por

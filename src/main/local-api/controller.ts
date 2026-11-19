@@ -32,7 +32,8 @@ export function createLocalApiController(options: {
     username: localApiUsername,
     // Reading the password can open the system keychain, so it waits for opt-in.
     password: settings.enabled ? options.credentials.password() : null,
-    persisted: options.credentials.persisted(),
+    // Checking the keychain can block startup, so it waits until the server is on.
+    persisted: settings.enabled ? options.credentials.persisted() : true,
     error,
   });
 

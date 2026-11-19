@@ -739,7 +739,7 @@ el sandbox para ejecutar estas pruebas.
 
 En Ubuntu, `scripts/setup-ubuntu-ci.sh` comprueba los índices e instala las
 bibliotecas del runtime desde la réplica HTTPS del archivo de Ubuntu en
-kernel.org, con la clave de firma de Ubuntu. La configuración temporal se
+kernel.org, con la clave de firma de Ubuntu. apt usa IPv4, porque los runners no tienen ruta IPv6. La configuración temporal se
 comparte con la instalación del DEB y evita los dominios de Azure y Canonical
 que fallaron al resolver DNS en los runners. El workflow de calidad comprueba
 ese acceso antes de crear un tag de publicación.

@@ -37,7 +37,9 @@ SOURCES
 cat > "$apt_config" <<CONFIG
 Dir::Etc::sourcelist "$apt_sources";
 Dir::Etc::sourceparts "-";
-Acquire::Retries "2";
+Acquire::Retries "5";
+# Runners have no IPv6 route, and the mirror publishes an IPv6 address first.
+Acquire::ForceIPv4 "true";
 Acquire::http::Timeout "30";
 Acquire::https::Timeout "30";
 APT::Update::Error-Mode "any";

@@ -26,8 +26,11 @@ it('keeps the first process running and notifies it about later launches', () =>
   const onSecondInstance = vi.fn();
   expect(claimSingleInstance(app, onSecondInstance)).toBe(true);
   expect(app.quit).not.toHaveBeenCalled();
-  app.emit('second-instance');
-  expect(onSecondInstance).toHaveBeenCalledTimes(1);
+  app.emit('second-instance', {}, ['/app/InkNote', 'inknote://note/x']);
+  expect(onSecondInstance).toHaveBeenCalledExactlyOnceWith([
+    '/app/InkNote',
+    'inknote://note/x',
+  ]);
 });
 
 it('restores a minimized window before focusing it', () => {

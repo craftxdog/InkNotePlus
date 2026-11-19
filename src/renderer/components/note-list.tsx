@@ -1,3 +1,4 @@
+import { copyText } from '../editor/clipboard';
 import {
   memo,
   useEffect,
@@ -29,7 +30,11 @@ import { useWorkspace } from '../state/workspace-context';
 import { IconButton } from './icon-button';
 import { TagBadge } from './tag-badge';
 import { statusLabels, statusIcons } from './note-status';
-import { endLibraryDrag, startLibraryDrag } from '../notebooks/library-drag';
+import {
+  endLibraryDrag,
+  noteDragLinks,
+  startLibraryDrag,
+} from '../notebooks/library-drag';
 
 const sortFields = [
   ['updated', 'Última modificación'],
@@ -92,6 +97,7 @@ export function NoteList({
   const platform = useWorkspace((state) => state.platform);
   const select = useWorkspace((state) => state.selectNote);
   const openNoteAction = useWorkspace((state) => state.openNoteAction);
+  const openNoteWindow = useWorkspace((state) => state.openNoteWindow);
   const setLibraryDialog = useWorkspace((state) => state.setLibraryDialog);
   const trashCount = useWorkspace((state) => state.library.trash);
   const pin = useWorkspace((state) => state.togglePin);
@@ -243,12 +249,16 @@ export function NoteList({
             terms={terms}
             showCreated={sortField === 'created'}
             draggable={!inTrash}
-            onDragStart={(event) =>
-              startLibraryDrag(event, {
-                kind: 'notes',
-                ids: selectedIds.includes(note.id) ? selectedIds : [note.id],
-              })
-            }
+            onDragStart={(event) => {
+              const ids = selectedIds.includes(note.id)
+                ? selectedIds
+                : [note.id];
+              startLibraryDrag(
+                event,
+                { kind: 'notes', ids },
+                noteDragLinks(notes, ids),
+              );
+            }}
             onContextMenu={(event) => {
               event.preventDefault();
               event.currentTarget.focus();
@@ -341,6 +351,14 @@ export function NoteList({
                         {
                           label: menu.pinned ? 'Desfijar nota' : 'Fijar nota',
                           run: pin,
+                        },
+                        {
+                          label: 'Abrir en una ventana nueva',
+                          run: () => void openNoteWindow(menu.ids[0]),
+                        },
+                        {
+                          label: 'Copiar ID de la nota',
+                          run: () => void copyText(menu.ids[0]),
                         },
                       ]
                     : []),

@@ -113,14 +113,16 @@ export function applyTemplate(
   current: NoteMetadata,
   books: readonly Notebook[],
   now = new Date(),
+  knownTags: readonly { name: string }[] = [],
 ) {
   const { body, config } = readTemplate(source.body);
+  const reference = config.notebook?.replace(/^book:/, '');
   let notebookId = current.notebookId;
-  if (config.notebook) {
+  if (reference) {
     const matches = books.filter(
       (book) =>
-        book.id === config.notebook ||
-        book.name.toLocaleLowerCase() === config.notebook!.toLocaleLowerCase(),
+        book.id === reference ||
+        book.name.toLocaleLowerCase() === reference.toLocaleLowerCase(),
     );
     if (matches.length !== 1)
       throw new Error(
@@ -141,7 +143,14 @@ export function applyTemplate(
       ...new Set([
         ...current.tags,
         ...(source.metadata?.tags ?? []),
-        ...(config.tags ?? []),
+        ...(config.tags ?? []).flatMap((tag) => {
+          if (!tag.startsWith('tag:')) return [tag];
+          const name = tag.slice(4).toLocaleLowerCase();
+          const known = knownTags.find(
+            (item) => item.name.toLocaleLowerCase() === name,
+          );
+          return known ? [known.name] : [];
+        }),
       ]),
     ],
   });

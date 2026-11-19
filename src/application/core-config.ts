@@ -1,3 +1,4 @@
+import { syncConnectionSchema } from '../shared/sync';
 import { z } from '../shared/validation';
 
 import { defineConfig, type ConfigDefinition } from './config';
@@ -15,6 +16,36 @@ export const coreConfig = {
   backupDirectory: defineConfig({
     key: 'core.backup.directory',
     schema: z.string().min(1).nullable(),
+    defaultValue: null,
+  }),
+  syncConnection: defineConfig({
+    key: 'core.sync.connection',
+    schema: syncConnectionSchema.nullable(),
+    defaultValue: null,
+  }),
+  syncSecret: defineConfig({
+    key: 'core.sync.secret',
+    schema: z.string().max(8192).nullable(),
+    defaultValue: null,
+  }),
+  aiSecret: defineConfig({
+    key: 'core.ai.secret',
+    schema: z.string().max(4096).nullable(),
+    defaultValue: null,
+  }),
+  githubSecret: defineConfig({
+    key: 'core.github.secret',
+    schema: z.string().max(4096).nullable(),
+    defaultValue: null,
+  }),
+  localApiSecret: defineConfig({
+    key: 'core.localApi.secret',
+    schema: z.string().max(4096).nullable(),
+    defaultValue: null,
+  }),
+  skippedUpdateVersion: defineConfig({
+    key: 'core.updates.skippedVersion',
+    schema: z.string().max(32).nullable(),
     defaultValue: null,
   }),
   window: {
@@ -49,6 +80,12 @@ export const coreConfig = {
 export const coreConfigDefinitions: readonly ConfigDefinition<unknown>[] = [
   coreConfig.appearance,
   coreConfig.backupDirectory,
+  coreConfig.skippedUpdateVersion,
+  coreConfig.localApiSecret,
+  coreConfig.aiSecret,
+  coreConfig.syncConnection,
+  coreConfig.syncSecret,
+  coreConfig.githubSecret,
   coreConfig.window.background,
   coreConfig.window.initialHeight,
   coreConfig.window.initialWidth,

@@ -1,6 +1,8 @@
 import { lstat, readFile, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { maxImageBytes } from '../shared/images';
+import { pluginHostUrl } from '../shared/plugins';
+import { pluginHostResponse } from './plugins/host-page';
 
 const mimeTypes: Record<string, string> = {
   '.css': 'text/css',
@@ -22,6 +24,7 @@ export async function readAsset(
 ): Promise<Response> {
   try {
     const parsed = new URL(url);
+    if (parsed.href === pluginHostUrl) return pluginHostResponse();
     if (
       parsed.protocol !== 'inknote-asset:' ||
       !['themes', 'images'].includes(parsed.hostname) ||

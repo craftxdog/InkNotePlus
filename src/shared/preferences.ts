@@ -1,6 +1,8 @@
+import { pluginNameSchema } from './plugins';
+import { aiProviderSchema, defaultAiModels } from './ai';
 import { z } from './validation';
 import { appErrorSchema, noteSortSchema } from './ipc';
-import { keybindingsSchema } from './keybindings';
+import { keybindingsSchema, keystrokeSchema } from './keybindings';
 
 export const themeIdSchema = z
   .string()
@@ -18,7 +20,24 @@ const fontFamilySchema = z
   .regex(/^[\p{L}\p{N}\s_,'"\u002e-]*$/u);
 const fields = {
   developmentMode: z.boolean(),
+  checkForUpdates: z.boolean(),
+  globalToggleShortcut: keystrokeSchema,
+  globalQuickNoteShortcut: keystrokeSchema,
+  trayEnabled: z.boolean(),
+  aiEnabled: z.boolean(),
+  aiProvider: aiProviderSchema,
+  aiModel: z.string().max(200),
+  aiBaseUrl: z.string().max(2048),
+  aiSuggestMode: z.enum(['manual', 'auto']),
+  syncProxy: z.string().max(300),
+  enabledPlugins: z.array(pluginNameSchema).max(100),
+  initScriptEnabled: z.boolean(),
+  localApiEnabled: z.boolean(),
+  localApiPort: z.number().int().min(1024).max(65_535),
   theme: themeIdSchema,
+  followSystemTheme: z.boolean(),
+  lightTheme: themeIdSchema,
+  darkTheme: themeIdSchema,
   sidebarWidth: z.number().int().min(160).max(400),
   noteListWidth: z.number().int().min(220).max(480),
   editorMode: editorModeSchema,
@@ -55,7 +74,24 @@ const recordSchema = z.object(fields).strict();
 export type Preferences = z.output<typeof recordSchema>;
 export const defaultPreferences: Preferences = {
   developmentMode: false,
+  checkForUpdates: true,
+  globalToggleShortcut: '',
+  globalQuickNoteShortcut: '',
+  trayEnabled: false,
+  aiEnabled: false,
+  aiProvider: 'anthropic',
+  aiModel: defaultAiModels.anthropic,
+  aiBaseUrl: '',
+  aiSuggestMode: 'manual',
+  syncProxy: '',
+  enabledPlugins: [],
+  initScriptEnabled: false,
+  localApiEnabled: false,
+  localApiPort: 19840,
   theme: 'inknote-light',
+  followSystemTheme: false,
+  lightTheme: 'inknote-light',
+  darkTheme: 'inknote-dark',
   sidebarWidth: 220,
   noteListWidth: 300,
   editorMode: 'split',

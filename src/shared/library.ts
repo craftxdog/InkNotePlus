@@ -77,6 +77,7 @@ export const libraryInputSchema = z
 export type LibraryInput = z.output<typeof libraryInputSchema>;
 export const LIBRARY_CHANNELS = {
   get: 'library:get',
+  activity: 'library:activity',
   createNotebook: 'library:create-notebook',
   setNotebookIcon: 'library:set-notebook-icon',
   renameNotebook: 'library:rename-notebook',

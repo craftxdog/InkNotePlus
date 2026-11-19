@@ -26,6 +26,7 @@ import {
   MathEquation,
   type MathEquationProps,
 } from '../renderer/vendor/inkdrop-math/src/math';
+import { remarkEmoji } from '../renderer/editor/remark-emoji';
 import { attachmentName } from './markdown-export';
 import { readAvailableImage } from './transfer-files';
 
@@ -37,6 +38,7 @@ const plugins = [
   remarkGithubAlerts,
   remarkHighlights,
   remarkCodeFenceMeta,
+  remarkEmoji,
 ];
 const mathOptions: MathEquationProps['options'] = {
   output: 'mathml',

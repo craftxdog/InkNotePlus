@@ -1,0 +1,72 @@
+# CouchDB para la sincronización de InkNote. Usa su propio proyecto, red y volumen,
+# así que no modifica los contenedores que ya funcionan en el servidor.
+name: inknote-sync
+
+services:
+  couchdb:
+    build:
+      context: .
+      args:
+        COUCHDB_VERSION: ${COUCHDB_VERSION:-3.5}
+    image: inknote-sync-couchdb:${COUCHDB_VERSION:-3.5}
+    restart: unless-stopped
+    environment:
+      COUCHDB_USER: ${COUCHDB_ADMIN_USER:?Ejecuta ./setup.sh}
+      COUCHDB_PASSWORD: ${COUCHDB_ADMIN_PASSWORD:?Ejecuta ./setup.sh}
+      # Mantiene válidas las sesiones al recrear el contenedor.
+      COUCHDB_SECRET: ${COUCHDB_SECRET:?Ejecuta ./setup.sh}
+      NODENAME: couchdb.inknote-sync
+    volumes:
+      - couchdb-data:/opt/couchdb/data
+      - couchdb-config:/opt/couchdb/etc/local.d
+    ports:
+      # Solo accesible desde el propio servidor. El proxy HTTPS publica el servicio.
+      - '${COUCHDB_BIND:-127.0.0.1}:${COUCHDB_PORT:-5984}:5984'
+    networks:
+      - inknote-sync
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:5984/_up']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    mem_limit: ${COUCHDB_MEMORY:-1g}
+    pids_limit: 512
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+
+  # Solo para servidores sin proxy: se activa con --profile tls y usa los puertos 80 y 443.
+  caddy:
+    profiles: [tls]
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      couchdb:
+        condition: service_healthy
+    environment:
+      INKNOTE_SYNC_DOMAIN: ${INKNOTE_SYNC_DOMAIN:-localhost}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - inknote-sync
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  inknote-sync:
+
+volumes:
+  couchdb-data:
+  couchdb-config:
+  caddy-data:
+  caddy-config:

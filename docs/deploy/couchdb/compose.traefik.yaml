@@ -1,0 +1,29 @@
+# Para servidores con Dokploy: Traefik publica CouchDB y gestiona el certificado.
+# Se activa con COMPOSE_FILE=compose.yaml:compose.traefik.yaml en .env.
+services:
+  couchdb:
+    # Traefik llega por su red interna, así que no se abre ningún puerto del servidor.
+    ports: !reset []
+    networks:
+      - inknote-sync
+      - dokploy-network
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: dokploy-network
+      traefik.http.routers.inknote-sync.rule: Host(`${INKNOTE_SYNC_DOMAIN}`)
+      traefik.http.routers.inknote-sync.entrypoints: websecure
+      traefik.http.routers.inknote-sync.tls.certresolver: letsencrypt
+      traefik.http.routers.inknote-sync.service: inknote-sync
+      traefik.http.routers.inknote-sync.middlewares: inknote-sync-limit
+      traefik.http.middlewares.inknote-sync-limit.ratelimit.average: '50'
+      traefik.http.middlewares.inknote-sync-limit.ratelimit.burst: '100'
+      traefik.http.routers.inknote-sync-http.rule: Host(`${INKNOTE_SYNC_DOMAIN}`)
+      traefik.http.routers.inknote-sync-http.entrypoints: web
+      traefik.http.routers.inknote-sync-http.middlewares: inknote-sync-https
+      traefik.http.routers.inknote-sync-http.service: inknote-sync
+      traefik.http.middlewares.inknote-sync-https.redirectscheme.scheme: https
+      traefik.http.services.inknote-sync.loadbalancer.server.port: '5984'
+
+networks:
+  dokploy-network:
+    external: true

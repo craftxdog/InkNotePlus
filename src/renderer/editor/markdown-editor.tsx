@@ -48,6 +48,7 @@ import { markdownTabKeys } from '../../shared/editor-keybindings';
 import { importableImageType } from '../../shared/images';
 import { pasteLinkOverSelection } from './link-paste';
 import { linkPasteMenu, pasteUrlAtCursor } from './link-paste-menu';
+import { aiSuggestion, type AiSuggestionOptions } from './ai-suggestion';
 
 const externalChange = Annotation.define<boolean>();
 
@@ -64,6 +65,7 @@ export function MarkdownEditor({
   onFloatingToolbar,
   noteLinks,
   fetchLinkTitle,
+  aiSuggest,
 }: {
   value: string;
   nonce: string;
@@ -77,6 +79,7 @@ export function MarkdownEditor({
   onFloatingToolbar?: (element: HTMLElement | null) => void;
   noteLinks?: CompletionSource;
   fetchLinkTitle?: (url: string) => Promise<string | null>;
+  aiSuggest?: AiSuggestionOptions['suggest'];
 }) {
   const container = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -91,6 +94,8 @@ export function MarkdownEditor({
     noteLinks,
     fetchLinkTitle,
     linkTitleFetch: preferences.linkTitleFetch,
+    aiSuggest,
+    aiAuto: preferences.aiEnabled && preferences.aiSuggestMode === 'auto',
   });
   callbacks.current = {
     onChange,
@@ -103,6 +108,8 @@ export function MarkdownEditor({
     noteLinks,
     fetchLinkTitle,
     linkTitleFetch: preferences.linkTitleFetch,
+    aiSuggest,
+    aiAuto: preferences.aiEnabled && preferences.aiSuggestMode === 'auto',
   };
   const initialValue = useRef(value);
   const settings = useRef(new Compartment()).current;
@@ -229,6 +236,14 @@ export function MarkdownEditor({
           drawSelection(),
           bracketMatching(),
           tableEditing,
+          aiSuggestion({
+            suggest: (input) =>
+              callbacks.current.aiSuggest?.(input) ?? {
+                result: Promise.resolve({ text: '' }),
+                cancel: () => {},
+              },
+            isAuto: () => callbacks.current.aiAuto,
+          }),
           linkPasteMenu({
             fetchTitle: (url) =>
               callbacks.current.fetchLinkTitle?.(url) ?? Promise.resolve(null),

@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react';
 import { useWorkspace } from '../state/workspace-context';
 import { themeCatalog } from './catalog';
 import { ThemeManager } from './theme-manager';
+import { activeThemeId, useSystemDark } from './system-theme';
 
 export function ThemeStyles() {
-  const id = useWorkspace((state) => state.preferences.theme);
+  const preferences = useWorkspace((state) => state.preferences);
+  const systemDark = useSystemDark();
+  const id = activeThemeId(preferences, systemDark);
   const installed = useWorkspace((state) => state.installedThemes);
   const ready = useWorkspace((state) => state.themesReady);
   const css = useWorkspace((state) => state.customStyles);

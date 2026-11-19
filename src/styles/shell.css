@@ -242,6 +242,8 @@
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 8px;
+    max-block-size: 320px;
+    overflow-y: auto;
   }
   .notebook-icon-picker .icon-button {
     inline-size: 100%;

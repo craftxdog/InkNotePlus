@@ -163,4 +163,15 @@ export const migrations: readonly SqliteMigration[] = [
       );
     `,
   },
+  {
+    // Which server revision and content each synchronized document last matched.
+    version: 8,
+    sql: `
+      CREATE TABLE sync_documents (
+        doc_id TEXT PRIMARY KEY NOT NULL,
+        rev TEXT NOT NULL,
+        content_hash TEXT NOT NULL
+      ) STRICT;
+    `,
+  },
 ];

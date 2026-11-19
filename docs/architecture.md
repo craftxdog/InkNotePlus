@@ -315,7 +315,28 @@ foco fuera del editor. La barra y los atajos aplican el mismo formato al
 Markdown, con historial de deshacer y autoguardado.
 
 En una línea vacía, `/` abre las inserciones Markdown. `[[` busca notas por
-título y crea enlaces `inknote://note/` que se abren dentro de la app.
+título y crea enlaces `inknote://note/` que se abren dentro de la app. El sistema
+entrega esos enlaces al proceso principal, que los retiene hasta que el renderer
+está listo. El menú de la app se genera desde el registro de comandos y los envía
+al renderer, donde se ejecutan igual que un atajo. Las actualizaciones consultan
+la última versión en GitHub y abren su descarga, porque las versiones publicadas
+no están firmadas y no pueden instalarse con `autoUpdater`.
+
+El servidor local (`src/main/local-api`) es opcional y escucha solo en `127.0.0.1`.
+Exige autenticación básica y rechaza solicitudes con `Origin` o con un `Host` ajeno,
+lo que impide que una página web lo use. Sus cambios pasan por los mismos comandos
+de notas que la interfaz y usan el control de revisiones. La contraseña se guarda
+cifrada con el llavero del sistema. Las rutas están en `docs/integrations/README.md`.
+
+El asistente de IA (`src/main/ai`) se ejecuta en el proceso principal. El renderer
+envía solo el texto que el usuario elige y nunca recibe la clave. Claude usa el SDK
+oficial de Anthropic, y los demás proveedores usan HTTPS o una dirección local.
+
+La sincronización (`src/main/sync`) compara el estado local con `sync_documents` y
+usa la API HTTP de CouchDB. Cada documento se cifra con AES-256-GCM y se autentica
+con su ID. Primero descarga y después sube. Si faltan muchas notas de golpe, se
+detiene para que una biblioteca dañada no borre las copias de los demás equipos.
+El kit para desplegar el servidor está en `docs/deploy/couchdb`.
 Cmd/Ctrl+K abre la paleta, con fuentes de comandos (`>`), notebooks (`b`),
 etiquetas (`t`), esquema (`#`) y temas (`h`). El esquema sale del árbol Lezer, por
 lo que ignora el código. `<mark>`, `<sub>` y `<sup>` sólo se aceptan como pares
@@ -561,11 +582,12 @@ Módulos actuales:
 - core.links: abre enlaces web permitidos mediante el navegador del sistema.
 - core.notes: abre SQLite, crea comandos, outbox e IPC de notas y biblioteca.
 
-El manifiesto de extensión sólo es un contrato declarativo. Valida versión de
-API, IDs con namespace, capacidades y contribuciones. No existe cargador,
-marketplace ni ejecución de código de terceros. Eso es intencional: un plugin
-futuro necesitará activate/deactivate, Disposable, capacidades mínimas y un
-entorno limitado; no acceso directo a la DB ni a Electron.
+Los plugins de terceros se ejecutan en un iframe con `sandbox="allow-scripts"`,
+origen opaco y una CSP sin red. El proceso principal también cancela sus peticiones
+y navegaciones. El código sólo se comunica por mensajes con un intermediario del
+renderer, que valida cada método. No hay acceso a Node, Electron ni la base de datos,
+y ninguna operación borra notas de forma definitiva. Un plugin activado sí puede leer
+y modificar notas. Los componentes React de Inkdrop no pueden cruzar este aislamiento.
 
 El renderer tiene un registro de componentes React de confianza y contribuciones
 a los layouts publicados por Inkdrop. Las altas devuelven Disposable y sólo el

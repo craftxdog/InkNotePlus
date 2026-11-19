@@ -16,6 +16,7 @@ import {
 import { failure, success, type Result } from '../../shared/ipc';
 import { isTrustedIpcEvent } from './note-handlers';
 import { setNotebookIconSchema } from '../../shared/notebook-icons';
+import { activityInputSchema } from '../../shared/activity';
 import { deleteTagSchema, updateTagSchema } from '../../shared/tags';
 
 export function registerLibraryHandlers(options: {
@@ -23,6 +24,7 @@ export function registerLibraryHandlers(options: {
   repository: Pick<
     SqliteLibraryRepository,
     | 'getSnapshot'
+    | 'getActivity'
     | 'createNotebook'
     | 'setNotebookIcon'
     | 'renameNotebook'
@@ -69,6 +71,9 @@ export function registerLibraryHandlers(options: {
 
   handle(LIBRARY_CHANNELS.get, libraryInputSchema, (input) =>
     success(repository.getSnapshot(input)),
+  );
+  handle(LIBRARY_CHANNELS.activity, activityInputSchema, (input) =>
+    success(repository.getActivity(input)),
   );
   handle(LIBRARY_CHANNELS.createNotebook, createNotebookSchema, (input) =>
     changed(repository.createNotebook(input)),

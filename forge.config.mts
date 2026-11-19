@@ -2,6 +2,7 @@ import type { ForgeConfig } from '@electron-forge/shared-types';
 import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerRpm } from '@electron-forge/maker-rpm';
+import { MakerZIP } from '@electron-forge/maker-zip';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
@@ -18,6 +19,7 @@ const linuxIcon = path.join(assets, 'icons', '512x512.png');
 const rpmOptions = {
   bin: metadata.productName,
   icon: linuxIcon,
+  mimeType: ['x-scheme-handler/inknote'],
   // The RPM maker's cp -r staging drops the helper's setuid bit.
   // Restore Chromium's required root ownership and mode after installation.
   post: `chown root:root /usr/lib/${metadata.name}/chrome-sandbox && chmod 4755 /usr/lib/${metadata.name}/chrome-sandbox`,
@@ -30,6 +32,11 @@ const config: ForgeConfig = {
     // https://www.electronforge.io/guides/create-and-add-icons
     icon: path.join(assets, 'icon'),
     asar: true,
+    protocols: [{ name: 'InkNote', schemes: ['inknote'] }],
+    extendInfo: {
+      NSAppleEventsUsageDescription:
+        'InkNote lee tus notas de Apple Notes solo cuando pides importarlas.',
+    },
     extraResource: [
       'resources/licenses',
       'LICENSE',
@@ -48,8 +55,16 @@ const config: ForgeConfig = {
         new URL('./config/windows-installer.nuspec', import.meta.url),
       ),
     }),
+    // Portable archives come from their own workflow, apart from the installers.
+    ...(process.env.INKNOTE_PORTABLE ? [new MakerZIP({})] : []),
     new MakerRpm({ options: rpmOptions }),
-    new MakerDeb({ options: { bin: metadata.productName, icon: linuxIcon } }),
+    new MakerDeb({
+      options: {
+        bin: metadata.productName,
+        icon: linuxIcon,
+        mimeType: ['x-scheme-handler/inknote'],
+      },
+    }),
   ],
   plugins: [
     new VitePlugin({

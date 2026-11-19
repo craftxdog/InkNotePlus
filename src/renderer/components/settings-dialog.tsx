@@ -9,7 +9,11 @@ import {
   Check,
   Calculator,
   Workflow,
+  Activity,
   Archive,
+  Plug,
+  Puzzle,
+  RefreshCw,
 } from 'lucide-react';
 import { useWorkspace } from '../state/workspace-context';
 import { ThemeSettings } from './theme-settings';
@@ -17,8 +21,14 @@ import { type Preferences, type EditorMode } from '../../shared/preferences';
 import { Modal } from './modal';
 import { CommitRange } from './commit-range';
 import { SettingGroup, FontField, LineHeight } from './settings-controls';
-import { Keybindings } from './keybindings-settings';
+import { Keybindings, KeymapFileStatus } from './keybindings-settings';
 import { BackupSettings } from './backup-settings';
+import { ActivitySettings } from './activity-settings';
+import { SyncSettings } from './sync-settings';
+import { PluginSettings } from './plugin-settings';
+import { IntegrationSettings } from './integration-settings';
+import { AiSettings, GithubSettings } from './ai-settings';
+import { GlobalShortcutField } from './global-shortcut-field';
 
 const sections = [
   { id: 'general', label: 'General', icon: Settings2 },
@@ -27,6 +37,10 @@ const sections = [
   { id: 'themes', label: 'Temas', icon: Palette },
   { id: 'keybindings', label: 'Atajos', icon: Keyboard },
   { id: 'backup', label: 'Respaldo', icon: Archive },
+  { id: 'activity', label: 'Actividad', icon: Activity },
+  { id: 'sync', label: 'Sincronización', icon: RefreshCw },
+  { id: 'plugins', label: 'Plugins', icon: Puzzle },
+  { id: 'integrations', label: 'Integraciones', icon: Plug },
 ] as const;
 type Section = (typeof sections)[number]['id'];
 
@@ -210,6 +224,34 @@ export function SettingsDialog() {
                     'Totales de la biblioteca, notebooks, estados y etiquetas.',
                   )}
                 </SettingGroup>
+                <SettingGroup title="Escritorio">
+                  {toggle(
+                    'trayEnabled',
+                    'Mostrar icono en la bandeja del sistema',
+                    'InkNote sigue abierto al cerrar la ventana y ofrece una nota rápida desde el icono.',
+                  )}
+                  <GlobalShortcutField
+                    label="Atajo global para mostrar u ocultar InkNote"
+                    value={preferences.globalToggleShortcut}
+                    onChange={(value) =>
+                      void update({ globalToggleShortcut: value })
+                    }
+                  />
+                  <GlobalShortcutField
+                    label="Atajo global para crear una nota rápida"
+                    value={preferences.globalQuickNoteShortcut}
+                    onChange={(value) =>
+                      void update({ globalQuickNoteShortcut: value })
+                    }
+                  />
+                </SettingGroup>
+                <SettingGroup title="Actualizaciones">
+                  {toggle(
+                    'checkForUpdates',
+                    'Buscar actualizaciones automáticamente',
+                    'Al iniciar y una vez al día, InkNote pregunta a GitHub cuál es la última versión. No envía tus notas ni tus datos.',
+                  )}
+                </SettingGroup>
                 <SettingGroup title="Paneles">
                   {toggle(
                     'developmentMode',
@@ -384,6 +426,16 @@ export function SettingsDialog() {
             )}
             {section === 'themes' && <ThemeSettings />}
             {section === 'backup' && <BackupSettings />}
+            {section === 'activity' && <ActivitySettings />}
+            {section === 'sync' && <SyncSettings />}
+            {section === 'plugins' && <PluginSettings />}
+            {section === 'integrations' && (
+              <>
+                <IntegrationSettings />
+                <AiSettings />
+                <GithubSettings />
+              </>
+            )}
             {section === 'keybindings' && (
               <>
                 <label className="settings-search">
@@ -401,6 +453,7 @@ export function SettingsDialog() {
                   secuencias se separan con espacios. Un campo vacío desactiva
                   el atajo.
                 </p>
+                <KeymapFileStatus />
                 <Keybindings query={query} />
                 <button
                   className="button"

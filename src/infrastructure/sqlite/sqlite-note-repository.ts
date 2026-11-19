@@ -376,6 +376,63 @@ export class SqliteNoteRepository implements NoteRepository {
     return row ? toNote(parseNoteRow(row)) : null;
   }
 
+  // Remote changes keep their timestamps and do not enter the local outbox.
+  applyRemote(note: Omit<Note, 'revision'>): Note {
+    return withSqliteWrite(this.database, () => {
+      const current = this.findById(note.id);
+      const next: Note = { ...note, revision: (current?.revision ?? 0) + 1 };
+      this.requireNotebook(next.metadata?.notebookId);
+      const metadata = JSON.stringify(next.metadata ?? defaultNoteMetadata);
+      // An upsert would override the OR IGNORE inside the tag triggers.
+      if (current)
+        this.database
+          .prepare(`
+            UPDATE notes SET title = ?, body = ?, is_pinned = ?, updated_at = ?,
+              deleted_at = ?, revision = ?, metadata_json = ?
+            WHERE id = ?
+          `)
+          .run(
+            next.title,
+            next.body,
+            Number(next.isPinned),
+            next.updatedAt,
+            next.deletedAt,
+            next.revision,
+            metadata,
+            next.id,
+          );
+      else
+        this.database
+          .prepare(`
+            INSERT INTO notes (
+              id, title, body, is_pinned, created_at, updated_at, deleted_at, revision, metadata_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `)
+          .run(
+            next.id,
+            next.title,
+            next.body,
+            Number(next.isPinned),
+            next.createdAt,
+            next.updatedAt,
+            next.deletedAt,
+            next.revision,
+            metadata,
+          );
+      this.insertRevision(next);
+      return next;
+    });
+  }
+
+  removeRemote(id: NoteId): void {
+    withSqliteWrite(this.database, () => {
+      this.database
+        .prepare('DELETE FROM note_revisions WHERE note_id = ?')
+        .run(id);
+      this.database.prepare('DELETE FROM notes WHERE id = ?').run(id);
+    });
+  }
+
   // The caller owns the transaction for the note, revision, and outbox.
   insertSnapshot(note: Note): void {
     this.requireNotebook(note.metadata?.notebookId);

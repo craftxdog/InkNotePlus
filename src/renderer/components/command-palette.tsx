@@ -62,6 +62,7 @@ export function CommandPalette() {
   const body = useWorkspace((state) => state.document.body);
   const noteId = useWorkspace((state) => state.document.noteId);
   const installedThemes = useWorkspace((state) => state.installedThemes);
+  const pluginCommands = useWorkspace((state) => state.pluginCommands);
   const [query, setQuery] = useState(
     () => store.getState().commandPaletteQuery,
   );
@@ -80,6 +81,8 @@ export function CommandPalette() {
   const items: PaletteItem[] = [
     ...shortcutCommands.flatMap((command): PaletteItem[] => {
       if (command.id === 'core:toggle-telescope') return [];
+      if (command.id === 'inknote:import-apple-notes' && platform !== 'darwin')
+        return [];
       if (command.scope === 'editor' && (!editor || inTrash)) return [];
       if (command.scope !== 'app' && command.scope !== 'editor') return [];
       return [
@@ -93,6 +96,16 @@ export function CommandPalette() {
         },
       ];
     }),
+    ...pluginCommands.map(({ plugin, name }): PaletteItem => ({
+      key: `plugin:${name}`,
+      source: 'commands',
+      label: name,
+      detail: `Plugin ${plugin}`,
+      enter: {
+        hint: 'Ejecutar',
+        run: () => void store.getState().runPluginCommand(name),
+      },
+    })),
     ...notebookTree(books).map(({ notebook, path }): PaletteItem => ({
       key: `book:${notebook.id}`,
       source: 'books',

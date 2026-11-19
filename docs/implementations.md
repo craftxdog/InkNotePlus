@@ -9,17 +9,17 @@
 InkNote tiene una base sólida y todas sus pruebas pasan, pero esas pruebas no cubrían
 varias diferencias con Inkdrop. La auditoría registró **23 funciones implementadas de
 forma incorrecta o incompleta** y **31 funciones sin implementar**. Ya están resueltos
-INC-01 a INC-08, INC-11, INC-12, INC-13, INC-14, INC-15, INC-16, INC-19, INC-23, FAL-02, FAL-03, FAL-04, FAL-05, FAL-08, FAL-09, FAL-10, FAL-11 y FAL-21, así que quedan **7 incorrectas y 22 faltantes**. FAL-01 está resuelto en parte y sigue contado como pendiente.
+INC-01 a INC-11, INC-12, INC-13, INC-14, INC-15, INC-16, INC-17, INC-18, INC-19, INC-20, INC-21, INC-22, INC-23, FAL-01, FAL-02, FAL-03, FAL-04, FAL-05, FAL-07, FAL-08, FAL-09, FAL-10, FAL-11, FAL-12, FAL-13, FAL-14, FAL-15, FAL-16, FAL-17, FAL-19, FAL-20, FAL-21, FAL-22, FAL-23, FAL-24, FAL-25 y FAL-26, así que quedan **0 incorrectas y 7 faltantes**. FAL-06, FAL-18, FAL-28, FAL-29 y FAL-30 están resueltos en parte y siguen contados como pendiente.
 
-| Prioridad     | Significado                                       | Incorrectas | Faltantes |  Total |
-| ------------- | ------------------------------------------------- | ----------: | --------: | -----: |
-| P0            | Riesgo para el uso diario o los datos (resueltos) |           0 |         0 |      0 |
-| P1            | Función básica que el usuario espera              |           0 |         3 |      3 |
-| P2            | Paridad importante                                |           5 |        10 |     15 |
-| P3            | Ecosistema, integraciones y mejoras               |           2 |         9 |     11 |
-| **Pendiente** |                                                   |       **7** |    **22** | **29** |
+| Prioridad     | Significado                                       | Incorrectas | Faltantes | Total |
+| ------------- | ------------------------------------------------- | ----------: | --------: | ----: |
+| P0            | Riesgo para el uso diario o los datos (resueltos) |           0 |         0 |     0 |
+| P1            | Función básica que el usuario espera              |           0 |         1 |     1 |
+| P2            | Paridad importante                                |           0 |         1 |     1 |
+| P3            | Ecosistema, integraciones y mejoras               |           0 |         5 |     5 |
+| **Pendiente** |                                                   |       **0** |     **7** | **7** |
 
-El siguiente bloque recomendado es la integración con el escritorio: **FAL-06** (actualización automática), **FAL-07** (enlaces externos) e **INC-17** (menú de la app).
+Lo que queda depende sobre todo de recursos externos: certificados de firma (**FAL-06**), un servicio de publicación (**FAL-27**), publicar el Web Clipper (**FAL-28**) y la app móvil (**FAL-31**).
 
 ## Resultados de las pruebas
 
@@ -158,6 +158,8 @@ Estas tres decisiones cambian el alcance del trabajo, así que conviene resolver
 
 #### INC-09. Los ID de comando no coinciden con Inkdrop
 
+**Estado: resuelto el 2026-11-18.** Los comandos usan los ID de Inkdrop y los atajos guardados con los nombres antiguos siguen funcionando.
+
 - **Evidencia (Código):** [keybindings.ts](../src/shared/keybindings.ts) usa nombres propios.
 
 | InkNote                   | Inkdrop                               |
@@ -175,6 +177,8 @@ Estas tres decisiones cambian el alcance del trabajo, así que conviene resolver
 - **Aceptación:** los atajos personalizados existentes siguen funcionando tras actualizar.
 
 #### INC-10. Faltan atajos por defecto
+
+**Estado: resuelto el 2026-11-18.** Insertar enlace, mover notas y abrir una nota en una ventana separada ya tienen atajo.
 
 - **Evidencia (Sonda):** ninguna de estas combinaciones produce efecto.
 
@@ -244,11 +248,15 @@ Estas tres decisiones cambian el alcance del trabajo, así que conviene resolver
 
 #### INC-17. La app usa el menú por defecto de Electron
 
+**Estado: resuelto el 2026-11-18.** Menús Archivo, Edición, Vista, Navegar, Ventana y Ayuda, creados desde el registro de comandos y con los atajos personalizados. Las herramientas de desarrollo sólo aparecen en modo desarrollo. Las pruebas cubren la plantilla y el envío de comandos, pero el menú nativo no se pulsó de forma automatizada.
+
 - **Evidencia (Código):** no se llama a `Menu.setApplicationMenu`.
 - **Inkdrop:** menús propios, entre ellos File, Edit, View y Navigate.
 - **Cambio:** construir el menú desde el registro de comandos, con los atajos actuales y sin herramientas de desarrollo en producción.
 
 #### INC-18. Las plantillas están incompletas
+
+**Estado: resuelto el 2026-11-18.** Hay diez plantillas en cinco categorías, con descripción y búsqueda, y las referencias `book:ID` y `tag:ID` se resuelven.
 
 - **Evidencia (Código):** solo hay una plantilla integrada, en [builtin-templates.ts:5](../src/renderer/templates/builtin-templates.ts:5). Una referencia `book:ID` hace fallar [template-engine.ts:116](../src/renderer/templates/template-engine.ts:116), y `tag:ID` se guarda como nombre de etiqueta.
 - **Inkdrop:** [categorías Brainstorming, Debugging, Learning, Planning y Productivity](https://docs.inkdrop.app/reference/note-templates).
@@ -264,6 +272,8 @@ Estas tres decisiones cambian el alcance del trabajo, así que conviene resolver
 
 #### INC-20. El catálogo de iconos de notebook es muy reducido
 
+**Estado: resuelto el 2026-11-18.** El selector busca en todo el catálogo de Lucide y cada icono se carga bajo demanda.
+
 - **Evidencia (Código):** [notebook-icons.ts](../src/shared/notebook-icons.ts) contiene 24 iconos.
 - **Inkdrop:** [más de 1.500 iconos Lucide](https://www.inkdrop.app/features).
 - **Cambio:** ampliar el catálogo con búsqueda y carga bajo demanda, sin aumentar el bundle inicial.
@@ -272,10 +282,14 @@ Estas tres decisiones cambian el alcance del trabajo, así que conviene resolver
 
 #### INC-21. Los códigos de emoji no se renderizan
 
+**Estado: resuelto el 2026-11-18.** Los códigos de emoji se muestran en el preview y en la exportación, sin tocar el código.
+
 - **Evidencia (Sonda):** `:smile:` aparece como texto en el preview. El autocompletado sí inserta el emoji.
 - **Cambio:** añadir un plugin remark con `gemoji` que respete el código en línea y los bloques.
 
 #### INC-22. Los atajos con Option pueden fallar en macOS (sin confirmar)
+
+**Estado: resuelto el 2026-11-18.** En macOS se compara también la tecla física. Se comprobó con eventos simulados, no con un teclado físico.
 
 - **Evidencia (Código):** [shortcuts.ts:32](../src/renderer/shortcuts.ts:32) compara `event.key`, y Option puede cambiar ese carácter en macOS. Afecta a `Mod-Alt-Shift-f` y a futuros atajos como Cmd+Alt+K.
 - **Cambio:** probarlo con un teclado físico y, si falla, comparar también `event.code`.
@@ -303,54 +317,54 @@ La ausencia de estas funciones se comprobó en el código fuente.
 
 ### P1: funciones básicas
 
-| ID     | Función                  | Qué ofrece Inkdrop                                                               | Implementación propuesta                                                                                                                                                                                                                 |
-| ------ | ------------------------ | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| FAL-01 | Importación              | Evernote, Apple Notes, Notion, Bear, Markdown y HTML, con subcarpetas e imágenes | **Resuelto en parte el 2026-11-18.** Importa Markdown, HTML, carpetas, imágenes y Evernote `.enex`, además de las exportaciones de Notion y Bear. Falta Apple Notes, que no ofrece un formato de exportación y necesita acceso a la app. |
-| FAL-02 | Historial de revisiones  | Lista, diff, restaurar y deshacer la restauración                                | **Resuelto el 2026-11-18.** Lista de versiones, diff, restaurar y deshacer la restauración.                                                                                                                                              |
-| FAL-03 | Gestión de notebooks     | Renombrar, mover y ordenar con arrastre                                          | **Resuelto el 2026-11-18.** Renombrar, mover y ordenar con arrastre o desde el menú contextual.                                                                                                                                          |
-| FAL-04 | Duplicar nota            | Comando `core:duplicate-note` y Cmd/Ctrl+D                                       | **Resuelto el 2026-11-18.** Disponible con Cmd/Ctrl+D, en el menú de la nota y en la lista.                                                                                                                                              |
-| FAL-05 | Mover notas arrastrando  | Arrastrar de la lista a un notebook                                              | **Resuelto el 2026-11-18.** Admite selección múltiple y soltar en «Sin notebook».                                                                                                                                                        |
-| FAL-06 | Actualización automática | Actualización integrada en el instalador                                         | Usar `autoUpdater` en Windows y macOS. macOS exige firma real, y en Linux basta con avisar.                                                                                                                                              |
-| FAL-07 | Enlaces externos a notas | Protocolo `inkdrop://` registrado en el sistema                                  | Registrar `inknote://` y validar la URL. Depende de INC-02.                                                                                                                                                                              |
+| ID     | Función                  | Qué ofrece Inkdrop                                                               | Implementación propuesta                                                                                                                                                                                                                                         |
+| ------ | ------------------------ | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FAL-01 | Importación              | Evernote, Apple Notes, Notion, Bear, Markdown y HTML, con subcarpetas e imágenes | **Resuelto el 2026-11-18.** Importa Markdown, HTML, carpetas, imágenes, Evernote `.enex`, Notion, Bear y Apple Notes en macOS. Las notas bloqueadas de Apple Notes no se importan. Esa lectura no se probó contra una biblioteca real de Notas.                  |
+| FAL-02 | Historial de revisiones  | Lista, diff, restaurar y deshacer la restauración                                | **Resuelto el 2026-11-18.** Lista de versiones, diff, restaurar y deshacer la restauración.                                                                                                                                                                      |
+| FAL-03 | Gestión de notebooks     | Renombrar, mover y ordenar con arrastre                                          | **Resuelto el 2026-11-18.** Renombrar, mover y ordenar con arrastre o desde el menú contextual.                                                                                                                                                                  |
+| FAL-04 | Duplicar nota            | Comando `core:duplicate-note` y Cmd/Ctrl+D                                       | **Resuelto el 2026-11-18.** Disponible con Cmd/Ctrl+D, en el menú de la nota y en la lista.                                                                                                                                                                      |
+| FAL-05 | Mover notas arrastrando  | Arrastrar de la lista a un notebook                                              | **Resuelto el 2026-11-18.** Admite selección múltiple y soltar en «Sin notebook».                                                                                                                                                                                |
+| FAL-06 | Actualización automática | Actualización integrada en el instalador                                         | **Resuelto en parte el 2026-11-18.** Busca versiones en GitHub al iniciar y cada día, avisa y abre la descarga. La opción se desactiva en Preferencias. Falta la instalación automática, que exige firmar los instaladores y publicar un canal de actualización. |
+| FAL-07 | Enlaces externos a notas | Protocolo `inkdrop://` registrado en el sistema                                  | **Resuelto el 2026-11-18.** `inknote://note/<id>` abre la nota con la app abierta o cerrada. Las URL no válidas se ignoran.                                                                                                                                      |
 
 ### P2: paridad importante
 
-| ID     | Función                        | Qué ofrece Inkdrop                                                         | Implementación propuesta                                                                                                            |
-| ------ | ------------------------------ | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| FAL-08 | Esquema de la nota             | Encabezados y tareas con la posición actual resaltada                      | **Resuelto el 2026-11-18.** Panel con la posición actual y fuente `#` en la paleta.                                                 |
-| FAL-09 | Buscar en el preview           | Búsqueda también dentro de bloques de código                               | **Resuelto el 2026-11-18.** Cmd/Ctrl+F fuera del editor busca en el preview, también dentro del código.                             |
-| FAL-10 | Visor de imágenes              | Se abre con doble clic                                                     | **Resuelto el 2026-11-18.** Se abre con doble clic o Enter, con zoom por botones y teclado.                                         |
-| FAL-11 | Pegado inteligente de enlaces  | Pegar URL sobre una selección crea un enlace, con título automático        | **Resuelto el 2026-11-18.** Menú de formato al pegar. El título se pide sólo con la preferencia activa o a petición en cada enlace. |
-| FAL-12 | Tema automático claro y oscuro | Sigue la apariencia del sistema                                            | Añadir un tema claro y otro oscuro en preferencias y escuchar `nativeTheme`.                                                        |
-| FAL-13 | Archivo `keymap.json`          | Selectores CSS, secuencias, `native!`, `unset!` y `abort!`                 | Cargar y vigilar el archivo, validar con Zod y mostrar los errores en Preferencias.                                                 |
-| FAL-14 | Servidor HTTP local            | Puerto 19840, autenticación básica, notas, notebooks, etiquetas y archivos | Desactivado por defecto, solo en loopback y con credenciales en el llavero del sistema.                                             |
-| FAL-15 | Servidor MCP                   | Agentes que buscan, leen, crean y actualizan notas                         | Construirlo sobre FAL-14 y conservar cursor e historial al editar la nota abierta.                                                  |
-| FAL-16 | Sincronización                 | Servidor propio o CouchDB, con fusión automática de conflictos             | Implementar `SyncAdapter`, notebooks, etiquetas, adjuntos y conflictos. Requiere D-2.                                               |
-| FAL-17 | Cifrado de extremo a extremo   | AES-256-GCM con clave derivada por PBKDF2                                  | Cifrar antes de enviar, con la clave en el llavero. Debe llegar junto con FAL-16.                                                   |
-| FAL-18 | Plugins                        | `activate`, `deactivate`, comandos, layouts e `ipm`                        | Crear el cargador sobre el manifiesto actual, con permisos limitados. Requiere D-3.                                                 |
-| FAL-19 | Script `init.js`               | JavaScript del usuario al arrancar                                         | Ofrecerlo solo con la API de FAL-18, activación explícita y sin acceso a Node.                                                      |
-| FAL-20 | Atajos globales y nota rápida  | Mostrar u ocultar la ventana, nota rápida, bandeja del sistema             | Usar `globalShortcut`, `Tray` y una segunda ventana con la misma seguridad.                                                         |
-| FAL-21 | Muestras de color              | Muestra junto a `#hex`, `rgb()` y `hsl()` en código en línea               | **Resuelto el 2026-11-18.** Disponible en el preview y en la exportación a HTML y PDF.                                              |
-| FAL-22 | Copiar ID y arrastrar enlaces  | Copiar ID de nota, notebook y etiqueta. Arrastrar una nota como enlace     | Añadir entradas al menú contextual y datos al arrastre.                                                                             |
+| ID     | Función                        | Qué ofrece Inkdrop                                                         | Implementación propuesta                                                                                                                                                                                                                                                                     |
+| ------ | ------------------------------ | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FAL-08 | Esquema de la nota             | Encabezados y tareas con la posición actual resaltada                      | **Resuelto el 2026-11-18.** Panel con la posición actual y fuente `#` en la paleta.                                                                                                                                                                                                          |
+| FAL-09 | Buscar en el preview           | Búsqueda también dentro de bloques de código                               | **Resuelto el 2026-11-18.** Cmd/Ctrl+F fuera del editor busca en el preview, también dentro del código.                                                                                                                                                                                      |
+| FAL-10 | Visor de imágenes              | Se abre con doble clic                                                     | **Resuelto el 2026-11-18.** Se abre con doble clic o Enter, con zoom por botones y teclado.                                                                                                                                                                                                  |
+| FAL-11 | Pegado inteligente de enlaces  | Pegar URL sobre una selección crea un enlace, con título automático        | **Resuelto el 2026-11-18.** Menú de formato al pegar. El título se pide sólo con la preferencia activa o a petición en cada enlace.                                                                                                                                                          |
+| FAL-12 | Tema automático claro y oscuro | Sigue la apariencia del sistema                                            | **Resuelto el 2026-11-18.** Preferencias permite seguir la apariencia del sistema con un tema claro y otro oscuro.                                                                                                                                                                           |
+| FAL-13 | Archivo `keymap.json`          | Selectores CSS, secuencias, `native!`, `unset!` y `abort!`                 | **Resuelto el 2026-11-18.** `keymap.json` admite selectores, secuencias, `native!`, `unset!` y `abort!`, se recarga al guardar y muestra sus errores en Preferencias.                                                                                                                        |
+| FAL-14 | Servidor HTTP local            | Puerto 19840, autenticación básica, notas, notebooks, etiquetas y archivos | **Resuelto el 2026-11-18.** API HTTP desactivada por defecto, solo en `127.0.0.1`, con contraseña en el llavero del sistema. Ofrece notas, notebooks y etiquetas. No expone archivos adjuntos.                                                                                               |
+| FAL-15 | Servidor MCP                   | Agentes que buscan, leen, crean y actualizan notas                         | **Resuelto el 2026-11-18.** Servidor MCP en `/mcp` para buscar, leer, crear y editar notas, sin herramientas de borrado. Al editar la nota abierta se conservan el cursor y el historial.                                                                                                    |
+| FAL-16 | Sincronización                 | Servidor propio o CouchDB, con fusión automática de conflictos             | **Resuelto el 2026-11-18.** Sincroniza notas, notebooks, etiquetas e imágenes de hasta 4 MB con un servidor CouchDB. En un conflicto gana la versión más reciente y la otra se conserva como copia.                                                                                          |
+| FAL-17 | Cifrado de extremo a extremo   | AES-256-GCM con clave derivada por PBKDF2                                  | **Resuelto el 2026-11-18.** Todo se cifra con AES-256-GCM antes de salir del equipo, con una clave derivada por PBKDF2. El servidor nunca recibe la frase de cifrado.                                                                                                                        |
+| FAL-18 | Plugins                        | `activate`, `deactivate`, comandos, layouts e `ipm`                        | **Resuelto en parte el 2026-11-18.** Los plugins se ejecutan aislados, sin Node ni red, con `activate`, `deactivate`, comandos, atajos, notas y notificaciones. No admite componentes visuales (`layouts`), plugins que usen Node o Electron, ni la instalación desde el catálogo con `ipm`. |
+| FAL-19 | Script `init.js`               | JavaScript del usuario al arrancar                                         | **Resuelto el 2026-11-18.** `init.js` se activa de forma explícita y se ejecuta con las mismas limitaciones que un plugin.                                                                                                                                                                   |
+| FAL-20 | Atajos globales y nota rápida  | Mostrar u ocultar la ventana, nota rápida, bandeja del sistema             | **Resuelto el 2026-11-18.** Hay atajos globales, bandeja del sistema y nota rápida en su propia ventana, todos desactivados por defecto.                                                                                                                                                     |
+| FAL-21 | Muestras de color              | Muestra junto a `#hex`, `rgb()` y `hsl()` en código en línea               | **Resuelto el 2026-11-18.** Disponible en el preview y en la exportación a HTML y PDF.                                                                                                                                                                                                       |
+| FAL-22 | Copiar ID y arrastrar enlaces  | Copiar ID de nota, notebook y etiqueta. Arrastrar una nota como enlace     | **Resuelto el 2026-11-18.** Copia el ID de notas y notebooks y el nombre de etiquetas. Arrastrar una nota al editor inserta su enlace.                                                                                                                                                       |
 
 ### P3: ecosistema
 
-| ID     | Función                     | Qué ofrece Inkdrop                                            | Implementación propuesta                                                  |
-| ------ | --------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| FAL-23 | Fragmentos de GitHub        | Código incrustado desde un enlace con rango de líneas         | Solo a petición del usuario, con token en el llavero para repos privados. |
-| FAL-24 | Estadísticas de actividad   | Notas y tareas de 52 semanas, con rachas                      | Calcularlas localmente desde `note_revisions`.                            |
-| FAL-25 | Asistente de IA en línea    | Clave propia, Anthropic o compatible con OpenAI, y Ollama     | Opcional, con la clave en el llavero y un interruptor global.             |
-| FAL-26 | Sugerencias de edición      | Texto fantasma, Tab acepta y Esc descarta                     | Construirlo después de FAL-25, en modo manual por defecto.                |
-| FAL-27 | Publicar notas en la web    | Enlace público de lectura                                     | Requiere un servicio externo y una decisión de producto.                  |
-| FAL-28 | Captura e integraciones     | Web Clipper, Kindle, Alfred y Raycast                         | Construirlas sobre FAL-14.                                                |
-| FAL-29 | Más formatos de instalación | Windows y Linux ARM64, AppImage, Snap, Flathub, zip, Homebrew | Ampliar [forge.config.mts:43](../forge.config.mts:43) y la matriz de CI.  |
-| FAL-30 | Redes corporativas          | Proxy, certificados propios y diagnóstico de red              | Hacerlo junto con FAL-16.                                                 |
-| FAL-31 | Aplicación móvil            | iOS y Android con el mismo editor                             | Proyecto aparte. Depende de FAL-16.                                       |
+| ID     | Función                     | Qué ofrece Inkdrop                                            | Implementación propuesta                                                                                                                                                                                                                                           |
+| ------ | --------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| FAL-23 | Fragmentos de GitHub        | Código incrustado desde un enlace con rango de líneas         | **Resuelto el 2026-11-18.** Inserta un bloque de código desde un enlace de GitHub con rango de líneas, solo a petición, con token opcional en el llavero.                                                                                                          |
+| FAL-24 | Estadísticas de actividad   | Notas y tareas de 52 semanas, con rachas                      | **Resuelto el 2026-11-18.** Preferencias muestra 52 semanas de actividad y las rachas, calculadas en el equipo.                                                                                                                                                    |
+| FAL-25 | Asistente de IA en línea    | Clave propia, Anthropic o compatible con OpenAI, y Ollama     | **Resuelto el 2026-11-18.** Asistente opcional con Anthropic, proveedores compatibles con OpenAI y Ollama. La clave queda en el llavero y nunca llega a la interfaz. No se probó con una clave real de un proveedor.                                               |
+| FAL-26 | Sugerencias de edición      | Texto fantasma, Tab acepta y Esc descarta                     | **Resuelto el 2026-11-18.** Texto fantasma manual por defecto y automático si se activa. Tab acepta y Esc descarta.                                                                                                                                                |
+| FAL-27 | Publicar notas en la web    | Enlace público de lectura                                     | Requiere un servicio externo y una decisión de producto.                                                                                                                                                                                                           |
+| FAL-28 | Captura e integraciones     | Web Clipper, Kindle, Alfred y Raycast                         | **Resuelto en parte el 2026-11-18.** Importa recortes de Kindle e incluye un script para Raycast y Alfred. Falta el Web Clipper, que necesita una extensión de navegador publicada.                                                                                |
+| FAL-29 | Más formatos de instalación | Windows y Linux ARM64, AppImage, Snap, Flathub, zip, Homebrew | **Resuelto en parte el 2026-11-18.** Añade archivos ZIP para macOS, Windows y Linux, incluidos Windows y Linux ARM64, y una plantilla de Homebrew. Faltan AppImage, Snap y Flathub. El flujo de publicación aún no se ejecutó en GitHub.                           |
+| FAL-30 | Redes corporativas          | Proxy, certificados propios y diagnóstico de red              | **Resuelto en parte el 2026-11-18.** La sincronización usa el proxy del sistema o uno propio, confía en los certificados del sistema e incluye un diagnóstico de conexión. El proxy no se probó en una red real y no se pueden importar certificados desde la app. |
+| FAL-31 | Aplicación móvil            | iOS y Android con el mismo editor                             | Proyecto aparte. Depende de FAL-16.                                                                                                                                                                                                                                |
 
 ## Orden de trabajo recomendado
 
 1. **Datos:** Apple Notes en FAL-01.
-2. **Integración con el escritorio:** INC-09, INC-10, INC-17, FAL-06, FAL-07, FAL-12, FAL-13 y FAL-20.
+2. **Integración con el escritorio:** ventana separada de INC-10 y FAL-20, FAL-29 e instalación automática de FAL-06.
 3. **Plataforma:** FAL-14, FAL-15, FAL-18, FAL-19, FAL-16 y FAL-17, según D-2 y D-3.
 4. **Ecosistema:** el resto de tareas P3.
 

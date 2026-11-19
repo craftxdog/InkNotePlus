@@ -1,5 +1,13 @@
 # Historial de versiones
 
+## Sin publicar
+
+### Corregido
+
+- Al desplazar el editor en notas largas, el preview avanza de forma continua.
+  Ya no sube y baja al cruzar líneas en blanco, bloques de código, tablas o
+  diagramas, y busca la posición sin recorrer todo el preview en cada frame.
+
 ## 1.5.0 — 2026-11-19
 
 ### Añadido

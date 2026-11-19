@@ -387,13 +387,14 @@ it('follows the user pane across preview wheel, unmapped editing, and editor whe
     panes.flushFrame();
     expect(panes.positions(12)).toEqual({ editor: 150, preview: 150 });
 
-    panes.scroll(panes.editor, 100, true);
+    // The reference row (35% of the pane) lands on line 12's first letter.
+    panes.scroll(panes.editor, 170, true);
     panes.flushFrame();
-    expect(panes.positions()).toEqual({ editor: 0, preview: 0 });
+    expect(panes.positions(12)).toEqual({ editor: 105, preview: 105 });
     panes.preview.dispatchEvent(new Event('scroll'));
     panes.sync.refresh();
     panes.flushFrame();
-    expect(panes.positions()).toEqual({ editor: 0, preview: 0 });
+    expect(panes.positions(12)).toEqual({ editor: 105, preview: 105 });
   } finally {
     panes.destroy();
   }

@@ -43,7 +43,23 @@ export function sourceTextOffsets(
   return offsets;
 }
 
-function spanRange(view: EditorView, span: HTMLElement) {
+export interface TextRange {
+  from: number;
+  to: number;
+  text: Text;
+}
+
+// Rendered text in source order. Footnotes render at the end but sort by source.
+export function collectTextRanges(view: EditorView, preview: HTMLElement) {
+  const ranges: TextRange[] = [];
+  for (const span of preview.querySelectorAll<HTMLElement>(selector)) {
+    const range = spanRange(view, span);
+    if (range) ranges.push(range);
+  }
+  return ranges.sort((a, b) => a.from - b.from || a.to - b.to);
+}
+
+function spanRange(view: EditorView, span: HTMLElement): TextRange | null {
   const line = Number(span.dataset.sourceTextLine),
     endLine = Number(span.dataset.sourceTextEndLine);
   if (
@@ -81,13 +97,12 @@ export function previewAtSource(
   preview: HTMLElement,
   position: number,
   referenceY?: number,
+  ranges: readonly TextRange[] = collectTextRanges(view, preview),
 ) {
-  let before: ReturnType<typeof spanRange> = null,
-    after: ReturnType<typeof spanRange> = null,
-    containing: ReturnType<typeof spanRange> = null;
-  for (const span of preview.querySelectorAll<HTMLElement>(selector)) {
-    const range = spanRange(view, span);
-    if (!range) continue;
+  let before: TextRange | null = null,
+    after: TextRange | null = null,
+    containing: TextRange | null = null;
+  for (const range of ranges) {
     if (range.from <= position && range.to >= position) {
       containing = range;
       break;
@@ -103,7 +118,7 @@ export function previewAtSource(
   // Hidden URLs can occupy several wrapped rows. Choose the closest visible
   // source row, rather than counting Markdown characters that have no glyph.
   const candidates = containing ? [containing] : [after, before];
-  let closest: ReturnType<typeof spanRange> = null,
+  let closest: TextRange | null = null,
     distance = Infinity;
   for (const range of candidates) {
     if (!range) continue;
@@ -122,7 +137,7 @@ export function previewAtSource(
     }
   }
   if (!closest) return null;
-  const { from, to, text } = closest;
+  const { from, to } = closest;
   // Do not jump to a different block while editing code or an equation.
   if (
     view.state.doc.lineAt(position).number <
@@ -130,6 +145,16 @@ export function previewAtSource(
     view.state.doc.lineAt(position).number > view.state.doc.lineAt(to).number
   )
     return null;
+  return previewGlyph(view, preview, closest, position);
+}
+
+// The preview position of the rendered letter for a source position.
+export function previewGlyph(
+  view: EditorView,
+  preview: HTMLElement,
+  { from, to, text }: TextRange,
+  position: number,
+) {
   const source = view.state.doc.sliceString(from, to),
     raw = Math.max(0, position - from);
   const offsets =

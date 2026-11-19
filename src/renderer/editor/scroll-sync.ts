@@ -1,6 +1,12 @@
 import type { EditorView } from '@codemirror/view';
 import { MapMode, type ChangeDesc } from '@codemirror/state';
-import { previewAtSource, sourceAtPreview } from './preview-source-position';
+import {
+  collectTextRanges,
+  previewAtSource,
+  previewGlyph,
+  sourceAtPreview,
+  type TextRange,
+} from './preview-source-position';
 
 export interface ScrollAnchor {
   editor: number;
@@ -48,7 +54,95 @@ export function createScrollSync(
   const editor = view.scrollDOM;
   let lastEditorTop = editor.scrollTop;
   let lastSourcePosition: number | null = null;
+  let ranges: TextRange[] | null = null;
+  const textRanges = () => (ranges ??= collectTextRanges(view, preview));
+  // Screen top of a source position, estimated when CodeMirror has not drawn it.
+  const editorTop = (position: number) =>
+    view.coordsAtPos(position)?.top ??
+    view.documentTop + view.lineBlockAt(position).top;
+  // A letter's position in both panes, in scroll content coordinates.
+  function letterPoint(position: number, range: TextRange, bounds: DOMRect) {
+    const glyph = previewGlyph(view, preview, range, position);
+    return glyph
+      ? {
+          position: glyph.position,
+          editor: editorTop(glyph.position) - bounds.top + editor.scrollTop,
+          preview: glyph.y,
+        }
+      : null;
+  }
+  // Blends the letters around the reference row so the preview moves without
+  // jumps. Blank lines, code, formulas and diagrams lie between two letters;
+  // their measured block edges keep the blend true to their rendered height.
+  function blendedScroll(referenceY: number, bounds: DOMRect, left: number) {
+    const position = view.posAtCoords({ x: left, y: referenceY }, false);
+    const list = textRanges();
+    if (position === null || !list.length) return null;
+    let low = 0,
+      high = list.length - 1;
+    while (low < high) {
+      const middle = Math.ceil((low + high) / 2);
+      if (list[middle].from <= position) low = middle;
+      else high = middle - 1;
+    }
+    let before: ReturnType<typeof letterPoint> = null;
+    for (let index = low; index >= 0 && index > low - 64; index--) {
+      const range = list[index];
+      if (range.from > position || range.to <= range.from) continue;
+      before = letterPoint(Math.min(position, range.to - 1), range, bounds);
+      break;
+    }
+    const row = view.coordsAtPos(position);
+    const next = row
+      ? view.posAtCoords({ x: left, y: row.bottom + 1 }, false)
+      : null;
+    let after: ReturnType<typeof letterPoint> = null;
+    for (
+      let index = Math.max(0, low - 1);
+      index < list.length && index < low + 64;
+      index++
+    ) {
+      const range = list[index];
+      if (
+        next !== null &&
+        next > position &&
+        range.from <= next &&
+        range.to > next
+      ) {
+        after = letterPoint(next, range, bounds);
+        break;
+      }
+      if (range.from > position) {
+        after = letterPoint(range.from, range, bounds);
+        break;
+      }
+    }
+    const reference = referenceY - bounds.top + editor.scrollTop;
+    const offset = reference - editor.scrollTop;
+    if (before && after && after.editor > before.editor) {
+      // Letters and block edges are measured differently; keep the map monotonic.
+      const points = [{ editor: before.editor, preview: before.preview }];
+      for (const point of [...anchors, after]) {
+        const last = points[points.length - 1];
+        if (
+          point.editor > last.editor &&
+          point.editor <= after.editor &&
+          point.preview >= last.preview &&
+          point.preview <= after.preview
+        )
+          points.push({ editor: point.editor, preview: point.preview });
+      }
+      if (points[points.length - 1].editor !== after.editor) points.push(after);
+      lastSourcePosition = before.position;
+      return mapScroll(points, reference, 'editor') - offset;
+    }
+    const single = before ?? after;
+    if (!single) return null;
+    lastSourcePosition = single.position;
+    return single.preview - (single.editor - editor.scrollTop);
+  }
   function measure() {
+    ranges = null;
     const previewTop = preview.getBoundingClientRect().top;
     const editorPadding =
       view.documentTop - editor.getBoundingClientRect().top + editor.scrollTop;
@@ -121,35 +215,41 @@ export function createScrollSync(
     let value = trackingCursor
       ? preview.scrollTop + editor.scrollTop - lastEditorTop
       : mapScroll(anchors, source.scrollTop, owner);
-    if (owner === 'editor') {
-      const referenceY = editorBounds.top + editor.clientHeight * 0.35;
-      const position = trackingCursor
-        ? view.state.selection.main.head
-        : view.posAtCoords(
-            {
-              x: Math.max(
-                editorBounds.left + 1,
-                view.contentDOM.getBoundingClientRect().left + 13,
-              ),
-              y: referenceY,
-            },
-            false,
-          );
-      if (position !== null) {
+    const referenceY = editorBounds.top + editor.clientHeight * 0.35;
+    if (owner === 'editor' && !trackingCursor) {
+      const blended = blendedScroll(
+        referenceY,
+        editorBounds,
+        Math.max(
+          editorBounds.left + 1,
+          view.contentDOM.getBoundingClientRect().left + 13,
+        ),
+      );
+      if (blended !== null) value = blended;
+    } else if (owner === 'editor') {
+      const position = view.state.selection.main.head;
+      {
         // coordsAtPos measures a visual row, including soft wrapping.
         // https://codemirror.net/docs/ref/#view.EditorView.coordsAtPos
         const caretPoint = previewAtSource(
           view,
           preview,
           position,
-          trackingCursor ? undefined : referenceY,
+          undefined,
+          textRanges(),
         );
         // Re-measure the last visible source anchor after an image, formula or
         // diagram changes height. Pixel deltas alone cannot follow that reflow.
         const point =
           caretPoint ??
-          (trackingCursor && lastSourcePosition !== null
-            ? previewAtSource(view, preview, lastSourcePosition)
+          (lastSourcePosition !== null
+            ? previewAtSource(
+                view,
+                preview,
+                lastSourcePosition,
+                undefined,
+                textRanges(),
+              )
             : null);
         // Measure the source glyph that produced the preview anchor. A caret
         // at the end of a table cell can already sit on the next soft-wrapped

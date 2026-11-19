@@ -342,6 +342,15 @@ Las tres decisiones están tomadas.
 
 - **Cambio:** mantener el modelo interno y crear un adaptador para FAL-01, FAL-14 y FAL-16.
 
+#### INC-24. El preview sube y baja al desplazar notas largas
+
+**Estado: resuelto el 2026-11-19.** El preview interpola entre las letras que rodean la fila de referencia y los bordes medidos de los bloques intermedios. Medido con la app empaquetada sobre una nota sintética de 1104 líneas y dos notas reales con tablas y diagramas.
+
+- **Evidencia (Sonda):** al desplazar el editor, el preview retrocedía en cada línea en blanco o bloque (262 retrocesos y un salto de 171 px en la nota sintética).
+- **Causa:** sin una letra en la fila de referencia, el preview saltaba al mapa de bloques y luego volvía a la letra anterior. Además, cada frame recorría todos los textos del preview.
+- **Cambio:** interpolación continua entre letras y bordes de bloque, y una lista ordenada de rangos de texto que se reutiliza mientras no cambie la medición.
+- **Aceptación:** el preview no retrocede al desplazar el editor y avanza sin saltos salvo al llegar al final.
+
 ## Parte 2: funciones sin implementar
 
 La ausencia de estas funciones se comprobó en el código fuente.

@@ -288,8 +288,16 @@ zona de lectura; al escribir es la posición del cursor. Un preview diferido
 sólo participa cuando corresponde al borrador actual. Si el cursor no tiene
 un glifo en el preview, por ejemplo tras Enter en una línea vacía, conserva el
 anclaje visual y acompaña únicamente el desplazamiento real del editor. Al
-volver a escribir, retoma las coordenadas del texto renderizado. El mapa de
-bloques sigue siendo el respaldo al desplazar manualmente.
+volver a escribir, retoma las coordenadas del texto renderizado.
+
+Al desplazar el editor, el preview interpola entre la letra que está en la
+fila de referencia, o justo antes, y la primera letra de la fila siguiente o
+del siguiente bloque con texto. Entre ambas usa los bordes medidos de los
+bloques intermedios (líneas en blanco, código, fórmulas, imágenes o diagramas),
+de modo que avanza de forma continua y nunca retrocede al cruzar un bloque.
+Los rangos de texto del preview se ordenan una sola vez por medición y se
+buscan con búsqueda binaria en lugar de recorrer el DOM en cada frame. El mapa
+de bloques sigue siendo el respaldo cuando no hay texto que comparar.
 
 La regresión `scripts/smoke-enter-scroll.mjs` reproduce Enter con un preview
 más alto que el editor, verifica el anclaje antes de escribir y cubre Backspace,

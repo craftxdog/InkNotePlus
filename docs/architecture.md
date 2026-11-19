@@ -737,11 +737,11 @@ Ubuntu y RPM mediante dnf en Fedora 44. Cada instalación inicia la aplicación
 con un perfil temporal y ejecuta las pruebas reales del editor. No se desactiva
 el sandbox para ejecutar estas pruebas.
 
-En Ubuntu, `scripts/setup-ubuntu-ci.sh` comprueba los índices e instala las
-bibliotecas del runtime desde la réplica HTTPS del archivo de Ubuntu en
-kernel.org, con la clave de firma de Ubuntu. apt usa IPv4, porque los runners no tienen ruta IPv6. La configuración temporal se
-comparte con la instalación del DEB y evita los dominios de Azure y Canonical
-que fallaron al resolver DNS en los runners. El workflow de calidad comprueba
+En Ubuntu, `scripts/setup-ubuntu-ci.sh` instala las bibliotecas del runtime con
+una lista de réplicas: kernel.org, Azure y el archivo de Canonical. Cada una falló en
+los runners en algún momento, así que apt prueba la siguiente y siempre comprueba la
+firma de Ubuntu. apt usa IPv4 porque los runners no tienen ruta IPv6. La configuración
+temporal se comparte con la instalación del DEB. El workflow de calidad comprueba
 ese acceso antes de crear un tag de publicación.
 
 Los tags `vX.Y.Z` deben coincidir con `package.json`. El job de versión rechaza

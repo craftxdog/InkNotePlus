@@ -324,7 +324,9 @@ no están firmadas y no pueden instalarse con `autoUpdater`.
 
 El servidor local (`src/main/local-api`) es opcional y escucha solo en `127.0.0.1`.
 Exige autenticación básica y rechaza solicitudes con `Origin` o con un `Host` ajeno,
-lo que impide que una página web lo use. Sus cambios pasan por los mismos comandos
+lo que impide que una página web lo use. Solo
+las extensiones que el usuario autoriza por su origen exacto pueden enviar `Origin`, y aun así
+necesitan la contraseña. Sus cambios pasan por los mismos comandos
 de notas que la interfaz y usan el control de revisiones. La contraseña se guarda
 cifrada con el llavero del sistema. Las rutas están en `docs/integrations/README.md`.
 
@@ -629,7 +631,9 @@ HEIF. Los SVG se reconstruyen sin contenido activo y HEIC se convierte a JPEG co
 `sips`, por lo que sólo se admite en macOS. Se limitan a 10 MiB y 16 megapíxeles
 antes de decodificar; se validan en main y se almacenan
 por hash bajo `<userData>/images`. Markdown sólo renderiza estas URLs gestionadas;
-las imágenes remotas siguen sin solicitarse. Los archivos se guardan junto al
+las imágenes remotas solo se
+solicitan si el usuario las permite para una nota o en Preferencias, siempre por HTTPS y sin
+enviar la página de origen. Los archivos se guardan junto al
 perfil y todavía no tienen transporte de sincronización remota.
 La sintaxis Marp de alt admite `width:`, `height:`, `w:` y `h:`, números en px
 y las unidades documentadas. Con el cursor dentro de una imagen, la toolbar
@@ -733,11 +737,11 @@ Ubuntu y RPM mediante dnf en Fedora 44. Cada instalación inicia la aplicación
 con un perfil temporal y ejecuta las pruebas reales del editor. No se desactiva
 el sandbox para ejecutar estas pruebas.
 
-En Ubuntu, `scripts/setup-ubuntu-ci.sh` comprueba los índices e instala las
-bibliotecas del runtime desde la réplica HTTPS del archivo de Ubuntu en
-kernel.org, con la clave de firma de Ubuntu. La configuración temporal se
-comparte con la instalación del DEB y evita los dominios de Azure y Canonical
-que fallaron al resolver DNS en los runners. El workflow de calidad comprueba
+En Ubuntu, `scripts/setup-ubuntu-ci.sh` instala las bibliotecas del runtime con
+una lista de réplicas: kernel.org, Azure y el archivo de Canonical. Cada una falló en
+los runners en algún momento, así que apt prueba la siguiente y siempre comprueba la
+firma de Ubuntu. apt usa IPv4 porque los runners no tienen ruta IPv6. La configuración
+temporal se comparte con la instalación del DEB. El workflow de calidad comprueba
 ese acceso antes de crear un tag de publicación.
 
 Los tags `vX.Y.Z` deben coincidir con `package.json`. El job de versión rechaza

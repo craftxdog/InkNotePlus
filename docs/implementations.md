@@ -81,13 +81,13 @@ Las sondas manejaron la app empaquetada con perfiles temporales y no tocaron dat
 
 ## Decisiones
 
-D-2 y D-3 se tomaron durante el trabajo. D-1 sigue abierta.
+Las tres decisiones están tomadas.
 
-| ID  | Decisión                       | Opciones                                                                            | Estado                                                                                                                                       | Afecta         |
-| --- | ------------------------------ | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| D-1 | Imágenes remotas en el preview | Mantener el bloqueo actual, cargarlas siempre como Inkdrop, o cargarlas con permiso | **Abierta.** Las imágenes remotas siguen bloqueadas. La propuesta es un permiso por nota o una preferencia global, desactivados por defecto. | Preview        |
-| D-2 | Protocolo de sincronización    | Compatible con CouchDB como Inkdrop, o propio sobre el `sync_outbox` existente      | **Decidido: CouchDB**, con cifrado de extremo a extremo obligatorio.                                                                         | FAL-16, FAL-17 |
-| D-3 | Compatibilidad de plugins      | API compatible con plugins de Inkdrop, o API propia con permisos limitados          | **Decidido: compatibilidad parcial sin Node.** Los plugins se ejecutan aislados, sin red ni acceso a archivos.                               | FAL-18, FAL-19 |
+| ID  | Decisión                       | Opciones                                                                            | Estado                                                                                                                | Afecta         |
+| --- | ------------------------------ | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------- |
+| D-1 | Imágenes remotas en el preview | Mantener el bloqueo actual, cargarlas siempre como Inkdrop, o cargarlas con permiso | **Decidido: con permiso.** Bloqueadas por defecto. Se permiten por nota o para todas en Preferencias, solo por HTTPS. | Preview        |
+| D-2 | Protocolo de sincronización    | Compatible con CouchDB como Inkdrop, o propio sobre el `sync_outbox` existente      | **Decidido: CouchDB**, con cifrado de extremo a extremo obligatorio.                                                  | FAL-16, FAL-17 |
+| D-3 | Compatibilidad de plugins      | API compatible con plugins de Inkdrop, o API propia con permisos limitados          | **Decidido: compatibilidad parcial sin Node.** Los plugins se ejecutan aislados, sin red ni acceso a archivos.        | FAL-18, FAL-19 |
 
 ## Diferencias técnicas
 
@@ -387,7 +387,7 @@ La ausencia de estas funciones se comprobó en el código fuente.
 | FAL-25 | Asistente de IA en línea    | Clave propia, Anthropic o compatible con OpenAI, y Ollama     | **Resuelto el 2026-11-18.** Asistente opcional con Anthropic, proveedores compatibles con OpenAI y Ollama. La clave queda en el llavero y nunca llega a la interfaz. No se probó con una clave real de un proveedor.                                               |
 | FAL-26 | Sugerencias de edición      | Texto fantasma, Tab acepta y Esc descarta                     | **Resuelto el 2026-11-18.** Texto fantasma manual por defecto y automático si se activa. Tab acepta y Esc descarta.                                                                                                                                                |
 | FAL-27 | Publicar notas en la web    | Enlace público de lectura                                     | Requiere un servicio externo y una decisión de producto.                                                                                                                                                                                                           |
-| FAL-28 | Captura e integraciones     | Web Clipper, Kindle, Alfred y Raycast                         | **Resuelto en parte el 2026-11-18.** Importa recortes de Kindle e incluye un script para Raycast y Alfred. Falta el Web Clipper, que necesita una extensión de navegador publicada.                                                                                |
+| FAL-28 | Captura e integraciones     | Web Clipper, Kindle, Alfred y Raycast                         | **Resuelto en la rama `codex/remote-images-clipper`.** Importa recortes de Kindle, incluye un script para Raycast y Alfred y una extensión Web Clipper para navegadores Chromium, probada con Brave. Falta publicarla en las tiendas.                              |
 | FAL-29 | Más formatos de instalación | Windows y Linux ARM64, AppImage, Snap, Flathub, zip, Homebrew | **Resuelto en parte el 2026-11-18.** La versión 1.4.0 publica ZIP para macOS, Windows y Linux, incluidos Windows y Linux ARM64, e incluye una plantilla de Homebrew. Faltan AppImage, Snap y Flathub.                                                              |
 | FAL-30 | Redes corporativas          | Proxy, certificados propios y diagnóstico de red              | **Resuelto en parte el 2026-11-18.** La sincronización usa el proxy del sistema o uno propio, confía en los certificados del sistema e incluye un diagnóstico de conexión. El proxy no se probó en una red real y no se pueden importar certificados desde la app. |
 | FAL-31 | Aplicación móvil            | iOS y Android con el mismo editor                             | Proyecto aparte. Depende de FAL-16.                                                                                                                                                                                                                                |
@@ -395,9 +395,9 @@ La ausencia de estas funciones se comprobó en el código fuente.
 ## Siguientes pasos
 
 1. **Distribución:** firmar los instaladores para cerrar FAL-06 y publicar AppImage, Snap y Flathub (FAL-29).
-2. **Captura:** publicar el Web Clipper (FAL-28).
+2. **Captura:** publicar el Web Clipper en las tiendas (FAL-28).
 3. **Validación:** probar Windows, Linux, el proxy corporativo y Apple Notes con datos reales.
-4. **Producto:** decidir D-1, la publicación web (FAL-27) y la app móvil (FAL-31).
+4. **Producto:** decidir la publicación web (FAL-27) y la app móvil (FAL-31).
 
 ## Funciones verificadas sin diferencias relevantes
 

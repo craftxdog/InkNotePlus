@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Opciones de InkNote Web Clipper</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="options">
+    <h1>InkNote Web Clipper</h1>
+    <ol>
+      <li>
+        En InkNote, abre Preferencias &gt; Integraciones y activa el servidor
+        local.
+      </li>
+      <li>Copia este origen en «Extensiones autorizadas»:</li>
+    </ol>
+    <p>
+      <code id="origin"></code>
+      <button id="copy-origin" type="button">Copiar</button>
+    </p>
+    <form id="settings">
+      <label
+        >Puerto <input id="port" type="number" min="1024" max="65535" required
+      /></label>
+      <label>
+        Contraseña del servidor local
+        <input id="password" type="password" autocomplete="off" required />
+      </label>
+      <label
+        >Etiquetas, separadas por comas <input id="tags" type="text"
+      /></label>
+      <div class="actions">
+        <button type="submit">Guardar</button>
+        <button id="test" type="button">Probar conexión</button>
+      </div>
+    </form>
+    <p id="status" role="status"></p>
+    <p class="muted">
+      La contraseña se guarda en este navegador. Cualquiera con acceso a tu
+      perfil del navegador podría leerla.
+    </p>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

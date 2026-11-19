@@ -1,3 +1,4 @@
+import { extensionOriginSchema } from '../../shared/preferences';
 import { useEffect, useState } from 'react';
 import type { LocalApiStatus } from '../../shared/local-api';
 import { copyText } from '../editor/clipboard';
@@ -39,6 +40,22 @@ export function IntegrationSettings() {
   const [status, setStatus] = useState<LocalApiStatus | null>(null);
   const [visible, setVisible] = useState(false);
   const [port, setPort] = useState(String(preferences.localApiPort));
+  const [origins, setOrigins] = useState(
+    preferences.localApiExtensionOrigins.join('\n'),
+  );
+  const originList = [
+    ...new Set(
+      origins
+        .split('\n')
+        .map((line) => line.trim().replace(/\/$/, ''))
+        .filter(Boolean),
+    ),
+  ];
+  const originsValid =
+    originList.length <= 10 &&
+    originList.every(
+      (origin) => extensionOriginSchema.safeParse(origin).success,
+    );
   useEffect(() => {
     let active = true;
     void getStatus().then((result) => {
@@ -84,6 +101,24 @@ export function IntegrationSettings() {
           }}
         />
       </label>
+      <label>
+        Extensiones autorizadas
+        <textarea
+          rows={2}
+          aria-invalid={!originsValid}
+          placeholder="chrome-extension://…"
+          value={origins}
+          onChange={(event) => setOrigins(event.target.value)}
+          onBlur={() => {
+            if (originsValid)
+              void update({ localApiExtensionOrigins: originList });
+          }}
+        />
+      </label>
+      <p className="settings-description">
+        Una por línea. Copia el origen que muestran las opciones del Web
+        Clipper. Ninguna página web puede usar el servidor.
+      </p>
       {status && (
         <p
           className="settings-description"

@@ -375,6 +375,44 @@ export function SettingsDialog() {
             )}
             {section === 'preview' && (
               <>
+                <SettingGroup title="Imágenes externas">
+                  <label>
+                    Imágenes de Internet
+                    <select
+                      value={preferences.remoteImages}
+                      onChange={(event) =>
+                        void update({
+                          remoteImages: event.target.value as
+                            | 'blocked'
+                            | 'allowed',
+                        })
+                      }
+                    >
+                      <option value="blocked">
+                        Bloqueadas, salvo en las notas que permitas
+                      </option>
+                      <option value="allowed">Mostrar siempre</option>
+                    </select>
+                  </label>
+                  <p className="settings-description">
+                    Al cargar una imagen externa, su sitio puede ver tu
+                    dirección IP y saber cuándo abres la nota. Solo se cargan
+                    imágenes por HTTPS.
+                  </p>
+                  {preferences.remoteImageNotes.length > 0 && (
+                    <button
+                      className="button"
+                      type="button"
+                      onClick={() => void update({ remoteImageNotes: [] })}
+                    >
+                      Olvidar los permisos de{' '}
+                      {preferences.remoteImageNotes.length}{' '}
+                      {preferences.remoteImageNotes.length === 1
+                        ? 'nota'
+                        : 'notas'}
+                    </button>
+                  )}
+                </SettingGroup>
                 <SettingGroup title="Tipografía">
                   <FontField
                     label="Fuente de la vista previa"

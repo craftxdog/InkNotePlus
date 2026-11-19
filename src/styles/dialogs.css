@@ -400,6 +400,7 @@
   .settings-content input[type='search'],
   .settings-content input[type='url'],
   .settings-content input[type='password'],
+  .settings-content textarea,
   .settings-content input[type='number'] {
     inline-size: 100%;
     border: var(--input-border);
@@ -763,4 +764,14 @@
 .plugin-notice > .button {
   grid-area: 1 / 2 / span 2;
   align-self: start;
+}
+
+.blocked-image-reason .link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--link-color, var(--primary-color));
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }

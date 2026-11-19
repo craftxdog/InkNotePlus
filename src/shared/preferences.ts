@@ -8,6 +8,12 @@ export const themeIdSchema = z
   .string()
   .max(100)
   .regex(/^[a-z][a-z0-9-]*$/);
+// Chrome extension ids use the letters a to p, and Firefox uses a UUID.
+export const extensionOriginSchema = z
+  .string()
+  .regex(
+    /^(?:chrome-extension:\/\/[a-p]{32}|moz-extension:\/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/,
+  );
 export const editorModeSchema = z.enum(['edit', 'split', 'preview']);
 export const lineWrappingSchema = z.preprocess(
   (value) => (value === true ? 'all' : value === false ? 'off' : value),
@@ -30,10 +36,13 @@ const fields = {
   aiBaseUrl: z.string().max(2048),
   aiSuggestMode: z.enum(['manual', 'auto']),
   syncProxy: z.string().max(300),
+  remoteImages: z.enum(['blocked', 'allowed']),
+  remoteImageNotes: z.array(z.uuid()).max(1000),
   enabledPlugins: z.array(pluginNameSchema).max(100),
   initScriptEnabled: z.boolean(),
   localApiEnabled: z.boolean(),
   localApiPort: z.number().int().min(1024).max(65_535),
+  localApiExtensionOrigins: z.array(extensionOriginSchema).max(10),
   theme: themeIdSchema,
   followSystemTheme: z.boolean(),
   lightTheme: themeIdSchema,
@@ -84,10 +93,13 @@ export const defaultPreferences: Preferences = {
   aiBaseUrl: '',
   aiSuggestMode: 'manual',
   syncProxy: '',
+  remoteImages: 'blocked',
+  remoteImageNotes: [],
   enabledPlugins: [],
   initScriptEnabled: false,
   localApiEnabled: false,
   localApiPort: 19840,
+  localApiExtensionOrigins: [],
   theme: 'inknote-light',
   followSystemTheme: false,
   lightTheme: 'inknote-light',

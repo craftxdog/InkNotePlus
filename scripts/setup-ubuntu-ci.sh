@@ -19,16 +19,22 @@ case "${1:-runtime}" in
 esac
 
 apt_sources="$RUNNER_TEMP/inknote-ubuntu.sources"
+apt_mirrors="$RUNNER_TEMP/inknote-ubuntu-mirrors.txt"
 apt_config="$RUNNER_TEMP/inknote-apt.conf"
 
-# The runner failed to resolve both Azure and Canonical archive hosts. Use
-# kernel.org's Ubuntu mirror, retaining Ubuntu signatures for every pocket.
-# https://mirrors.edge.kernel.org/
+# Every one of these hosts has failed on the runners at some point, so apt
+# tries them in order. Ubuntu's signatures are checked whichever one answers.
+# https://manpages.ubuntu.com/manpages/noble/man1/apt-transport-mirror.1.html
 # https://documentation.ubuntu.com/security/software-integrity/archive-verification/
 # The configuration stays in this job's temporary directory.
-cat > "$apt_sources" <<'SOURCES'
+cat > "$apt_mirrors" <<'MIRRORS'
+https://mirrors.edge.kernel.org/ubuntu/
+http://azure.archive.ubuntu.com/ubuntu/
+http://archive.ubuntu.com/ubuntu/
+MIRRORS
+cat > "$apt_sources" <<SOURCES
 Types: deb
-URIs: https://mirrors.edge.kernel.org/ubuntu/
+URIs: mirror+file:$apt_mirrors
 Suites: noble noble-updates noble-backports noble-security
 Components: main restricted universe multiverse
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
@@ -37,7 +43,9 @@ SOURCES
 cat > "$apt_config" <<CONFIG
 Dir::Etc::sourcelist "$apt_sources";
 Dir::Etc::sourceparts "-";
-Acquire::Retries "2";
+Acquire::Retries "5";
+# Runners have no IPv6 route, and the mirror publishes an IPv6 address first.
+Acquire::ForceIPv4 "true";
 Acquire::http::Timeout "30";
 Acquire::https::Timeout "30";
 APT::Update::Error-Mode "any";

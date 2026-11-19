@@ -6,6 +6,7 @@ import {
   useLayoutEffect,
   useRef,
   type ComponentProps,
+  type ReactNode,
   lazy,
   Suspense,
 } from 'react';
@@ -50,6 +51,7 @@ const PreviewContext = createContext<{
   toggle: (body: string, offset: number, checked: boolean) => void;
   openLink: (url: string) => unknown;
   openNoteLink: (url: string) => unknown;
+  noteId: string | null;
 } | null>(null);
 const TaskOffsetContext = createContext<number | null>(null);
 
@@ -71,6 +73,7 @@ export const MarkdownPreview = memo(function MarkdownPreview({
   const openLink = useWorkspace((state) => state.openExternalLink);
   const openNoteLink = useWorkspace((state) => state.openNoteLink);
   const toggle = useWorkspace((state) => state.toggleTask);
+  const noteId = useWorkspace((state) => state.document.noteId);
   return (
     <PreviewContext
       value={{
@@ -79,6 +82,8 @@ export const MarkdownPreview = memo(function MarkdownPreview({
         toggle,
         openLink,
         openNoteLink,
+        // Read-only previews belong to templates and revisions, not to a note.
+        noteId: readOnly ? null : noteId,
       }}
     >
       <div className="mde-preview" aria-label="Vista previa Markdown">
@@ -185,16 +190,45 @@ function PreviewImage({
 }: ComponentProps<'img'> & ExtraProps) {
   const openViewer = useWorkspace((state) => state.setImageViewer);
   const { width, height, caption } = parseImageDimensions(alt ?? '');
-  if (typeof src !== 'string' || !managedImageUrlPattern.test(src))
+  const remote = typeof src === 'string' ? remoteImage(src) : null;
+  const preview = useContext(PreviewContext);
+  const allowNote = useWorkspace((state) => state.allowRemoteImages);
+  const allowed = useWorkspace(
+    (state) =>
+      state.preferences.remoteImages === 'allowed' ||
+      (!!preview?.noteId &&
+        state.preferences.remoteImageNotes.includes(preview.noteId)),
+  );
+  if (typeof src !== 'string') return <BlockedImage caption={caption} />;
+  if (remote && !remote.secure)
     return (
-      <span className="blocked-image">
-        {caption ? `[Imagen: ${caption}]` : '[Imagen]'}
-      </span>
+      <BlockedImage caption={caption}>
+        Imagen sin cifrar de {remote.host}, bloqueada.
+      </BlockedImage>
     );
+  if (remote && !allowed)
+    return (
+      <BlockedImage caption={caption}>
+        Imagen externa de {remote.host}.{' '}
+        {preview?.noteId && !preview.disabled && (
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => allowNote(preview.noteId!)}
+          >
+            Mostrar imágenes de esta nota
+          </button>
+        )}
+      </BlockedImage>
+    );
+  if (!remote && !managedImageUrlPattern.test(src))
+    return <BlockedImage caption={caption} />;
   return (
     <img
       {...props}
       src={src}
+      // A remote site must not learn which note shows its image.
+      referrerPolicy={remote ? 'no-referrer' : undefined}
       alt={caption}
       title={title ?? 'Doble clic para ampliar'}
       style={{ width, height }}
@@ -206,6 +240,27 @@ function PreviewImage({
         if (event.key === 'Enter') openViewer({ src, alt: caption });
       }}
     />
+  );
+}
+
+function remoteImage(src: string) {
+  if (!/^https?:\/\//i.test(src) || !URL.canParse(src)) return null;
+  const url = new URL(src);
+  return { host: url.host, secure: url.protocol === 'https:' };
+}
+
+function BlockedImage({
+  caption,
+  children,
+}: {
+  caption: string;
+  children?: ReactNode;
+}) {
+  return (
+    <span className="blocked-image">
+      {caption ? `[Imagen: ${caption}]` : '[Imagen]'}
+      {children && <span className="blocked-image-reason"> {children}</span>}
+    </span>
   );
 }
 

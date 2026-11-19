@@ -43,6 +43,8 @@ import {
 import { createApiCredentials } from './main/local-api/credentials';
 import { createLocalApiServer } from './main/local-api/http-server';
 import { createNotesBackend } from './main/local-api/notes-backend';
+import { readClippedPage } from './main/note-import';
+import { storeImage } from './main/image-store';
 import { registerLocalApiHandlers } from './main/ipc/local-api-handlers';
 import { LOCAL_API_CHANNELS } from './shared/local-api';
 import { randomBytes } from 'node:crypto';
@@ -764,6 +766,21 @@ function initializeCoreModules(): Configuration {
               username: localApiUsername,
               password,
               version: app.getVersion(),
+              allowedOrigins: () =>
+                activeConfig.get(coreConfig.appearance)
+                  .localApiExtensionOrigins,
+              clip: (page) =>
+                readClippedPage(page, {
+                  storeImage: async (bytes) =>
+                    (
+                      await storeImage(
+                        bytes,
+                        userData,
+                        (image) =>
+                          !nativeImage.createFromBuffer(image).isEmpty(),
+                      )
+                    ).url,
+                }),
             }),
           credentials: createApiCredentials({
             read: () => activeConfig.get(coreConfig.localApiSecret),

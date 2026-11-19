@@ -2,14 +2,18 @@
 
 **Fecha de la auditoría:** 2026-11-18
 **Versión auditada:** InkNote 1.4.0, rama `codex/improve-notebooks-codeblocks`, commit `1a2559d`
+**Estado final:** publicado en [InkNote v1.4.0](https://github.com/craftxdog/InkNotePlus/releases/tag/v1.4.0), commit `0f30e72` de `main`
 **Referencias:** [inkdrop.app](https://www.inkdrop.app/), [guía de usuario](https://docs.inkdrop.app/start-guide) y [documentación para desarrolladores](https://developers.inkdrop.app/)
 
 ## Resumen
 
-InkNote tiene una base sólida y todas sus pruebas pasan, pero esas pruebas no cubrían
-varias diferencias con Inkdrop. La auditoría registró **23 funciones implementadas de
-forma incorrecta o incompleta** y **31 funciones sin implementar**. Ya están resueltos
-INC-01 a INC-11, INC-12, INC-13, INC-14, INC-15, INC-16, INC-17, INC-18, INC-19, INC-20, INC-21, INC-22, INC-23, FAL-01, FAL-02, FAL-03, FAL-04, FAL-05, FAL-07, FAL-08, FAL-09, FAL-10, FAL-11, FAL-12, FAL-13, FAL-14, FAL-15, FAL-16, FAL-17, FAL-19, FAL-20, FAL-21, FAL-22, FAL-23, FAL-24, FAL-25 y FAL-26, así que quedan **0 incorrectas y 7 faltantes**. FAL-06, FAL-18, FAL-28, FAL-29 y FAL-30 están resueltos en parte y siguen contados como pendiente.
+La auditoría registró **23 funciones implementadas de forma incorrecta o incompleta** y
+**31 funciones sin implementar**, 54 en total. La versión 1.4.0 corrige las 23 incorrectas
+y resuelve por completo 24 de las faltantes.
+
+Quedan **7 pendientes**. Cinco están resueltas en parte (FAL-06, FAL-18, FAL-28, FAL-29 y
+FAL-30) y dos sin empezar (FAL-27 y FAL-31). Ninguna se puede cerrar sin recursos externos,
+salvo FAL-18, cuyo límite es la decisión D-3.
 
 | Prioridad     | Significado                                       | Incorrectas | Faltantes | Total |
 | ------------- | ------------------------------------------------- | ----------: | --------: | ----: |
@@ -19,27 +23,54 @@ INC-01 a INC-11, INC-12, INC-13, INC-14, INC-15, INC-16, INC-17, INC-18, INC-19,
 | P3            | Ecosistema, integraciones y mejoras               |           0 |         5 |     5 |
 | **Pendiente** |                                                   |       **0** |     **7** | **7** |
 
-Lo que queda depende sobre todo de recursos externos: certificados de firma (**FAL-06**), un servicio de publicación (**FAL-27**), publicar el Web Clipper (**FAL-28**) y la app móvil (**FAL-31**).
+| Pendiente | Qué falta                                    | Qué se necesita                                |
+| --------- | -------------------------------------------- | ---------------------------------------------- |
+| FAL-06    | Instalar actualizaciones sin pasos manuales  | Certificados de Apple Developer y de Windows   |
+| FAL-18    | Componentes visuales e instalación con `ipm` | Nada: es el límite elegido en D-3              |
+| FAL-27    | Enlace público de lectura                    | Un servicio alojado y una decisión de producto |
+| FAL-28    | Web Clipper                                  | Publicar la extensión en las tiendas           |
+| FAL-29    | AppImage, Snap y Flathub                     | Cuentas en Snap y Flathub                      |
+| FAL-30    | Certificados propios y prueba en red real    | Una red corporativa con proxy para validarlo   |
+| FAL-31    | Aplicación móvil                             | Cuentas de Apple y Google y un proyecto aparte |
 
 ## Resultados de las pruebas
 
+### Verificación final de la versión 1.4.0
+
+| Prueba                                      | Resultado                                                                |
+| ------------------------------------------- | ------------------------------------------------------------------------ |
+| `pnpm run verify`                           | Aprobado: lint, TypeScript y 1165 pruebas en 144 archivos                |
+| `pnpm audit --audit-level high`             | Sin vulnerabilidades                                                     |
+| `pnpm run test:desktop`                     | Aprobado cinco veces seguidas                                            |
+| `pnpm run test:desktop:package`             | Aprobado                                                                 |
+| `pnpm run test:desktop:audit`               | Aprobado, sin problemas de contraste                                     |
+| `pnpm run test:desktop:qa`                  | Aprobado                                                                 |
+| DMG de Apple Silicon                        | Instalado, abierto y editor comprobado                                   |
+| CI de GitHub                                | Quality, instaladores y publicación aprobados                            |
+| Descargas publicadas                        | Cinco instaladores y seis ZIP con sumas SHA-256 correctas                |
+| ZIP de Apple Silicon descargado de GitHub   | Abre la app y guarda notas                                               |
+| Sincronización con un servidor CouchDB real | Dos instancias sincronizadas por HTTPS, sin texto legible en el servidor |
+| Plugin hostil contra el aislamiento         | Sin acceso a la app ni a la red                                          |
+
+### Auditoría inicial
+
 | Prueba                                    | Resultado                                            |
 | ----------------------------------------- | ---------------------------------------------------- |
-| `pnpm run lint`                           | Aprobado                                             |
-| `pnpm run typecheck`                      | Aprobado                                             |
 | `pnpm run test`                           | Aprobado: 454 pruebas en 78 archivos                 |
-| `pnpm run build`                          | Aprobado                                             |
-| `pnpm run test:desktop:package`           | Aprobado                                             |
 | `pnpm run test:desktop:qa`                | Aprobado: 7 de 7 bloques, incluido el de 3.000 notas |
 | Sonda de paridad sobre la app empaquetada | 12 diferencias de comportamiento confirmadas         |
 
-La sonda manejó la app empaquetada con un perfil temporal y no tocó datos reales.
+Las sondas manejaron la app empaquetada con perfiles temporales y no tocaron datos reales.
 
 ### Qué no se pudo comprobar
 
 - **Inkdrop no se ejecutó.** La comparación usa su documentación pública, no la app real.
-- **Solo se probó macOS Apple Silicon.** Windows, Linux y macOS Intel quedan sin probar en esta auditoría.
-- **Los atajos se simularon por CDP.** Las combinaciones con Option en un teclado físico siguen sin confirmar (ver INC-22).
+- **Windows, Linux y macOS Intel no se probaron a mano.** GitHub construyó y verificó sus instaladores, pero nadie abrió la app en esos sistemas.
+- **Los atajos con Option se simularon.** No se confirmaron con un teclado físico (INC-22).
+- **Apple Notes no se leyó contra una biblioteca real**, para no acceder a notas privadas.
+- **El asistente de IA no se usó con una clave real** de un proveedor en la nube.
+- **El proxy de sincronización no se probó en una red corporativa.**
+- **Ningún plugin publicado de Inkdrop se probó.** Solo plugins escritos para las pruebas.
 - **La instalación de temas desde el catálogo en línea no se ejecutó** (`--catalog`).
 - **Algunas páginas de Inkdrop devuelven 404:** importación, exportación, historial de revisiones y lista de atajos. Para esas funciones la fuente es [inkdrop.app/features](https://www.inkdrop.app/features).
 
@@ -48,15 +79,15 @@ La sonda manejó la app empaquetada con un perfil temporal y no tocó datos real
 - **Sonda:** comportamiento observado en la app empaquetada.
 - **Código:** comprobado leyendo el código fuente.
 
-## Decisiones que debes tomar
+## Decisiones
 
-Estas tres decisiones cambian el alcance del trabajo, así que conviene resolverlas antes de empezar las tareas afectadas.
+D-2 y D-3 se tomaron durante el trabajo. D-1 sigue abierta.
 
-| ID  | Decisión                       | Opciones                                                                            | Recomendación                                                                                                                                                                                                       | Afecta         |
-| --- | ------------------------------ | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| D-1 | Imágenes remotas en el preview | Mantener el bloqueo actual, cargarlas siempre como Inkdrop, o cargarlas con permiso | Permiso por nota o preferencia global, desactivado por defecto. Evita que una nota revele tu IP a terceros. Los títulos de enlaces ya se resolvieron con permiso explícito; las imágenes remotas siguen bloqueadas. | Preview        |
-| D-2 | Protocolo de sincronización    | Compatible con CouchDB como Inkdrop, o propio sobre el `sync_outbox` existente      | CouchDB si quieres servidores autoalojados. Exige adaptar IDs y `_rev` (INC-23).                                                                                                                                    | FAL-16, FAL-17 |
-| D-3 | Compatibilidad de plugins      | API compatible con plugins de Inkdrop, o API propia con permisos limitados          | API propia. `docs/architecture.md` ya descarta dar acceso directo a Electron y a la base de datos.                                                                                                                  | FAL-18, FAL-19 |
+| ID  | Decisión                       | Opciones                                                                            | Estado                                                                                                                                       | Afecta         |
+| --- | ------------------------------ | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| D-1 | Imágenes remotas en el preview | Mantener el bloqueo actual, cargarlas siempre como Inkdrop, o cargarlas con permiso | **Abierta.** Las imágenes remotas siguen bloqueadas. La propuesta es un permiso por nota o una preferencia global, desactivados por defecto. | Preview        |
+| D-2 | Protocolo de sincronización    | Compatible con CouchDB como Inkdrop, o propio sobre el `sync_outbox` existente      | **Decidido: CouchDB**, con cifrado de extremo a extremo obligatorio.                                                                         | FAL-16, FAL-17 |
+| D-3 | Compatibilidad de plugins      | API compatible con plugins de Inkdrop, o API propia con permisos limitados          | **Decidido: compatibilidad parcial sin Node.** Los plugins se ejecutan aislados, sin red ni acceso a archivos.                               | FAL-18, FAL-19 |
 
 ## Diferencias técnicas
 
@@ -68,10 +99,10 @@ Estas tres decisiones cambian el alcance del trabajo, así que conviene resolver
 | Markdown       | unified 10, remark 14, remark-rehype 10 | unified 11, remark-parse 11, remark-rehype 11 | Los plugins de Inkdrop pueden no ser compatibles (D-3) |
 | Datos          | PouchDB con índice SQLite               | SQLite con `node:sqlite`                      | Diferencia deliberada                                  |
 | Búsqueda       | SQLite FTS5 con ranking                 | SQLite FTS5 con `bm25`                        | Alineado                                               |
-| Sincronización | CouchDB, `_rev`, `_changes`             | Outbox local sin transporte                   | Incompleto (FAL-16)                                    |
-| Atajos         | `keymap.json` con selectores CSS        | Lista de sustituciones en Preferencias        | Incompleto (FAL-13)                                    |
+| Sincronización | CouchDB, `_rev`, `_changes`             | CouchDB, `_changes`, `_bulk_docs`, cifrado    | Alineado, con cifrado obligatorio                      |
+| Atajos         | `keymap.json` con selectores CSS        | `keymap.json` y sustituciones en Preferencias | Alineado                                               |
 | Temas          | `@inkdropapp/css`, capas `theme.*`      | Los mismos tokens y capas                     | Alineado                                               |
-| Extensiones    | `activate(env)`, `ipm`, `init.js`       | Solo un manifiesto, sin cargador              | Sin implementar (FAL-18, FAL-19)                       |
+| Extensiones    | `activate(env)`, `ipm`, `init.js`       | Plugins e `init.js` aislados, sin Node        | Parcial por diseño (FAL-18, D-3)                       |
 
 ## Parte 1: implementado de forma incorrecta o incompleta
 
@@ -339,7 +370,7 @@ La ausencia de estas funciones se comprobó en el código fuente.
 | FAL-13 | Archivo `keymap.json`          | Selectores CSS, secuencias, `native!`, `unset!` y `abort!`                 | **Resuelto el 2026-11-18.** `keymap.json` admite selectores, secuencias, `native!`, `unset!` y `abort!`, se recarga al guardar y muestra sus errores en Preferencias.                                                                                                                        |
 | FAL-14 | Servidor HTTP local            | Puerto 19840, autenticación básica, notas, notebooks, etiquetas y archivos | **Resuelto el 2026-11-18.** API HTTP desactivada por defecto, solo en `127.0.0.1`, con contraseña en el llavero del sistema. Ofrece notas, notebooks y etiquetas. No expone archivos adjuntos.                                                                                               |
 | FAL-15 | Servidor MCP                   | Agentes que buscan, leen, crean y actualizan notas                         | **Resuelto el 2026-11-18.** Servidor MCP en `/mcp` para buscar, leer, crear y editar notas, sin herramientas de borrado. Al editar la nota abierta se conservan el cursor y el historial.                                                                                                    |
-| FAL-16 | Sincronización                 | Servidor propio o CouchDB, con fusión automática de conflictos             | **Resuelto el 2026-11-18.** Sincroniza notas, notebooks, etiquetas e imágenes de hasta 4 MB con un servidor CouchDB. En un conflicto gana la versión más reciente y la otra se conserva como copia.                                                                                          |
+| FAL-16 | Sincronización                 | Servidor propio o CouchDB, con fusión automática de conflictos             | **Resuelto el 2026-11-18.** Sincroniza notas, notebooks, etiquetas e imágenes de hasta 4 MB con un servidor CouchDB. En un conflicto gana la versión más reciente y la otra se conserva como copia. El kit de `docs/deploy/couchdb` se desplegó y probó en un servidor real.                 |
 | FAL-17 | Cifrado de extremo a extremo   | AES-256-GCM con clave derivada por PBKDF2                                  | **Resuelto el 2026-11-18.** Todo se cifra con AES-256-GCM antes de salir del equipo, con una clave derivada por PBKDF2. El servidor nunca recibe la frase de cifrado.                                                                                                                        |
 | FAL-18 | Plugins                        | `activate`, `deactivate`, comandos, layouts e `ipm`                        | **Resuelto en parte el 2026-11-18.** Los plugins se ejecutan aislados, sin Node ni red, con `activate`, `deactivate`, comandos, atajos, notas y notificaciones. No admite componentes visuales (`layouts`), plugins que usen Node o Electron, ni la instalación desde el catálogo con `ipm`. |
 | FAL-19 | Script `init.js`               | JavaScript del usuario al arrancar                                         | **Resuelto el 2026-11-18.** `init.js` se activa de forma explícita y se ejecuta con las mismas limitaciones que un plugin.                                                                                                                                                                   |
@@ -357,16 +388,16 @@ La ausencia de estas funciones se comprobó en el código fuente.
 | FAL-26 | Sugerencias de edición      | Texto fantasma, Tab acepta y Esc descarta                     | **Resuelto el 2026-11-18.** Texto fantasma manual por defecto y automático si se activa. Tab acepta y Esc descarta.                                                                                                                                                |
 | FAL-27 | Publicar notas en la web    | Enlace público de lectura                                     | Requiere un servicio externo y una decisión de producto.                                                                                                                                                                                                           |
 | FAL-28 | Captura e integraciones     | Web Clipper, Kindle, Alfred y Raycast                         | **Resuelto en parte el 2026-11-18.** Importa recortes de Kindle e incluye un script para Raycast y Alfred. Falta el Web Clipper, que necesita una extensión de navegador publicada.                                                                                |
-| FAL-29 | Más formatos de instalación | Windows y Linux ARM64, AppImage, Snap, Flathub, zip, Homebrew | **Resuelto en parte el 2026-11-18.** Añade archivos ZIP para macOS, Windows y Linux, incluidos Windows y Linux ARM64, y una plantilla de Homebrew. Faltan AppImage, Snap y Flathub. El flujo de publicación aún no se ejecutó en GitHub.                           |
+| FAL-29 | Más formatos de instalación | Windows y Linux ARM64, AppImage, Snap, Flathub, zip, Homebrew | **Resuelto en parte el 2026-11-18.** La versión 1.4.0 publica ZIP para macOS, Windows y Linux, incluidos Windows y Linux ARM64, e incluye una plantilla de Homebrew. Faltan AppImage, Snap y Flathub.                                                              |
 | FAL-30 | Redes corporativas          | Proxy, certificados propios y diagnóstico de red              | **Resuelto en parte el 2026-11-18.** La sincronización usa el proxy del sistema o uno propio, confía en los certificados del sistema e incluye un diagnóstico de conexión. El proxy no se probó en una red real y no se pueden importar certificados desde la app. |
 | FAL-31 | Aplicación móvil            | iOS y Android con el mismo editor                             | Proyecto aparte. Depende de FAL-16.                                                                                                                                                                                                                                |
 
-## Orden de trabajo recomendado
+## Siguientes pasos
 
-1. **Datos:** Apple Notes en FAL-01.
-2. **Integración con el escritorio:** ventana separada de INC-10 y FAL-20, FAL-29 e instalación automática de FAL-06.
-3. **Plataforma:** FAL-14, FAL-15, FAL-18, FAL-19, FAL-16 y FAL-17, según D-2 y D-3.
-4. **Ecosistema:** el resto de tareas P3.
+1. **Distribución:** firmar los instaladores para cerrar FAL-06 y publicar AppImage, Snap y Flathub (FAL-29).
+2. **Captura:** publicar el Web Clipper (FAL-28).
+3. **Validación:** probar Windows, Linux, el proxy corporativo y Apple Notes con datos reales.
+4. **Producto:** decidir D-1, la publicación web (FAL-27) y la app móvil (FAL-31).
 
 ## Funciones verificadas sin diferencias relevantes
 

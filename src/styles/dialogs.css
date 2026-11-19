@@ -398,6 +398,8 @@
   }
   .settings-content input[type='text'],
   .settings-content input[type='search'],
+  .settings-content input[type='url'],
+  .settings-content input[type='password'],
   .settings-content input[type='number'] {
     inline-size: 100%;
     border: var(--input-border);

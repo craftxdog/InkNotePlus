@@ -3,7 +3,7 @@
 cask "inknote" do
   arch arm: "arm64", intel: "x64"
 
-  version "1.5.1"
+  version "1.6.0"
   sha256 arm:   "REEMPLAZAR_CON_SHA256_ARM64",
          intel: "REEMPLAZAR_CON_SHA256_X64"
 

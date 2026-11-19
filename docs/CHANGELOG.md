@@ -1,6 +1,6 @@
 # Historial de versiones
 
-## Sin publicar
+## 1.6.0 — 2026-11-19
 
 ### Añadido
 
@@ -14,6 +14,11 @@
 
 - Al escribir, los bloques de código, diagramas y enlaces de otros bloques ya
   no se vuelven a renderizar.
+
+### Pruebas
+
+- 1203 pruebas automatizadas, lint y TypeScript aprobados.
+- El doble clic y los enlaces a encabezados se probaron en la app empaquetada.
 
 ## 1.5.1 — 2026-11-19
 

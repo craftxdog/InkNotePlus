@@ -1,5 +1,20 @@
 # Historial de versiones
 
+## Sin publicar
+
+### Añadido
+
+- Doble clic en el texto del preview para llevar el cursor del editor a esa
+  letra, a la misma altura en pantalla, sin mover el preview.
+- Los enlaces a encabezados dentro de la nota, como `[ver](#instalación)`,
+  llevan al encabezado. Siguen las reglas de GitHub, incluidos los repetidos
+  (`#notas-1`).
+
+### Mejorado
+
+- Al escribir, los bloques de código, diagramas y enlaces de otros bloques ya
+  no se vuelven a renderizar.
+
 ## 1.5.1 — 2026-11-19
 
 ### Corregido

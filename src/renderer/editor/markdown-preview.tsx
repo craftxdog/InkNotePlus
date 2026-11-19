@@ -27,6 +27,7 @@ import {
   rehypeSourceText,
 } from './markdown-source-map';
 import { splitMarkdownBlocks } from './markdown-blocks';
+import { findHeading } from './heading-slug';
 import { remarkHighlights } from './highlights';
 import { linkedNoteId } from '../../shared/note-link';
 import { remarkGithubAlerts } from './github-alerts';
@@ -51,14 +52,15 @@ const gfm = [
 const sourceText = [rehypeSourceText];
 const Equation = lazy(() => import('./math-equation'));
 const Diagram = lazy(() => import('./mermaid-diagram'));
+// Stable actions. The rendered text lives in its own context, so typing does
+// not re-render code blocks, links or diagrams in unchanged blocks.
 const PreviewContext = createContext<{
-  body: string;
-  disabled: boolean;
   toggle: (body: string, offset: number, checked: boolean) => void;
   openLink: (url: string) => unknown;
   openNoteLink: (url: string) => unknown;
   noteId: string | null;
 } | null>(null);
+const PreviewStateContext = createContext({ body: '', disabled: true });
 const TaskOffsetContext = createContext<number | null>(null);
 // Source offset of the preview block being rendered.
 const BlockOffsetContext = createContext(0);
@@ -158,25 +160,32 @@ export const MarkdownPreview = memo(function MarkdownPreview({
   const keys = useBlockKeys(
     useMemo(() => blocks.map((block) => block.text), [blocks]),
   );
+  const actions = useMemo(
+    () => ({
+      toggle,
+      openLink,
+      openNoteLink,
+      // Read-only previews belong to templates and revisions, not to a note.
+      noteId: readOnly ? null : noteId,
+    }),
+    [toggle, openLink, openNoteLink, readOnly, noteId],
+  );
+  const disabled = readOnly || body !== deferredBody;
+  const state = useMemo(
+    () => ({ body: deferredBody, disabled }),
+    [deferredBody, disabled],
+  );
   return (
-    <PreviewContext
-      value={{
-        body: deferredBody,
-        disabled: readOnly || body !== deferredBody,
-        toggle,
-        openLink,
-        openNoteLink,
-        // Read-only previews belong to templates and revisions, not to a note.
-        noteId: readOnly ? null : noteId,
-      }}
-    >
-      <div className="mde-preview" aria-label="Vista previa Markdown">
-        {blocks.map((block, index) => (
-          <BlockOffsetContext key={keys[index]} value={block.offset}>
-            <PreviewMarkdownBlock text={block.text} line={block.line} />
-          </BlockOffsetContext>
-        ))}
-      </div>
+    <PreviewContext value={actions}>
+      <PreviewStateContext value={state}>
+        <div className="mde-preview" aria-label="Vista previa Markdown">
+          {blocks.map((block, index) => (
+            <BlockOffsetContext key={keys[index]} value={block.offset}>
+              <PreviewMarkdownBlock text={block.text} line={block.line} />
+            </BlockOffsetContext>
+          ))}
+        </div>
+      </PreviewStateContext>
     </PreviewContext>
   );
 });
@@ -197,23 +206,23 @@ function PreviewListItem({
 }
 function PreviewCheckbox() {
   const offset = useContext(TaskOffsetContext),
-    context = useContext(PreviewContext)!;
+    context = useContext(PreviewContext)!,
+    { body, disabled } = useContext(PreviewStateContext);
   const text =
     offset === null
       ? ''
-      : context.body
+      : body
           .slice(offset + 2)
           .split(/\r?\n/, 1)[0]
           .trim();
   return (
     <input
       type="checkbox"
-      checked={offset !== null && context.body[offset] !== ' '}
-      disabled={context.disabled || offset === null}
+      checked={offset !== null && body[offset] !== ' '}
+      disabled={disabled || offset === null}
       aria-label={`Tarea: ${text}`}
       onChange={(event) => {
-        if (offset !== null)
-          context.toggle(context.body, offset, event.target.checked);
+        if (offset !== null) context.toggle(body, offset, event.target.checked);
       }}
     />
   );
@@ -234,12 +243,12 @@ function PreviewLink({
         event.preventDefault();
         if (href?.startsWith('#')) {
           const id = href.slice(1);
-          const anchors = event.currentTarget
-            .closest('.mde-preview')
-            ?.querySelectorAll('[id]');
-          [...(anchors ?? [])]
-            .find((anchor) => anchor.id === id)
-            ?.scrollIntoView({ block: 'center' });
+          const container = event.currentTarget.closest('.mde-preview');
+          const anchors = container?.querySelectorAll('[id]');
+          (
+            [...(anchors ?? [])].find((anchor) => anchor.id === id) ??
+            (container && findHeading(container, id))
+          )?.scrollIntoView({ block: 'center' });
         } else if (href && linkedNoteId(href)) void context.openNoteLink(href);
         else if (href) void context.openLink(href);
       }}
@@ -269,6 +278,7 @@ function PreviewImage({
   const { width, height, caption } = parseImageDimensions(alt ?? '');
   const remote = typeof src === 'string' ? remoteImage(src) : null;
   const preview = useContext(PreviewContext);
+  const { disabled } = useContext(PreviewStateContext);
   const allowNote = useWorkspace((state) => state.allowRemoteImages);
   const allowed = useWorkspace(
     (state) =>
@@ -287,7 +297,7 @@ function PreviewImage({
     return (
       <BlockedImage caption={caption}>
         Imagen externa de {remote.host}.{' '}
-        {preview?.noteId && !preview.disabled && (
+        {preview?.noteId && !disabled && (
           <button
             type="button"
             className="link-button"

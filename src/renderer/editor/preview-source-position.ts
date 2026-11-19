@@ -224,32 +224,32 @@ export function previewRangeBox(preview: HTMLElement, { text }: TextRange) {
   return { top, bottom: top + rect.height };
 }
 
-export function sourceAtPreview(view: EditorView, preview: HTMLElement) {
-  const bounds = preview.getBoundingClientRect();
-  const referenceY = bounds.top + preview.clientHeight * 0.35;
-  for (const span of preview.querySelectorAll<HTMLElement>(selector)) {
-    const box = span.getBoundingClientRect(),
-      range = spanRange(view, span);
-    if (!range || box.bottom <= referenceY || box.top >= bounds.bottom)
-      continue;
-    let low = 0,
-      high = range.text.length - 1;
-    while (low < high) {
-      const middle = Math.floor((low + high) / 2);
-      if (characterRect(range.text, middle).bottom <= referenceY)
-        low = middle + 1;
-      else high = middle;
-    }
-    const rect = characterRect(range.text, low);
+// Source position of a point in the preview, e.g. from caretPositionFromPoint.
+// Rendered text maps letter by letter; other content maps to its block start.
+export function sourceAtTextPoint(
+  view: EditorView,
+  node: Node,
+  offset: number,
+): number | null {
+  const span = node.parentElement?.closest<HTMLElement>(selector);
+  const range = span && spanRange(view, span);
+  if (range && range.text === node) {
     const source = view.state.doc.sliceString(range.from, range.to);
-    const offset =
-      source.length === range.text.length
-        ? low
-        : sourceTextOffsets(source, range.text.data, preview.ownerDocument)[
-            low
-          ];
-    if (rect.height && offset !== undefined)
-      return { position: range.from + offset, y: rect.top - bounds.top };
+    const index = Math.max(0, Math.min(range.text.length, offset));
+    if (source.length === range.text.length) return range.from + index;
+    const mapped = sourceTextOffsets(
+      source,
+      range.text.data,
+      range.text.ownerDocument,
+    )[index];
+    return mapped === undefined ? range.to : range.from + mapped;
   }
-  return null;
+  const element = node instanceof Element ? node : node.parentElement;
+  const block = element?.closest<HTMLElement>('[data-source-line]');
+  const line = Number(block?.dataset.sourceLine),
+    column = Number(block?.dataset.sourceColumn ?? 1);
+  if (!Number.isInteger(line) || line < 1 || line > view.state.doc.lines)
+    return null;
+  const start = view.state.doc.line(line);
+  return Math.min(start.to, start.from + Math.max(0, column - 1));
 }

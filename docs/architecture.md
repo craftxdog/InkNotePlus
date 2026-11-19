@@ -233,7 +233,18 @@ definiciones afectan a todo el documento. Las líneas del AST se desplazan a su
 posición en la nota (`remarkLineOffset`). Los offsets quedan relativos al
 bloque: el texto de antes puede cambiar sin volver a analizarlo, y las tareas
 suman el offset del bloque al marcarse. Las claves de los bloques sobreviven a
-las ediciones, así que React actualiza el bloque editado en su sitio.
+las ediciones, así que React actualiza el bloque editado en su sitio. El
+contexto del preview separa las acciones estables (enlaces, tareas, nota) del
+texto renderizado, de modo que escribir no vuelve a renderizar los bloques de
+código, enlaces o diagramas que no cambian.
+
+Los enlaces `#id` se resuelven al hacer clic: primero contra los `id` del
+preview (notas al pie) y después contra los encabezados, con las reglas de
+GitHub (`heading-slug.ts`), incluidos los repetidos. Calcular el `id` al hacer
+clic evita que cada bloque tenga que contar los encabezados anteriores. Un
+doble clic en el texto del preview usa `caretPositionFromPoint` y el mapa de
+offsets del texto para colocar el cursor del editor en esa letra exacta, a la
+misma altura en pantalla.
 
 El preview confirma su contenido desde `useLayoutEffect`, con la misma
 normalización LF/CRLF que CodeMirror. Guarda la referencia inmutable del

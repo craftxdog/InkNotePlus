@@ -1,5 +1,5 @@
 import { request } from 'node:http';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createLocalApiServer } from '../../../src/main/local-api/http-server';
 import { readClippedPage } from '../../../src/main/note-import';
 import { createBackend } from './support';

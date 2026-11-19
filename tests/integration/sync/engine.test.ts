@@ -16,7 +16,10 @@ import {
 } from '../../../src/infrastructure/sqlite/database';
 import { SqliteLibraryRepository } from '../../../src/infrastructure/sqlite/sqlite-library-repository';
 import { SqliteNoteRepository } from '../../../src/infrastructure/sqlite/sqlite-note-repository';
-import { SqliteSyncStore } from '../../../src/infrastructure/sqlite/sqlite-sync-store';
+import {
+  SqliteSyncStore,
+  maxSyncFileBytes,
+} from '../../../src/infrastructure/sqlite/sqlite-sync-store';
 import { createCouchClient } from '../../../src/main/sync/couch-client';
 import { connectEncryption } from '../../../src/main/sync/connection';
 import { runSync } from '../../../src/main/sync/engine';
@@ -292,21 +295,9 @@ describe('sync between two devices', () => {
     expect(await b.sync()).toMatchObject({ pushed: 0, pulled: 0 });
   });
 
-  it('syncs the largest image that fits in a document', async () => {
-    const a = device();
-    const b = device();
-    const bytes = Buffer.alloc(4 * 1024 * 1024, 9);
-    const name = `${createHash('sha256').update(bytes).digest('hex')}.png`;
-    mkdirSync(path.join(a.userData, 'images'));
-    writeFileSync(path.join(a.userData, 'images', name), bytes);
-    expect(await a.sync()).toMatchObject({ pushed: 1, skippedFiles: 0 });
-    await b.sync();
-    expect(readFileSync(path.join(b.userData, 'images', name))).toEqual(bytes);
-  }, 30_000);
-
   it('skips images too large for a document', async () => {
     const a = device();
-    const bytes = Buffer.alloc(4 * 1024 * 1024 + 1, 7);
+    const bytes = Buffer.alloc(maxSyncFileBytes + 1, 7);
     const name = `${createHash('sha256').update(bytes).digest('hex')}.png`;
     mkdirSync(path.join(a.userData, 'images'));
     writeFileSync(path.join(a.userData, 'images', name), bytes);

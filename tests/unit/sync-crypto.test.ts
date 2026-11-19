@@ -5,6 +5,7 @@ import {
   encryptDocument,
   unlockEncryption,
 } from '../../src/main/sync/crypto';
+import { maxSyncFileBytes } from '../../src/infrastructure/sqlite/sqlite-sync-store';
 
 const iterations = 1000;
 
@@ -56,6 +57,23 @@ describe('sync encryption', () => {
     const text = JSON.stringify(info);
     expect(text).not.toContain('frase-unica');
     expect(text).not.toContain(key.toString('base64'));
+  });
+
+  // CouchDB rejects documents over 8 MB by default, and images are encoded twice.
+  it('fits the largest synced image in one CouchDB document', async () => {
+    const { key } = await createEncryptionInfo('frase', iterations);
+    const name = `${'a'.repeat(64)}.png`;
+    const doc = {
+      _id: `file:${name}`,
+      _rev: '1-'.padEnd(34, 'f'),
+      docType: 'file',
+      sealed: encryptDocument(key, `file:${name}`, {
+        type: 'file',
+        name,
+        data: Buffer.alloc(maxSyncFileBytes, 1).toString('base64'),
+      }),
+    };
+    expect(JSON.stringify(doc).length).toBeLessThan(8_000_000);
   });
 
   it('requires a strong iteration count by default', async () => {

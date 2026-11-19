@@ -26,7 +26,7 @@ import type { SqliteLibraryRepository } from './sqlite-library-repository';
 import type { SqliteNoteRepository } from './sqlite-note-repository';
 
 // Images are encoded twice, and must still fit CouchDB's default 8 MB documents.
-const maxFileBytes = 4 * 1024 * 1024;
+export const maxSyncFileBytes = 4 * 1024 * 1024;
 const imageName = /^[a-f0-9]{64}\.(?:png|jpg|gif|webp|svg)$/;
 const tagId = (name: string) =>
   `tag:${createHash('sha256').update(name).digest('hex').slice(0, 32)}`;
@@ -113,7 +113,7 @@ export class SqliteSyncStore implements SyncStore {
       for (const name of readdirSync(this.images)) {
         if (!imageName.test(name)) continue;
         const file = path.join(this.images, name);
-        if (statSync(file).size > maxFileBytes) {
+        if (statSync(file).size > maxSyncFileBytes) {
           skippedFiles += 1;
           continue;
         }

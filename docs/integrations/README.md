@@ -19,8 +19,9 @@ La dirección predeterminada es `http://127.0.0.1:19840`.
 | `GET`    | `/books`      | Lista los notebooks                                                           |
 | `GET`    | `/tags`       | Lista las etiquetas                                                           |
 
-Las solicitudes que envían una cabecera `Origin` se rechazan, así que las páginas
-web no pueden usar esta API.
+Las solicitudes que envían una cabecera `Origin` se rechazan, salvo las de las extensiones
+autorizadas, así que las páginas web no pueden usar esta API. La contraseña sigue siendo
+obligatoria para todas.
 
 ## Agentes de IA (MCP)
 
@@ -29,6 +30,24 @@ configuración MCP** de Preferencias genera la configuración para tu cliente.
 
 Las herramientas son `search_notes`, `read_note`, `create_note`, `update_note`,
 `list_notebooks` y `list_tags`. Ninguna puede borrar notas.
+
+## Web Clipper
+
+La extensión de [`extensions/web-clipper`](../../extensions/web-clipper) guarda páginas o
+fragmentos como notas desde Chrome, Edge, Brave y otros navegadores Chromium. Todavía no
+está publicada en las tiendas.
+
+1. Abre `chrome://extensions`, activa el modo desarrollador y elige **Cargar descomprimida**
+   con la carpeta `extensions/web-clipper`.
+2. En sus opciones, copia el origen `chrome-extension://…`.
+3. En InkNote, pégalo en **Preferencias > Integraciones > Extensiones autorizadas**.
+4. Vuelve a las opciones, escribe la contraseña del servidor local y pulsa **Probar conexión**.
+
+Para guardar, usa el botón de la extensión o el menú contextual de la página. Las imágenes
+remotas quedan enlazadas y la vista previa solo las carga si lo permites.
+
+La API también acepta `POST /clip` con `url`, `title`, `html` y, de forma opcional, `tags`
+y `bookId`.
 
 ## Raycast
 

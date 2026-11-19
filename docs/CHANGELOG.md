@@ -1,5 +1,14 @@
 # Historial de versiones
 
+## Sin publicar
+
+### Añadido
+
+- La vista previa puede mostrar imágenes de Internet si las permites para una nota o
+  en Preferencias. Siguen bloqueadas por defecto y solo se cargan por HTTPS.
+- Extensión Web Clipper para navegadores Chromium, que guarda páginas o selecciones
+  como notas a través del servidor local.
+
 ## 1.4.1 — 2026-11-19
 
 ### Corregido

@@ -146,6 +146,7 @@ export interface WorkspaceActions {
   ): void;
   setGithubSnippetOpen(open: boolean): void;
   syncApi: InkNoteApi['sync'];
+  allowRemoteImages(noteId: string): void;
   openNoteWindow: InkNoteApi['openNoteWindow'];
   pluginApi: InkNoteApi;
   addPluginNotice(notice: Omit<PluginNotice, 'id'>): void;

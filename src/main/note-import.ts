@@ -476,6 +476,22 @@ async function readInkdropLibrary(
   });
 }
 
+// A page from the Web Clipper. Remote images stay as links, which the preview
+// loads only with permission. Embedded images are stored like any import.
+export async function readClippedPage(
+  page: { url: string; title: string; html: string },
+  options: ImportOptions,
+) {
+  const context: ImportContext = {
+    ...options,
+    cache: new Map(),
+    images: 0,
+    missingImages: 0,
+  };
+  const note = await readHtml(context, page.html, '/', '/', page.title.trim());
+  return { title: page.title.trim() || note.title, body: note.body };
+}
+
 const untitledAppleNote = 'Nota de Apple Notes';
 
 export async function readAppleNotesSources(

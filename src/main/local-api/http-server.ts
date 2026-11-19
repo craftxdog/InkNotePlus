@@ -8,6 +8,7 @@ import {
 import type { AddressInfo } from 'node:net';
 import type { NotesBackend } from './notes-backend';
 import { handleApiRequest } from './routes';
+import { clipPageSchema, type ClipPage } from './clip';
 import { handleMcpMessage, mcpProtocolVersions } from './mcp';
 
 const maxBodyBytes = 2 * 1024 * 1024;
@@ -16,8 +17,22 @@ const failureWindow = 60_000;
 
 const digest = (value: string) => createHash('sha256').update(value).digest();
 
-function send(response: ServerResponse, status: number, body?: unknown) {
+function send(
+  response: ServerResponse,
+  status: number,
+  body?: unknown,
+  corsOrigin?: string,
+) {
   response.writeHead(status, {
+    ...(corsOrigin
+      ? {
+          'access-control-allow-origin': corsOrigin,
+          'access-control-allow-headers': 'authorization, content-type',
+          'access-control-allow-methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+          'access-control-max-age': '600',
+          vary: 'Origin',
+        }
+      : {}),
     'cache-control': 'no-store',
     'x-content-type-options': 'nosniff',
     ...(status === 401
@@ -51,6 +66,9 @@ export function createLocalApiServer(options: {
   username: string;
   password: string;
   version: string;
+  // Browser extensions the user allowed by their exact origin.
+  allowedOrigins?: () => readonly string[];
+  clip?: (page: ClipPage) => Promise<{ title: string; body: string }>;
 }) {
   const expected = digest(`${options.username}:${options.password}`);
   let server: Server | null = null;
@@ -65,19 +83,29 @@ export function createLocalApiServer(options: {
 
   async function handle(request: IncomingMessage, response: ServerResponse) {
     // Browsers always send Origin on cross-site writes, and rebinding changes Host.
+    // Only the extensions the user allowed may send one.
     const hosts = [`127.0.0.1:${port}`, `localhost:${port}`];
+    const origin = request.headers.origin;
+    const extension =
+      origin !== undefined &&
+      (options.allowedOrigins?.() ?? []).includes(origin)
+        ? origin
+        : undefined;
     if (
       !hosts.includes(request.headers.host ?? '') ||
-      request.headers.origin !== undefined
+      (origin !== undefined && !extension)
     )
       return send(response, 403, { error: 'Origen no permitido.' });
+    const reply = (status: number, body?: unknown) =>
+      send(response, status, body, extension);
+    if (extension && request.method === 'OPTIONS') return reply(204);
     const now = Date.now();
     failures = failures.filter((time) => now - time < failureWindow);
     if (failures.length >= maxFailures)
-      return send(response, 429, { error: 'Demasiados intentos.' });
+      return reply(429, { error: 'Demasiados intentos.' });
     if (!authorized(request.headers.authorization)) {
       failures.push(now);
-      return send(response, 401, { error: 'Credenciales no válidas.' });
+      return reply(401, { error: 'Credenciales no válidas.' });
     }
     const method = request.method ?? 'GET';
     const url = new URL(request.url ?? '/', 'http://127.0.0.1');
@@ -86,43 +114,67 @@ export function createLocalApiServer(options: {
       const type = request.headers['content-type'] ?? '';
       const text = await readBody(request);
       if (text === null)
-        return send(response, 413, {
+        return reply(413, {
           error: 'El contenido es demasiado grande.',
         });
       if (!/^application\/json\b/i.test(type))
-        return send(response, 415, { error: 'Usa application/json.' });
+        return reply(415, { error: 'Usa application/json.' });
       try {
         body = JSON.parse(text);
       } catch {
-        return send(response, 400, { error: 'JSON no válido.' });
+        return reply(400, { error: 'JSON no válido.' });
       }
     }
     if (url.pathname === '/')
       return method === 'GET'
-        ? send(response, 200, { name: 'InkNote', version: options.version })
-        : send(response, 405, { error: 'Método no admitido.' });
+        ? reply(200, { name: 'InkNote', version: options.version })
+        : reply(405, { error: 'Método no admitido.' });
+    if (url.pathname === '/clip' && options.clip) {
+      if (method !== 'POST')
+        return reply(405, { error: 'Método no admitido.' });
+      const page = clipPageSchema.safeParse(body);
+      if (!page.success) return reply(400, { error: 'Solicitud no válida.' });
+      const { tags, bookId, ...source } = page.data;
+      const clipped = await options.clip(source);
+      const site = new URL(source.url).host;
+      const created = await handleApiRequest(
+        {
+          method: 'POST',
+          path: '/notes',
+          query: new URLSearchParams(),
+          body: {
+            title: clipped.title.slice(0, 512) || site,
+            body: `> Fuente: [${site}](${source.url})\n\n${clipped.body}`,
+            ...(tags ? { tags } : {}),
+            ...(bookId ? { bookId } : {}),
+          },
+        },
+        options.backend,
+      );
+      return reply(created.status, created.body);
+    }
     if (url.pathname === '/mcp') {
       // Answers are plain JSON, so there is no event stream to open with GET.
       if (method !== 'POST')
-        return send(response, 405, { error: 'Método no admitido.' });
+        return reply(405, { error: 'Método no admitido.' });
       const protocol = request.headers['mcp-protocol-version'];
       if (
         protocol !== undefined &&
         !mcpProtocolVersions.some((version) => version === protocol)
       )
-        return send(response, 400, { error: 'Versión de MCP no admitida.' });
+        return reply(400, { error: 'Versión de MCP no admitida.' });
       const answer = await handleMcpMessage(
         body,
         options.backend,
         options.version,
       );
-      return answer ? send(response, 200, answer) : send(response, 202);
+      return answer ? reply(200, answer) : reply(202);
     }
     const result = await handleApiRequest(
       { method, path: url.pathname, query: url.searchParams, body },
       options.backend,
     );
-    send(response, result.status, result.body);
+    reply(result.status, result.body);
   }
 
   return {

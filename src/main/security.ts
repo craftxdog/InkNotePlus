@@ -26,7 +26,8 @@ export function createContentSecurityPolicy(
     // KaTeX/Pele emit numeric layout styles. Script execution stays self-only;
     // style elements still require the production nonce or an external sheet.
     "style-src-attr 'unsafe-inline'",
-    "img-src 'self' data: inknote-asset:",
+    // Remote images load only after the user allows them in the preview.
+    "img-src 'self' data: inknote-asset: https:",
     "font-src 'self' inknote-asset:",
     `connect-src ${connectSource}`,
     // Only the sandboxed plugin host may be embedded.

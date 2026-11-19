@@ -293,6 +293,13 @@ export function createWorkspaceStore(
       githubSnippetOpen: false,
       setGithubSnippetOpen: (githubSnippetOpen) => set({ githubSnippetOpen }),
       syncApi: api.sync,
+      allowRemoteImages(noteId) {
+        const notes = get().preferences.remoteImageNotes;
+        if (notes.includes(noteId)) return;
+        void get().updatePreferences({
+          remoteImageNotes: [...notes, noteId].slice(-1000),
+        });
+      },
       pluginApi: api,
       pluginCommands: [],
       pluginKeymaps: {},

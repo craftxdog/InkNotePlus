@@ -36,3 +36,17 @@ export function previewLineAtTop(pane: HTMLElement) {
   );
   return block ? Number(block.dataset.sourceLine) : 1;
 }
+
+// Places the cursor at a source position, at the same screen height as the
+// preview text that was double-clicked, so the preview does not move.
+export function jumpToSourceAt(view: EditorView, position: number, y: number) {
+  const top = view.scrollDOM.getBoundingClientRect().top;
+  view.focus();
+  view.dispatch({
+    selection: { anchor: position },
+    effects: EditorView.scrollIntoView(position, {
+      y: 'start',
+      yMargin: Math.max(0, y - top - view.defaultLineHeight / 2),
+    }),
+  });
+}

@@ -20,7 +20,6 @@ import { createKeymapFile } from './main/keymap-file';
 import { createPluginStore } from './main/plugins/plugin-store';
 import { registerPluginHandlers } from './main/ipc/plugin-handlers';
 import { pluginHostUrl } from './shared/plugins';
-import type { ShortcutCommand } from './shared/keybindings';
 import { createDesktopIntegration } from './main/desktop-integration';
 import { createSecretStore, type SecretEncryption } from './main/secret-store';
 import { createCouchClient } from './main/sync/couch-client';

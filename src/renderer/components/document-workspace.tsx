@@ -73,7 +73,12 @@ import { UiSlot } from '../extensions/ui-slots';
 import { NoteTrashActions } from './note-trash-actions';
 import { NoteOutlinePanel } from './note-outline-panel';
 import { PreviewFindBar } from './preview-find-bar';
-import { jumpToNoteLine, previewLineAtTop } from '../editor/note-navigation';
+import {
+  jumpToNoteLine,
+  jumpToSourceAt,
+  previewLineAtTop,
+} from '../editor/note-navigation';
+import { sourceAtTextPoint } from '../editor/preview-source-position';
 import type { ExportNoteInput } from '../../shared/transfer';
 import { maxNoteTags, maxTagLength } from '../../shared/tags';
 
@@ -233,6 +238,27 @@ export function DocumentWorkspace({
   useEffect(() => {
     view.current?.requestMeasure();
   }, [mode, splitRatio]);
+  // Double-clicking preview text moves the editor cursor to that letter.
+  const previewDoubleClicked = (event: React.MouseEvent<HTMLElement>) => {
+    const instance = view.current;
+    const target = event.target as Element;
+    if (
+      !instance ||
+      mode !== 'split' ||
+      target.closest('a, button, input, img, select, textarea, label') ||
+      !renderedDocument.current?.eq(instance.state.doc)
+    )
+      return;
+    const caret = document.caretPositionFromPoint?.(
+      event.clientX,
+      event.clientY,
+    );
+    const position =
+      caret && sourceAtTextPoint(instance, caret.offsetNode, caret.offset);
+    if (position === null || position === undefined) return;
+    window.getSelection()?.removeAllRanges();
+    jumpToSourceAt(instance, position, event.clientY);
+  };
   const followEditorLine = useCallback(() => {
     const instance = view.current;
     if (instance)
@@ -710,6 +736,7 @@ export function DocumentWorkspace({
               className="pane pane--preview mde-preview-container"
               aria-label="Vista previa"
               tabIndex={-1}
+              onDoubleClick={previewDoubleClicked}
             >
               <MarkdownPreview
                 body={draft.body}

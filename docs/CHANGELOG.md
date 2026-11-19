@@ -1,6 +1,6 @@
 # Historial de versiones
 
-## Sin publicar
+## 1.5.1 — 2026-11-19
 
 ### Corregido
 
@@ -11,6 +11,12 @@
   por diagramas Mermaid altos.
 - Escribir en notas largas es más fluido: el preview solo vuelve a procesar el
   bloque que cambia, en lugar de toda la nota en cada tecla.
+
+### Pruebas
+
+- 1199 pruebas automatizadas, lint y TypeScript aprobados.
+- Scroll y escritura medidos con la app empaquetada en una nota de 1104 líneas
+  y en dos notas reales con tablas y diagramas.
 
 ## 1.5.0 — 2026-11-19
 

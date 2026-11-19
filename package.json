@@ -1,7 +1,7 @@
 {
   "name": "inknote",
   "productName": "InkNote",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "private": true,
   "description": "Local-first Markdown notes for desktop.",
   "keywords": [],

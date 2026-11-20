@@ -1,6 +1,6 @@
 # Historial de versiones
 
-## Sin publicar
+## 1.7.0 — 2026-11-20
 
 ### Añadido
 
@@ -17,6 +17,7 @@
 
 - Las comprobaciones de contraste, de alineación del preview y de las fuentes de
   KaTeX ya no fallan de forma intermitente.
+- 1222 pruebas automatizadas, lint y TypeScript aprobados.
 
 ## 1.6.1 — 2026-11-20
 

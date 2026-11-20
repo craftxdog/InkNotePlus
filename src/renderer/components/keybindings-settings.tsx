@@ -149,6 +149,7 @@ function ShortcutRow({
         {error && <small role="alert">{error}</small>}
       </span>
       <input
+        type="text"
         data-shortcut-input
         aria-label={`Atajo: ${label}`}
         value={input}

@@ -46,6 +46,40 @@ async function fixture() {
   return { source, data, service: new ThemeService(data) };
 }
 describe('theme packages', () => {
+  it('installs an archive whose files sit at its root, as Inkdrop 6 publishes them', async () => {
+    const { source, service } = await fixture();
+    const archive = path.join(root, 'flat.tgz');
+    await create({ cwd: source, file: archive, gzip: true }, [
+      'package.json',
+      'styles',
+    ]);
+    const theme = await service.importTarball(
+      await readFile(archive),
+      'test-theme',
+    );
+    expect(theme.manifest.name).toBe('test-theme');
+    expect(theme.label).toBe('Test Theme');
+    expect(theme.styles).toHaveLength(2);
+  });
+  it('skips oversized documentation images instead of rejecting the theme', async () => {
+    const { source, service } = await fixture();
+    await mkdir(path.join(source, 'docs'));
+    await writeFile(
+      path.join(source, 'docs', 'screenshot.png'),
+      new Uint8Array(6_000_000),
+    );
+    const archive = path.join(root, 'large.tgz');
+    await create({ cwd: source, file: archive, gzip: true }, [
+      'package.json',
+      'styles',
+      'docs',
+    ]);
+    const theme = await service.importTarball(
+      await readFile(archive),
+      'test-theme',
+    );
+    expect(theme.styles).toHaveLength(2);
+  });
   it('installs a registry archive and rejects links inside it', async () => {
     const { source, service } = await fixture();
     const archive = path.join(root, 'theme.tgz');
@@ -124,5 +158,28 @@ describe('theme packages', () => {
       'a { background: url(file:///etc/passwd) }',
     ])
       expect(() => validateThemeCss(value)).toThrow();
+  });
+});
+
+describe('theme CSS validation', () => {
+  it('accepts inline image data URIs, as Inkdrop 6 syntax themes use', () => {
+    expect(() =>
+      validateThemeCss(
+        `:root { --tab: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>'); }`,
+      ),
+    ).not.toThrow();
+    expect(() =>
+      validateThemeCss(
+        ':root { --dot: url("data:image/png;base64,iVBORw0KGgo="); }',
+      ),
+    ).not.toThrow();
+  });
+  it('still rejects non-image data URIs and remote resources', () => {
+    for (const css of [
+      ':root { --x: url("data:text/html,<script>alert(1)</script>"); }',
+      ':root { --x: url(https://example.com/a.png); }',
+      ":root { --x: url('data:image/png,a') url(https://example.com/b.png); }",
+    ])
+      expect(() => validateThemeCss(css)).toThrow();
   });
 });

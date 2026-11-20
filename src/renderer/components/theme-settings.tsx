@@ -88,7 +88,7 @@ export function ThemeSettings() {
             ))}
           </select>
         </label>
-        <label className="setting-toggle">
+        <label className="settings-toggle">
           <input
             type="checkbox"
             checked={preferences.followSystemTheme}

@@ -9,7 +9,7 @@ import {
 } from 'node:fs/promises';
 import { watch, type FSWatcher } from 'node:fs';
 import path from 'node:path';
-import { extract, type Unpack } from 'tar';
+import { extract, list, type Unpack } from 'tar';
 import { importThemeFolder, validateThemeCss } from './theme-files';
 import { themePackageSchema, type InstalledTheme } from '../../shared/themes';
 
@@ -53,19 +53,31 @@ export class ThemeService {
       const folder = path.join(temporary, 'package');
       await mkdir(folder);
       await writeFile(archive, bytes);
+      // npm-style archives wrap files in one folder (`package/`); Inkdrop 6
+      // packages and some source archives keep package.json at the root.
+      let flat = false;
+      await list({
+        file: archive,
+        onReadEntry(entry) {
+          if (entry.path.replace(/^\.\//, '') === 'package.json') flat = true;
+        },
+      });
       let entries = 0,
         size = 0;
       await extract({
         file: archive,
         cwd: folder,
-        strip: 1,
+        strip: flat ? 0 : 1,
         strict: true,
         preservePaths: false,
         filter(this: Unpack, name, entry) {
+          // Packages may ship large screenshots for their README. Themes only
+          // use small assets, so a large file is skipped, not extracted; a
+          // skipped stylesheet still fails the install as missing.
+          if (entry.size > 5_000_000) return false;
           if (
             ++entries > 1024 ||
             (size += entry.size) > 30_000_000 ||
-            entry.size > 5_000_000 ||
             name.split('/').some((part) => part === '..') ||
             name.startsWith('/') ||
             name.includes('\\')

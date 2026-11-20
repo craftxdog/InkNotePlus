@@ -35,7 +35,7 @@ export function PluginSettings() {
           const on = preferences.enabledPlugins.includes(name);
           return (
             <div className="plugin-row" key={name}>
-              <label className="setting-toggle">
+              <label className="settings-toggle">
                 <input
                   type="checkbox"
                   aria-label={`Activar ${name}`}
@@ -86,7 +86,7 @@ export function PluginSettings() {
         </div>
       </SettingGroup>
       <SettingGroup title="Script de inicio">
-        <label className="setting-toggle">
+        <label className="settings-toggle">
           <input
             type="checkbox"
             checked={preferences.initScriptEnabled}

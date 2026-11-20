@@ -1,5 +1,17 @@
 # Historial de versiones
 
+## Sin publicar
+
+### Corregido
+
+- Los temas del catálogo de Inkdrop ya se pueden instalar. Antes ningún tema
+  descargado se instalaba: los paquetes de Inkdrop 6 no tienen carpeta raíz,
+  algunos usan imágenes SVG en línea y otros incluyen capturas grandes.
+- Los temas instalados se muestran con un nombre legible, como «Catppuccin Mocha».
+- Las casillas de Temas, Integraciones, Plugins e IA vuelven a estar alineadas con
+  su texto, y los campos de atajos tienen el mismo estilo que el resto.
+- La racha de actividad dice «1 día» en lugar de «1 días».
+
 ## 1.6.0 — 2026-11-19
 
 ### Añadido

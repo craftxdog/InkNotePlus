@@ -3,6 +3,7 @@
 **Fecha de la auditoría:** 2026-11-18
 **Versión auditada:** InkNote 1.4.0, rama `codex/improve-notebooks-codeblocks`, commit `1a2559d`
 **Estado final:** publicado en [InkNote v1.4.0](https://github.com/craftxdog/InkNotePlus/releases/tag/v1.4.0), commit `0f30e72` de `main`
+**Último recorrido:** 2026-11-20 sobre InkNote 1.6.0, rama `codex/theme-install-fix` (ver [Recorrido completo del 2026-11-20](#recorrido-completo-del-2026-11-20))
 **Referencias:** [inkdrop.app](https://www.inkdrop.app/), [guía de usuario](https://docs.inkdrop.app/start-guide) y [documentación para desarrolladores](https://developers.inkdrop.app/)
 
 ## Resumen
@@ -32,6 +33,61 @@ salvo FAL-18, cuyo límite es la decisión D-3.
 | FAL-29    | AppImage, Snap y Flathub                     | Cuentas en Snap y Flathub                      |
 | FAL-30    | Certificados propios y prueba en red real    | Una red corporativa con proxy para validarlo   |
 | FAL-31    | Aplicación móvil                             | Cuentas de Apple y Google y un proyecto aparte |
+
+## Recorrido completo del 2026-11-20
+
+**Motivo:** no se podían instalar temas del catálogo, y se quería saber si Claude puede leer y escribir notas.
+**Método:** app empaquetada con perfiles temporales, sin datos reales. Se usaron la interfaz real, el catálogo real de Inkdrop y llamadas MCP por HTTP, y se revisaron capturas de cada pantalla de Preferencias.
+
+### Resultado por área
+
+| Área                                          | Cómo se comprobó                                                                                | Resultado                                                                                                                 |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Temas del catálogo                            | Instalar desde Preferencias › Temas › Explorar catálogo, y los 20 temas del catálogo por la API | **Fallaba**: ningún tema de Inkdrop 6 se instalaba (INC-26). Corregido: 20 de 20 se instalan y se aplican                 |
+| Compartir notas con Claude (MCP)              | Servidor local activado, cliente MCP por HTTP contra la app                                     | Funciona: buscar, leer, crear y editar una nota concreta. Ver [Compartir notas con Claude](#compartir-notas-con-claude)   |
+| Preview                                       | Tareas, código, Mermaid, KaTeX, alerta, nota al pie, muestras de color                          | Correcto                                                                                                                  |
+| Esquema, buscar en el preview, paleta `Cmd+K` | Interfaz                                                                                        | Correcto: 6 encabezados y tareas, «1 de 1» coincidencias, 218 comandos y prefijo `#`                                      |
+| Duplicar, historial, papelera                 | `Cmd+D`, dos ediciones, papelera y restaurar                                                    | Correcto: copia creada, 3 revisiones, nota restaurada                                                                     |
+| Actividad, `keymap.json`, plugins, `init.js`  | Preferencias y API                                                                              | Correcto. «1 días» corregido a «1 día» (INC-29)                                                                           |
+| Sincronización, IA, GitHub sin configurar     | Estado de cada servicio                                                                         | Correcto: desactivados y sin errores                                                                                      |
+| Modos de editor                               | Sólo editor, sólo vista previa, dividido                                                        | Correcto                                                                                                                  |
+| Preferencias, 10 secciones                    | Captura de cada una                                                                             | Casillas mal alineadas en Temas, Integraciones, Plugins e IA (INC-27), y campos de atajos sin estilo (INC-28). Corregidos |
+| Consola del renderer                          | Errores durante el recorrido                                                                    | Ninguno                                                                                                                   |
+| Pruebas automáticas                           | `pnpm run verify` y las tres baterías de escritorio                                             | Aprobadas. Hay dos comprobaciones intermitentes (ver abajo)                                                               |
+
+### Compartir notas con Claude
+
+Ya existe (FAL-15): un servidor MCP local que da a Claude acceso de lectura y escritura a tus notas.
+
+1. En **Preferencias › Integraciones**, activa «Permitir que otras aplicaciones de este equipo accedan a mis notas».
+2. Pulsa **Copiar configuración MCP**. Copia la dirección `http://127.0.0.1:19840/mcp` y la cabecera `Authorization` con la contraseña del llavero.
+3. En Claude Code, añade ese bloque al `.mcp.json` del proyecto, o regístralo con `claude mcp add-json inknote '<bloque inknote>'`. Claude Desktop necesita un puente local como `mcp-remote` en `claude_desktop_config.json`, porque su configuración local solo arranca servidores por línea de comandos.
+4. Pide a Claude, por ejemplo, «busca la nota Lista de compras y añade leche». Usa `search_notes` o `read_note` y después `update_note` con la revisión leída.
+
+| Herramienta                   | Qué hace                                                                                          |
+| ----------------------------- | ------------------------------------------------------------------------------------------------- |
+| `search_notes`                | Busca por texto, notebook, etiqueta o estado. Sin consulta, devuelve las recientes                |
+| `read_note`                   | Lee una nota completa por su ID                                                                   |
+| `create_note`                 | Crea una nota                                                                                     |
+| `update_note`                 | Edita una nota concreta. Exige la revisión leída, así que no sobrescribe cambios hechos en la app |
+| `list_notebooks`, `list_tags` | Lista notebooks y etiquetas                                                                       |
+
+**Comprobado:** inicialización con el protocolo 2025-06-18, 401 sin contraseña, búsqueda, lectura y edición de una nota concreta. Una edición con una revisión antigua se rechaza («La nota cambió»), y el cambio aparece al momento en la app. No hay herramienta de borrado. El servidor solo acepta conexiones desde el propio equipo y viene desactivado por defecto.
+
+**Límite:** el acceso cubre todas las notas. No se puede compartir una sola nota o un solo notebook. Sería una mejora (ver «Siguientes pasos»).
+
+### Pruebas intermitentes
+
+Dos comprobaciones de las baterías de escritorio fallaron una vez y pasaron al repetirlas, sin cambios en el código. Ninguna toca lo cambiado en este recorrido:
+
+- `smoke-preview-stability`: «cada frame alinea la letra escrita antes de pintarse» (más de 2 px en un frame).
+- `smoke-theme-selection`: contraste de las etiquetas sobre la fila seleccionada en InkNote Light (3,98 frente a 4,5). Probablemente se mide durante la transición del fondo seleccionado.
+
+### Qué no se comprobó en este recorrido
+
+- Sincronización con el servidor CouchDB real, la IA con una clave real y plugins publicados de Inkdrop.
+- Claude Desktop con `mcp-remote`. El protocolo se probó con un cliente HTTP, y la configuración copiada es la de Claude Code.
+- Windows y Linux.
 
 ## Resultados de las pruebas
 
@@ -360,6 +416,39 @@ Las tres decisiones están tomadas.
 - **Cambio:** división en bloques (`markdown-blocks.ts`), un componente memoizado por bloque, líneas absolutas con `remarkLineOffset` y claves que sobreviven a las ediciones.
 - **Aceptación:** el HTML es idéntico al de la nota completa. En la nota de 1104 líneas cada tecla cuesta 18 ms, y en las notas reales de prueba entre 14 y 16 ms (antes 18 ms).
 
+#### INC-26. Los temas del catálogo no se pueden instalar
+
+**Estado: resuelto el 2026-11-20.** Los 20 temas del catálogo de Inkdrop 6 se instalan y se aplican. Comprobado con la interfaz real y la red real, y por la API uno por uno.
+
+- **Evidencia (Sonda):** al instalar `nord` desde Preferencias › Temas › Explorar catálogo aparecía «El paquete no contiene un tema CSS válido o usa recursos no admitidos». Solo se instalaba el 0 % de los temas que no venían incluidos.
+- **Causas:**
+  - [theme-service.ts](../src/main/themes/theme-service.ts) quitaba siempre la primera carpeta del archivo (`strip: 1`, la convención de `npm pack`). Inkdrop 6 publica los paquetes con `package.json` en la raíz, así que el manifiesto y los estilos desaparecían.
+  - [theme-files.ts](../src/main/themes/theme-files.ts) rechazaba las imágenes `data:image/svg+xml` con las que `nord` dibuja las pestañas.
+  - Los paquetes de Catppuccin incluyen una captura de 6 a 7 MB para su README. Superar el límite de 5 MB por archivo abortaba la instalación a medias, y la limpieza fallaba con `ENOTEMPTY` («No se pudo completar la operación»).
+- **Cambio:** detectar si el archivo tiene carpeta raíz antes de extraer, aceptar URI `data:` de imagen (la CSP ya los permite y un SVG como imagen no ejecuta código), y omitir los archivos grandes en lugar de abortar. Un estilo omitido sigue haciendo fallar la instalación. Además, los temas instalados se muestran con un nombre legible («Catppuccin Mocha»).
+- **Aceptación:** 20 de 20 temas del catálogo se instalan, y `nord` y `catppuccin-mocha` cambian la interfaz, el editor y la vista previa al instalarse.
+- **Nota:** sin la cabecera `X-CLIENT-VERSION: 6.0.0`, el catálogo solo devuelve temas de Inkdrop 4 y 5 (`ui`, `syntax`, `preview`). Usan LESS o clases de CodeMirror 5 y su almacenamiento rechaza las descargas (403). La app envía la cabecera y solo ve temas de Inkdrop 6, que son los compatibles.
+
+#### INC-27. Las casillas de Temas, Integraciones, Plugins e IA se ven descolocadas
+
+**Estado: resuelto el 2026-11-20.**
+
+- **Evidencia (Sonda):** «Seguir la apariencia del sistema», «Permitir que otras aplicaciones…», «Activar el asistente de IA» y las casillas de plugins aparecían centradas sobre su texto, no a su izquierda.
+- **Causa:** esos componentes usaban la clase `setting-toggle`, pero la hoja de estilos define `settings-toggle`.
+- **Cambio:** usar la clase correcta.
+
+#### INC-28. Los campos de atajos no tienen el estilo de los demás campos
+
+**Estado: resuelto el 2026-11-20.**
+
+- **Evidencia (Sonda):** en Preferencias › Atajos, los campos tenían un borde fino y no tenían relleno.
+- **Causa:** el campo no declaraba `type="text"`, y el estilo común solo se aplica a `input[type='text']`.
+- **Cambio:** declarar el tipo.
+
+#### INC-29. La racha de actividad dice «1 días»
+
+**Estado: resuelto el 2026-11-20.** Ahora dice «1 día» y, a partir de 2, «días».
+
 ## Parte 2: funciones sin implementar
 
 La ausencia de estas funciones se comprobó en el código fuente.
@@ -416,6 +505,7 @@ La ausencia de estas funciones se comprobó en el código fuente.
 2. **Captura:** publicar el Web Clipper en las tiendas (FAL-28).
 3. **Validación:** probar Windows, Linux, el proxy corporativo y Apple Notes con datos reales.
 4. **Producto:** decidir la publicación web (FAL-27) y la app móvil (FAL-31).
+5. **Privacidad con Claude:** permitir que el servidor MCP solo vea un notebook o una etiqueta elegidos, en lugar de todas las notas.
 
 ## Funciones verificadas sin diferencias relevantes
 

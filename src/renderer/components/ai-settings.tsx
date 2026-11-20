@@ -31,7 +31,7 @@ export function AiSettings() {
   const provider = preferences.aiProvider;
   return (
     <SettingGroup title="Asistente de IA">
-      <label className="setting-toggle">
+      <label className="settings-toggle">
         <input
           type="checkbox"
           checked={preferences.aiEnabled}

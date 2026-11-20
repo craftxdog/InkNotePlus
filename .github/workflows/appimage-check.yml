@@ -1,0 +1,56 @@
+name: AppImage check
+
+# Releases build AppImages after publishing; this catches a broken build first.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/make-appimage.mjs
+      - scripts/lib/appimage.mjs
+      - forge.config.mts
+      - .github/workflows/appimage-check.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: appimage-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }} AppImage
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            os: ubuntu-24.04
+          - arch: arm64
+            os: ubuntu-24.04-arm
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
+        with:
+          version: 11.25.0
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.22.1
+          cache: pnpm
+
+      - name: Install locked dependencies
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Build AppImage
+        run: node scripts/make-appimage.mjs ${{ matrix.arch }}

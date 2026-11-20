@@ -59,7 +59,7 @@ export function createNotesBackend(options: {
       mutate(NOTE_COMMAND_IDS.update, input, 'updated'),
     trash: (id: string) =>
       mutate(NOTE_COMMAND_IDS.moveToTrash, { id }, 'trashed'),
-    books: () => options.library.getSnapshot().notebooks,
-    tags: () => options.library.getSnapshot().tags,
+    books: async () => options.library.getSnapshot().notebooks,
+    tags: async () => options.library.getSnapshot().tags,
   };
 }

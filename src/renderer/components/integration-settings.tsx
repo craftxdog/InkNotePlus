@@ -1,4 +1,8 @@
-import { extensionOriginSchema } from '../../shared/preferences';
+import {
+  extensionOriginSchema,
+  type LocalApiScope,
+} from '../../shared/preferences';
+import type { Notebook } from '../../shared/library';
 import { useEffect, useState } from 'react';
 import type { LocalApiStatus } from '../../shared/local-api';
 import { copyText } from '../editor/clipboard';
@@ -86,6 +90,7 @@ export function IntegrationSettings() {
         Las aplicaciones y agentes de IA que tengan la contraseña podrán leer,
         crear y editar notas. Solo acepta conexiones desde este equipo.
       </p>
+      <LocalApiScopeField />
       <label>
         Puerto
         <input
@@ -178,5 +183,108 @@ export function IntegrationSettings() {
         </>
       )}
     </SettingGroup>
+  );
+}
+
+// Notebooks in tree order, labelled with their path: "Trabajo › Clientes".
+function notebookPaths(notebooks: readonly Notebook[]) {
+  const children = new Map<string | null, Notebook[]>();
+  for (const notebook of notebooks)
+    children.set(notebook.parentId, [
+      ...(children.get(notebook.parentId) ?? []),
+      notebook,
+    ]);
+  const paths: { id: string; label: string }[] = [];
+  const visit = (parentId: string | null, prefix: string) => {
+    for (const notebook of children.get(parentId) ?? []) {
+      const label = prefix ? `${prefix} › ${notebook.name}` : notebook.name;
+      paths.push({ id: notebook.id, label });
+      visit(notebook.id, label);
+    }
+  };
+  visit(null, '');
+  return paths;
+}
+
+function LocalApiScopeField() {
+  const scope = useWorkspace((state) => state.preferences.localApiScope);
+  const update = useWorkspace((state) => state.updatePreferences);
+  const notebooks = useWorkspace((state) => state.library.notebooks);
+  const tags = useWorkspace((state) => state.library.tags);
+  const paths = notebookPaths(notebooks);
+  const set = (localApiScope: LocalApiScope) => void update({ localApiScope });
+  return (
+    <>
+      <label>
+        Notas accesibles
+        <select
+          aria-label="Notas accesibles"
+          value={scope.type}
+          onChange={(event) => {
+            const type = event.target.value;
+            if (type === 'notebook' && paths[0])
+              set({ type, notebookId: paths[0].id });
+            else if (type === 'tag' && tags[0])
+              set({ type, tag: tags[0].name });
+            else set({ type: 'all' });
+          }}
+        >
+          <option value="all">Todas las notas</option>
+          <option value="notebook" disabled={!paths.length}>
+            Solo un notebook y sus sub-notebooks
+          </option>
+          <option value="tag" disabled={!tags.length}>
+            Solo las notas con una etiqueta
+          </option>
+        </select>
+      </label>
+      {scope.type === 'notebook' && (
+        <label>
+          Notebook
+          <select
+            aria-label="Notebook accesible"
+            value={scope.notebookId}
+            onChange={(event) =>
+              set({ type: 'notebook', notebookId: event.target.value })
+            }
+          >
+            {!paths.some((path) => path.id === scope.notebookId) && (
+              <option value={scope.notebookId}>Notebook eliminado</option>
+            )}
+            {paths.map((path) => (
+              <option key={path.id} value={path.id}>
+                {path.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {scope.type === 'tag' && (
+        <label>
+          Etiqueta
+          <select
+            aria-label="Etiqueta accesible"
+            value={scope.tag}
+            onChange={(event) => set({ type: 'tag', tag: event.target.value })}
+          >
+            {!tags.some((tag) => tag.name === scope.tag) && (
+              <option value={scope.tag}>{scope.tag}</option>
+            )}
+            {tags.map((tag) => (
+              <option key={tag.name} value={tag.name}>
+                {tag.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      <p className="settings-description">
+        {scope.type === 'all'
+          ? 'Con la contraseña se puede acceder a todas tus notas.'
+          : scope.type === 'notebook'
+            ? 'Las demás notas no existen para las aplicaciones: no aparecen en búsquedas ni se pueden leer o editar. Las notas nuevas se crean en este notebook.'
+            : 'Las demás notas no existen para las aplicaciones: no aparecen en búsquedas ni se pueden leer o editar. Las notas nuevas reciben esta etiqueta, y no se puede quitar.'}
+      </p>
+    </>
   );
 }

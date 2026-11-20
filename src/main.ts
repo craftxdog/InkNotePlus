@@ -42,6 +42,7 @@ import {
 import { createApiCredentials } from './main/local-api/credentials';
 import { createLocalApiServer } from './main/local-api/http-server';
 import { createNotesBackend } from './main/local-api/notes-backend';
+import { scopeNotesBackend } from './main/local-api/notes-scope';
 import { readClippedPage } from './main/note-import';
 import { storeImage } from './main/image-store';
 import { registerLocalApiHandlers } from './main/ipc/local-api-handlers';
@@ -753,11 +754,15 @@ function initializeCoreModules(): Configuration {
           localDatabase,
           repository,
         );
-        const apiBackend = createNotesBackend({
-          commands,
-          library: libraryRepository,
-          publish: publishNoteChanged,
-        });
+        // Apps and agents only reach the notebook or tag chosen in Preferences.
+        const apiBackend = scopeNotesBackend(
+          createNotesBackend({
+            commands,
+            library: libraryRepository,
+            publish: publishNoteChanged,
+          }),
+          () => activeConfig.get(coreConfig.appearance).localApiScope,
+        );
         localApi = createLocalApiController({
           createServer: (password) =>
             createLocalApiServer({

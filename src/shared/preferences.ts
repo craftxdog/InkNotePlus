@@ -3,6 +3,7 @@ import { aiProviderSchema, defaultAiModels } from './ai';
 import { z } from './validation';
 import { appErrorSchema, noteSortSchema } from './ipc';
 import { keybindingsSchema, keystrokeSchema } from './keybindings';
+import { tagNameSchema } from './tags';
 
 export const themeIdSchema = z
   .string()
@@ -14,6 +15,13 @@ export const extensionOriginSchema = z
   .regex(
     /^(?:chrome-extension:\/\/[a-p]{32}|moz-extension:\/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/,
   );
+// What apps and AI agents can reach through the local API and MCP.
+export const localApiScopeSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('all') }).strict(),
+  z.object({ type: z.literal('notebook'), notebookId: z.uuid() }).strict(),
+  z.object({ type: z.literal('tag'), tag: tagNameSchema }).strict(),
+]);
+export type LocalApiScope = z.output<typeof localApiScopeSchema>;
 export const editorModeSchema = z.enum(['edit', 'split', 'preview']);
 export const lineWrappingSchema = z.preprocess(
   (value) => (value === true ? 'all' : value === false ? 'off' : value),
@@ -43,6 +51,7 @@ const fields = {
   localApiEnabled: z.boolean(),
   localApiPort: z.number().int().min(1024).max(65_535),
   localApiExtensionOrigins: z.array(extensionOriginSchema).max(10),
+  localApiScope: localApiScopeSchema,
   theme: themeIdSchema,
   followSystemTheme: z.boolean(),
   lightTheme: themeIdSchema,
@@ -100,6 +109,7 @@ export const defaultPreferences: Preferences = {
   localApiEnabled: false,
   localApiPort: 19840,
   localApiExtensionOrigins: [],
+  localApiScope: { type: 'all' },
   theme: 'inknote-light',
   followSystemTheme: false,
   lightTheme: 'inknote-light',

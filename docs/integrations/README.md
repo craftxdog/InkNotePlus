@@ -4,6 +4,17 @@ Activa el servidor en **Preferencias > Integraciones**. Solo acepta conexiones d
 tu equipo y todas las solicitudes necesitan el usuario `inknote` y la contraseña
 que aparece en esa pantalla.
 
+### Notas accesibles
+
+En la misma pantalla, **Notas accesibles** limita la API y el MCP a un notebook (con
+sus sub-notebooks) o a una etiqueta:
+
+- Las notas de fuera no aparecen en listas ni búsquedas, y leerlas, editarlas o
+  enviarlas a la papelera responde `404`.
+- Las notas nuevas se crean dentro del alcance (en el notebook o con la etiqueta).
+- Mover una nota fuera del alcance o quitarle la etiqueta responde `400`.
+- `/books` y `/tags` solo muestran lo que hay dentro.
+
 ## API HTTP
 
 La dirección predeterminada es `http://127.0.0.1:19840`.

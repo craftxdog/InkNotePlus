@@ -1,6 +1,6 @@
 # Historial de versiones
 
-## Sin publicar
+## 1.6.1 — 2026-11-20
 
 ### Corregido
 
@@ -11,6 +11,11 @@
 - Las casillas de Temas, Integraciones, Plugins e IA vuelven a estar alineadas con
   su texto, y los campos de atajos tienen el mismo estilo que el resto.
 - La racha de actividad dice «1 día» en lugar de «1 días».
+
+### Pruebas
+
+- 1207 pruebas automatizadas, lint y TypeScript aprobados.
+- Los 20 temas del catálogo de Inkdrop se instalaron en la app empaquetada.
 
 ## 1.6.0 — 2026-11-19
 

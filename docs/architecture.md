@@ -367,6 +367,18 @@ necesitan la contraseña. Sus cambios pasan por los mismos comandos
 de notas que la interfaz y usan el control de revisiones. La contraseña se guarda
 cifrada con el llavero del sistema. Las rutas están en `docs/integrations/README.md`.
 
+El usuario puede limitar el servidor local a un notebook (con sus sub-notebooks) o a
+una etiqueta (`notes-scope.ts`). El límite se aplica en la consulta, a la API REST y
+al MCP por igual, porque comparten la contraseña. Lo que queda fuera responde como si
+no existiera, las notas nuevas se crean dentro y ninguna edición puede sacar una nota
+del alcance.
+
+Las versiones publican AppImage para Linux x64 y ARM64 (`scripts/make-appimage.mjs`).
+`appimagetool` y el runtime vienen de versiones fijas comprobadas por SHA-256. El
+`AppRun` desactiva el sandbox de Chromium solo donde el sistema bloquea los
+namespaces sin privilegios (Ubuntu 24.04+), porque el auxiliar setuid no funciona
+dentro de la imagen. Los paquetes `.deb` y `.rpm` conservan el sandbox.
+
 El asistente de IA (`src/main/ai`) se ejecuta en el proceso principal. El renderer
 envía solo el texto que el usuario elige y nunca recibe la clave. Claude usa el SDK
 oficial de Anthropic, y los demás proveedores usan HTTPS o una dirección local.

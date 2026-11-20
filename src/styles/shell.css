@@ -551,6 +551,13 @@
     background: var(--note-list-view-item-active-background);
     color: var(--selected-text-color);
   }
+  /* The hover background darkens behind the translucent tag colours, below
+     a readable contrast. Compose tags on hovered rows over the list
+     background, as on a plain row. Active rows keep their own colours. */
+  .note-list-item:not([data-active='true']):hover .tag-badge {
+    background: linear-gradient(var(--tag-background), var(--tag-background))
+      var(--note-list-bar-background);
+  }
   .note-list-item[data-active='true'] .note-row-title,
   .note-list-item[data-active='true'] time,
   .note-list-item[data-active='true'] .task-summary {

@@ -30,7 +30,7 @@ salvo FAL-18, cuyo límite es la decisión D-3.
 | FAL-18    | Componentes visuales e instalación con `ipm` | Nada: es el límite elegido en D-3              |
 | FAL-27    | Enlace público de lectura                    | Un servicio alojado y una decisión de producto |
 | FAL-28    | Web Clipper                                  | Publicar la extensión en las tiendas           |
-| FAL-29    | AppImage, Snap y Flathub                     | Cuentas en Snap y Flathub                      |
+| FAL-29    | Snap y Flathub                               | Cuentas en Snap y Flathub                      |
 | FAL-30    | Certificados propios y prueba en red real    | Una red corporativa con proxy para validarlo   |
 | FAL-31    | Aplicación móvil                             | Cuentas de Apple y Google y un proyecto aparte |
 
@@ -74,14 +74,17 @@ Ya existe (FAL-15): un servidor MCP local que da a Claude acceso de lectura y es
 
 **Comprobado:** inicialización con el protocolo 2025-06-18, 401 sin contraseña, búsqueda, lectura y edición de una nota concreta. Una edición con una revisión antigua se rechaza («La nota cambió»), y el cambio aparece al momento en la app. No hay herramienta de borrado. El servidor solo acepta conexiones desde el propio equipo y viene desactivado por defecto.
 
-**Límite:** el acceso cubre todas las notas. No se puede compartir una sola nota o un solo notebook. Sería una mejora (ver «Siguientes pasos»).
+**Alcance (desde el 2026-11-20):** en Integraciones, «Notas accesibles» limita el acceso a un notebook con sus sub-notebooks o a una etiqueta. Lo demás no existe para Claude: no aparece al buscar ni listar, y leerlo, editarlo o enviarlo a la papelera responde «no existe». Las notas nuevas se crean dentro del alcance, y no se puede sacar una nota de él. El límite se aplica a toda la API local, no solo al MCP, porque ambos usan la misma contraseña (INC-31).
 
 ### Pruebas intermitentes
 
-Dos comprobaciones de las baterías de escritorio fallaron una vez y pasaron al repetirlas, sin cambios en el código. Ninguna toca lo cambiado en este recorrido:
+Dos comprobaciones de las baterías de escritorio fallaron una vez y pasaron al repetirlas. **Resueltas el 2026-11-20:**
 
-- `smoke-preview-stability`: «cada frame alinea la letra escrita antes de pintarse» (más de 2 px en un frame).
-- `smoke-theme-selection`: contraste de las etiquetas sobre la fila seleccionada en InkNote Light (3,98 frente a 4,5). Probablemente se mide durante la transición del fondo seleccionado.
+- `smoke-theme-selection`: el contraste de las etiquetas bajaba a 3,98. La causa era un **fallo real de accesibilidad**: en la fila bajo el ratón, las etiquetas quedaban por debajo de 4,5:1 (3,99 y 3,95 medidos). La prueba solo lo veía cuando el ratón quedaba sobre una fila (INC-30). Ahora la prueba coloca siempre el ratón sobre una fila con etiquetas antes de medir. Con la versión anterior falla siempre y con la corrección pasa. La auditoría de contraste también tiene en cuenta los fondos de un solo color hechos con degradado.
+- `smoke-preview-stability`: medía dentro de su propio `requestAnimationFrame`, que a veces se ejecutaba antes que el de la sincronización de la app y veía una posición que nunca llega a pintarse. Ahora mide en un `ResizeObserver`, que el navegador ejecuta después de todos los `requestAnimationFrame` y justo antes de pintar.
+- `smoke-electron` (fuentes de KaTeX): apareció durante la verificación de estas correcciones. `document.fonts.check()` responde al instante, y la fuente podía estar todavía descargándose. Ahora espera con `document.fonts.load()`. Una fuente bloqueada por la CSP sigue haciendo fallar la prueba.
+
+Tras las correcciones, `test:desktop`, `test:desktop:package` y `test:desktop:qa` pasaron en tres rondas seguidas, y la batería de desarrollo tres veces más después de corregir la de KaTeX.
 
 ### Qué no se comprobó en este recorrido
 
@@ -449,6 +452,27 @@ Las tres decisiones están tomadas.
 
 **Estado: resuelto el 2026-11-20.** Ahora dice «1 día» y, a partir de 2, «días».
 
+#### INC-30. Las etiquetas pierden contraste en la fila bajo el ratón
+
+**Estado: resuelto el 2026-11-20.**
+
+- **Evidencia (Sonda):** en InkNote Light, las etiquetas de una fila bajo el ratón tenían un contraste de 3,99 (azul) y 3,95 (rojo), por debajo de 4,5:1. En la fila activa era de 4,72 y en una fila normal de 5,55.
+- **Causa:** el fondo de la etiqueta es semitransparente y se mezclaba con el fondo más oscuro de la fila bajo el ratón.
+- **Cambio:** en esas filas, la etiqueta se compone sobre el fondo de la lista, como en una fila normal. La fila activa conserva sus colores, que ya cumplían.
+- **Aceptación:** la prueba de contraste coloca siempre el ratón sobre una fila con etiquetas. Falla con la versión anterior y pasa con la corrección en los siete temas.
+
+#### INC-31. Claude ve todas las notas
+
+**Estado: resuelto el 2026-11-20.**
+
+- **Evidencia (Código):** el servidor MCP y la API local daban acceso a toda la biblioteca a cualquier aplicación con la contraseña.
+- **Cambio:** en Preferencias › Integraciones, «Notas accesibles» permite elegir todas las notas, un notebook con sus sub-notebooks o una etiqueta. [notes-scope.ts](../src/main/local-api/notes-scope.ts) aplica el límite en la consulta, así que la paginación sigue siendo correcta.
+  - Fuera del alcance todo responde «no existe».
+  - Notebooks, etiquetas y conteos solo muestran lo que está dentro.
+  - Las notas nuevas entran en el alcance y no se pueden sacar de él.
+  - Si el notebook elegido se borra, no se muestra nada.
+- **Aceptación:** pruebas de integración con una base de datos real para la API REST y para las herramientas MCP, en los tres modos.
+
 ## Parte 2: funciones sin implementar
 
 La ausencia de estas funciones se comprobó en el código fuente.
@@ -495,7 +519,7 @@ La ausencia de estas funciones se comprobó en el código fuente.
 | FAL-26 | Sugerencias de edición      | Texto fantasma, Tab acepta y Esc descarta                     | **Resuelto el 2026-11-18.** Texto fantasma manual por defecto y automático si se activa. Tab acepta y Esc descarta.                                                                                                                                                |
 | FAL-27 | Publicar notas en la web    | Enlace público de lectura                                     | Requiere un servicio externo y una decisión de producto.                                                                                                                                                                                                           |
 | FAL-28 | Captura e integraciones     | Web Clipper, Kindle, Alfred y Raycast                         | **Resuelto en la rama `codex/remote-images-clipper`.** Importa recortes de Kindle, incluye un script para Raycast y Alfred y una extensión Web Clipper para navegadores Chromium, probada con Brave. Falta publicarla en las tiendas.                              |
-| FAL-29 | Más formatos de instalación | Windows y Linux ARM64, AppImage, Snap, Flathub, zip, Homebrew | **Resuelto en parte el 2026-11-18.** La versión 1.4.0 publica ZIP para macOS, Windows y Linux, incluidos Windows y Linux ARM64, e incluye una plantilla de Homebrew. Faltan AppImage, Snap y Flathub.                                                              |
+| FAL-29 | Más formatos de instalación | Windows y Linux ARM64, AppImage, Snap, Flathub, zip, Homebrew | **Resuelto en parte.** La versión 1.4.0 publica ZIP para macOS, Windows y Linux, incluidos Windows y Linux ARM64, e incluye una plantilla de Homebrew. Desde el 2026-11-20 cada versión publica también AppImage para Linux x64 y ARM64. Faltan Snap y Flathub.    |
 | FAL-30 | Redes corporativas          | Proxy, certificados propios y diagnóstico de red              | **Resuelto en parte el 2026-11-18.** La sincronización usa el proxy del sistema o uno propio, confía en los certificados del sistema e incluye un diagnóstico de conexión. El proxy no se probó en una red real y no se pueden importar certificados desde la app. |
 | FAL-31 | Aplicación móvil            | iOS y Android con el mismo editor                             | Proyecto aparte. Depende de FAL-16.                                                                                                                                                                                                                                |
 
@@ -505,7 +529,7 @@ La ausencia de estas funciones se comprobó en el código fuente.
 2. **Captura:** publicar el Web Clipper en las tiendas (FAL-28).
 3. **Validación:** probar Windows, Linux, el proxy corporativo y Apple Notes con datos reales.
 4. **Producto:** decidir la publicación web (FAL-27) y la app móvil (FAL-31).
-5. **Privacidad con Claude:** permitir que el servidor MCP solo vea un notebook o una etiqueta elegidos, en lugar de todas las notas.
+5. ~~**Privacidad con Claude:** permitir que el servidor MCP solo vea un notebook o una etiqueta elegidos.~~ Resuelto el 2026-11-20 (INC-31).
 
 ## Funciones verificadas sin diferencias relevantes
 

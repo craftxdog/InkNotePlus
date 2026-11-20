@@ -46,7 +46,25 @@ function watchFrames(marker) {
     }
     return null;
   }
+  // Measure what will be painted: ResizeObserver callbacks run after every
+  // requestAnimationFrame callback and layout of the frame, before paint. A
+  // measurement inside our own rAF could run before the app's sync rAF and
+  // see a position the frame never shows.
+  // https://html.spec.whatwg.org/multipage/webappapis.html#update-the-rendering
+  const pulse = document.createElement('div');
+  pulse.style.cssText =
+    'position:fixed;left:-10px;top:0;width:1px;height:1px;pointer-events:none';
+  document.body.append(pulse);
+  let frameTime = 0;
+  const painted = new ResizeObserver(() => measure(frameTime));
+  painted.observe(pulse);
   function tick(time) {
+    if (stopped) return;
+    frameTime = time;
+    pulse.style.width = pulse.style.width === '1px' ? '2px' : '1px';
+    requestAnimationFrame(tick);
+  }
+  function measure(time) {
     if (stopped) return;
     const source = [...document.querySelectorAll('.cm-line')].find((line) =>
       line.textContent.includes(marker),
@@ -78,12 +96,13 @@ function watchFrames(marker) {
       sourceY: a?.top,
       previewY: b?.top,
     });
-    requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
   window.stopPreviewWatch = () => {
     stopped = true;
     observer.disconnect();
+    painted.disconnect();
+    pulse.remove();
     return { marker, frames, loading, svgRemovals };
   };
 }

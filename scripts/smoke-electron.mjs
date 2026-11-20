@@ -481,7 +481,12 @@ try {
     ),
   );
   assert.ok(
-    await page.evaluate(() => document.fonts.check('16px KaTeX_Main')),
+    // check() answers at once, while the font may still be downloading; wait
+    // for the load first. A font blocked by CSP still fails the check.
+    await page.evaluate(async () => {
+      await document.fonts.load('16px KaTeX_Main');
+      return document.fonts.check('16px KaTeX_Main');
+    }),
     'KaTeX WOFF2 fonts must load locally under CSP.',
   );
   await page.hover('.mermaid-block');

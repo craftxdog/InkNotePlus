@@ -1,5 +1,23 @@
 # Historial de versiones
 
+## Sin publicar
+
+### Añadido
+
+- En Preferencias › Integraciones puedes limitar lo que ven Claude y otras
+  aplicaciones a un notebook (con sus sub-notebooks) o a una etiqueta.
+- AppImage para Linux x64 y ARM64 en cada versión. En Ubuntu 24.04 o posterior
+  arranca sin el sandbox de Chromium; para conservarlo, usa el paquete `.deb`.
+
+### Corregido
+
+- Las etiquetas de la fila bajo el ratón vuelven a tener un contraste legible.
+
+### Pruebas
+
+- Las comprobaciones de contraste, de alineación del preview y de las fuentes de
+  KaTeX ya no fallan de forma intermitente.
+
 ## 1.6.1 — 2026-11-20
 
 ### Corregido

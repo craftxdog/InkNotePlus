@@ -85,10 +85,14 @@ export function inspectText({ selection = false } = {}) {
     let background = [255, 255, 255];
     let selected = false;
     for (const parent of ancestors) {
-      background = composite(
-        rgba(getComputedStyle(parent).backgroundColor),
-        background,
+      const layers = getComputedStyle(parent);
+      background = composite(rgba(layers.backgroundColor), background);
+      // A one-colour gradient paints that colour over the background colour
+      // (tag badges use it to stay readable on any row state).
+      const tint = /^linear-gradient\((rgba?\([^)]*\)), \1\)$/.exec(
+        layers.backgroundImage,
       );
+      if (tint) background = composite(rgba(tint[1]), background);
       if (parent.classList.contains('cm-scroller')) {
         const marker = selections.find(
           ({ bounds }) =>

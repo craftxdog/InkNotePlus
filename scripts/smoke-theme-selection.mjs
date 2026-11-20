@@ -150,9 +150,16 @@ export async function verifyThemeSelection({ page, profile }) {
             color,
           }),
         );
+      // Tagged too, so a hovered row with tags is always measured.
       const other = await window.inkNote.notes.create({
         title: 'Otra nota de contraste',
         body: 'Texto sin seleccionar.',
+        metadata: {
+          notebookId: null,
+          status: 'none',
+          isTemplate: false,
+          tags: colors.map((c) => `${c} tag`),
+        },
       });
       assertResult(other);
       return [note.data.id, other.data.id];
@@ -193,6 +200,9 @@ export async function verifyThemeSelection({ page, profile }) {
       await page.keyboard.press('a');
       await page.keyboard.up(modifier);
       await page.waitForSelector('.cm-selectionBackground');
+      // The pointer position decides which row shows its hover background.
+      // Rest it on the other tagged row instead of wherever it was left.
+      await page.hover('.note-list-item:not([data-active="true"])');
       await settle(page);
       const focused = await page.evaluate(inspectText, { selection: true });
       const selection = await page.evaluate(() => {

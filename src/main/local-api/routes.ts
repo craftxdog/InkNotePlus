@@ -109,12 +109,14 @@ async function listNotes(query: URLSearchParams, backend: NotesBackend) {
     : failed(notes.error.code);
 }
 
-const knownBook = (backend: NotesBackend, id: string | null | undefined) =>
-  !id || backend.books().some((book) => book.id === id);
+const knownBook = async (
+  backend: NotesBackend,
+  id: string | null | undefined,
+) => !id || (await backend.books()).some((book) => book.id === id);
 
 async function createNote(body: unknown, backend: NotesBackend) {
   const input = createNoteSchema.safeParse(body);
-  if (!input.success || !knownBook(backend, input.data.bookId))
+  if (!input.success || !(await knownBook(backend, input.data.bookId)))
     return invalid();
   const {
     title = '',
@@ -150,7 +152,7 @@ async function createNote(body: unknown, backend: NotesBackend) {
 
 async function patchNote(id: string, body: unknown, backend: NotesBackend) {
   const input = patchNoteSchema.safeParse(body);
-  if (!input.success || !knownBook(backend, input.data.bookId))
+  if (!input.success || !(await knownBook(backend, input.data.bookId)))
     return invalid();
   const current = await backend.get(id);
   if (!current.ok) return failed(current.error.code);
@@ -189,7 +191,7 @@ export async function handleApiRequest(
     return method === 'GET'
       ? reply(
           200,
-          backend.books().map(({ id, name, parentId, count }) => ({
+          (await backend.books()).map(({ id, name, parentId, count }) => ({
             id,
             name,
             parentId,
@@ -198,7 +200,7 @@ export async function handleApiRequest(
         )
       : notAllowed;
   if (path === '/tags')
-    return method === 'GET' ? reply(200, backend.tags()) : notAllowed;
+    return method === 'GET' ? reply(200, await backend.tags()) : notAllowed;
   const match = /^\/notes\/([^/]+)$/.exec(path);
   if (!match) return problem(404, 'Ruta no encontrada.');
   const id = noteIdInputSchema.safeParse({ id: match[1] });

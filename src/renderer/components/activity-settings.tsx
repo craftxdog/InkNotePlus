@@ -35,8 +35,8 @@ export function ActivitySettings() {
     ['Notas editadas', summary.totals.edited],
     ['Notas creadas', summary.totals.created],
     ['Tareas completadas', summary.totals.completed],
-    ['Racha actual', `${summary.currentStreak} días`],
-    ['Racha más larga', `${summary.longestStreak} días`],
+    ['Racha actual', days(summary.currentStreak)],
+    ['Racha más larga', days(summary.longestStreak)],
   ] as const;
   return (
     <SettingGroup title="Actividad de las últimas 52 semanas">
@@ -67,3 +67,5 @@ export function ActivitySettings() {
     </SettingGroup>
   );
 }
+
+const days = (count: number) => `${count} ${count === 1 ? 'día' : 'días'}`;

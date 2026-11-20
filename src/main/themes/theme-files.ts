@@ -37,6 +37,10 @@ export function validateThemeCss(css: string): void {
     if (/url\s*\(/i.test(rule.value)) {
       for (const match of rule.value.matchAll(/url\s*\(([^)]*)\)/gi)) {
         const value = match[1].trim().replace(/^['"]|['"]$/g, '');
+        // Inline images (e.g. a tab outline as SVG) never reach the network,
+        // and SVG used as an image cannot run scripts. CSP allows data: images.
+        if (/^data:image\/(?:svg\+xml|png|jpeg|gif|webp|avif)[;,]/i.test(value))
+          continue;
         if (
           !/^[a-zA-Z0-9_./-]+$/.test(value) ||
           value.startsWith('/') ||
@@ -117,7 +121,11 @@ export async function importThemeFolder(
   }
   const result: InstalledTheme = {
     manifest,
-    label: manifest.name,
+    // Readable like the built-in themes: catppuccin-mocha → Catppuccin Mocha.
+    label: manifest.name
+      .split('-')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' '),
     source: 'installed',
     styles: manifest.styleSheets.map(
       (file) =>

@@ -72,7 +72,7 @@ export function IntegrationSettings() {
     Number.isInteger(portNumber) && portNumber >= 1024 && portNumber <= 65_535;
   return (
     <SettingGroup title="Servidor local">
-      <label className="setting-toggle">
+      <label className="settings-toggle">
         <input
           type="checkbox"
           checked={preferences.localApiEnabled}
